@@ -1,7 +1,8 @@
 // src/pages/RegisterPage.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import axios from "axios";
+import API from "../api";
+
 import { toast } from "sonner";
 import { Coffee, Loader2 } from "lucide-react";
 
@@ -16,7 +17,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 
-const API = "http://127.0.0.1:8000/api";
+
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -50,23 +51,17 @@ const RegisterPage = () => {
 
     setLoading(true);
 
-    try {
-      await axios.post(
-        `${API}/auth/register`,
-        {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role, // ✅ IMPORTANT
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
 
-      toast.success("Account registered successfully. Please login.");
+  try {
+    await API.post("/api/auth/register", {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role,
+    });
 
-      navigate("/login", { replace: true });
+    toast.success("Account registered successfully. Please login.");
+    navigate("/login", { replace: true });
     } catch (err) {
       console.error("REGISTER ERROR:", err);
 
