@@ -1,15 +1,21 @@
 from pymongo import MongoClient, ReturnDocument
 from datetime import timedelta, timezone
 import os
+import certifi
 
 MONGO_URL = os.getenv("MONGO_URI")
-
+if not MONGO_URL:
+    raise RuntimeError("MONGO_URI environment variable not set")
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
-client = MongoClient(MONGO_URL)
+client = MongoClient(
+    MONGO_URL,
+    tls=True,
+    tlsCAFile=certifi.where(),
+    serverSelectionTimeoutMS=5000
+)
 
-# 🔴 OLD DB (login works here)
 db = client["ecanteen"]
 
 users_collection = db["users"]
