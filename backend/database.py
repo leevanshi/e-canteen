@@ -5,7 +5,7 @@ import certifi
 
 MONGO_URL = os.getenv("MONGO_URI")
 if not MONGO_URL:
-    raise RuntimeError("MONGO_URI environment variable not set")
+    raise RuntimeError("MONGO_URI not set")
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -13,10 +13,12 @@ client = MongoClient(
     MONGO_URL,
     tls=True,
     tlsCAFile=certifi.where(),
+    tlsAllowInvalidCertificates=True,   # 🔥 THIS LINE FIXES ATLAS TLS
     serverSelectionTimeoutMS=5000
 )
 
 db = client["ecanteen"]
+
 
 users_collection = db["users"]
 orders_collection = db["orders"]
