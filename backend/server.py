@@ -8,6 +8,9 @@ from typing import List, Optional
 from bson import ObjectId
 from passlib.context import CryptContext
 import os
+from fastapi.responses import Response
+from fastapi import Request
+
 
 # ================= TIMEZONE =================
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -24,8 +27,7 @@ def hash_password(password: str):
 # ================= CORS =================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # 👈 allow all for now
-    allow_credentials=False,      # 👈 MUST be false with "*"
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -99,31 +101,48 @@ class RegisterUser(BaseModel):
     password: str
 
 # ================= REGISTER =================
+@app.options("/{path:path}")
+async def options_handler(path: str, request: Request):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+
 @app.post("/api/register")
 def register_user(data: RegisterUser):
+    try:
+        # ONLY NMIMS EMAILS
+        if not data.email.endswith("@nmims.in"):
+            raise HTTPException(status_code=400, detail="Only NMIMS email allowed")
 
-    # ONLY NMIMS EMAILS
-    if not data.email.endswith("@nmims.in"):
-        raise HTTPException(status_code=400, detail="Only NMIMS email allowed")
+        existing_user = users_collection.find_one({"email": data.email})
+        if existing_user:
+            raise HTTPException(status_code=409, detail="Email already registered")
 
-    existing_user = users_collection.find_one({"email": data.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        user_doc = {
+            "name": data.name,
+            "email": data.email,
+            "password": hash_password(data.password),
+            "role": "student"
+        }
 
-    user_doc = {
-        "name": data.name,
-        "email": data.email,
-        "password": hash_password(data.password),
-        "role": "student"
-    }
+        result = users_collection.insert_one(user_doc)
 
-    result = users_collection.insert_one(user_doc)
+        return {
+            "success": True,
+            "user_id": str(result.inserted_id),
+            "message": "User registered successfully"
+        }
 
-    return {
-        "success": True,
-        "user_id": str(result.inserted_id),
-        "message": "User registered successfully"
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("REGISTER ERROR >>>", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ================= MENU =================
 @app.get("/api/menu")
