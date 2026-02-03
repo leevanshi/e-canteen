@@ -5,10 +5,7 @@ import axios from "axios";
    AXIOS INSTANCE
 ========================= */
 const API = axios.create({
-  baseURL:
-    import.meta.env.PROD
-      ? "https://e-canteen-4.onrender.com"
-      : "http://localhost:8000",
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -36,7 +33,7 @@ API.interceptors.request.use(
       url.startsWith(route)
     );
 
-    // Attach token ONLY for protected routes
+    // attach token ONLY to protected routes
     if (token && !isPublic) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -59,27 +56,10 @@ API.interceptors.response.use(
       url.startsWith(route)
     );
 
-    // Redirect ONLY if protected route fails
     if (status === 401 && !isPublic) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
-      if (
-        window.location.pathname !== "/login" &&
-        window.location.pathname !== "/"
-      ) {
-        window.location.replace("/login");
-      }
-    }
-
-    if (status === 403) {
-      console.warn("403 Forbidden");
-    }
-
-    if (!status) {
-      console.error("Network error");
-    } else {
-      console.error("API Error:", error.response?.data);
+      window.location.replace("/login");
     }
 
     return Promise.reject(error);
@@ -98,24 +78,20 @@ export const loginUser = (data) =>
 /* =========================
    MENU
 ========================= */
-// Student menu (PUBLIC)
 export const getMenu = () =>
   API.get("/menu");
 
-// Admin menu (PROTECTED)
 export const getAdminMenu = () =>
   API.get("/admin/menu");
 
-// Toggle availability
 export const toggleMenuAvailability = (itemId) =>
   API.put(`/admin/menu/${itemId}/availability`);
 
 /* =========================
    ORDERS (USER)
 ========================= */
-export const createOrder = (data) => API.post("/orders", data);
-
-
+export const createOrder = (data) =>
+  API.post("/orders", data);
 
 export const getUserOrders = () =>
   API.get("/orders");
