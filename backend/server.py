@@ -27,10 +27,15 @@ def hash_password(password: str):
 # ================= CORS =================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://ecanteen-nmims.vercel.app",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ================= DATABASE =================
 from database import (
@@ -101,16 +106,7 @@ class RegisterUser(BaseModel):
     password: str
 
 # ================= REGISTER =================
-@app.options("/{path:path}")
-async def options_handler(path: str, request: Request):
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        },
-    )
+
 
 @app.post("/api/register")
 def register_user(data: RegisterUser):
