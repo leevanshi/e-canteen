@@ -2,7 +2,8 @@ from pymongo import MongoClient, ReturnDocument
 from datetime import timedelta, timezone
 import os
 
-MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+MONGO_URL = os.getenv("MONGO_URI")
+
 IST = timezone(timedelta(hours=5, minutes=30))
 
 client = MongoClient(MONGO_URL)
