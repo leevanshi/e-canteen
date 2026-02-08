@@ -57,7 +57,6 @@ const RegisterPage = () => {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
-        role, // student | staff | admin
       });
 
       toast.success("Account registered successfully. Please login.");

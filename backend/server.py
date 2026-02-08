@@ -8,13 +8,11 @@ from typing import List, Optional
 from bson import ObjectId
 from passlib.context import CryptContext
 import os
-from fastapi.responses import Response
-from fastapi import Request
 from dotenv import load_dotenv
+
 from routes.auth import get_current_user
 
-
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
+load_dotenv()
 
 # ================= TIMEZONE =================
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -29,17 +27,15 @@ def hash_password(password: str):
     return pwd_context.hash(password)
 
 # ================= CORS =================
-# ================= CORS =================
 origins = os.getenv("CORS_ORIGINS")
 
 if origins:
     origins = [o.strip() for o in origins.split(",")]
 else:
-    # fallback for local + production
     origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://ecanteen-nmims.vercel.app/",
+        "https://ecanteen-nmims.vercel.app",
     ]
 
 app.add_middleware(
@@ -47,7 +43,7 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],  # REQUIRED for Authorization
+    allow_headers=["*"],
 )
 
 # ================= DATABASE =================
@@ -58,6 +54,8 @@ from database import (
     users_collection,
     counters_collection,
 )
+
+# ================= ROUTERS =================
 from routes.auth import router as auth_router
 from routes.wallet import router as wallet_router
 from routes.menu import router as menu_router
@@ -65,14 +63,13 @@ from routes.orders import router as orders_router
 from routes.admin import router as admin_router
 from routes.feedback import router as feedback_router
 
-app.include_router(auth_router, prefix="/api")
-app.include_router(wallet_router, prefix="/api")
-app.include_router(menu_router, prefix="/api")
-app.include_router(orders_router, prefix="/api")
-app.include_router(admin_router, prefix="/api")
-app.include_router(feedback_router, prefix="/api")
-
-
+# 🔥 IMPORTANT FIX: REMOVE `/api` PREFIX
+app.include_router(auth_router)
+app.include_router(wallet_router)
+app.include_router(menu_router)
+app.include_router(orders_router)
+app.include_router(admin_router)
+app.include_router(feedback_router)
 
 # ================= STATIC FILES =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -92,7 +89,7 @@ def get_next_order_id():
     if counter["value"] < 101:
         counters_collection.update_one(
             {"_id": "order_id"},
-            {"$set": {"value": 101}}
+            {"$set": {"value": 101}},
         )
         return 101
 
@@ -110,51 +107,37 @@ class CreateOrder(BaseModel):
     pickup_time: Optional[str] = None
     payment_method: str
 
-class StatusUpdate(BaseModel):
-    status: str
-
 class RegisterUser(BaseModel):
     name: str
     email: EmailStr
     password: str
 
 # ================= REGISTER =================
-
-
-@app.post("/api/register")
+@app.post("/auth/register")
 def register_user(data: RegisterUser):
-    try:
-        # ONLY NMIMS EMAILS
-        if not data.email.endswith("@nmims.in"):
-            raise HTTPException(status_code=400, detail="Only NMIMS email allowed")
+    if not data.email.endswith("@nmims.in"):
+        raise HTTPException(status_code=400, detail="Only NMIMS email allowed")
 
-        existing_user = users_collection.find_one({"email": data.email})
-        if existing_user:
-            raise HTTPException(status_code=409, detail="Email already registered")
+    if users_collection.find_one({"email": data.email}):
+        raise HTTPException(status_code=409, detail="Email already registered")
 
-        user_doc = {
-            "name": data.name,
-            "email": data.email,
-            "password": hash_password(data.password),
-            "role": "student"
-        }
+    user_doc = {
+        "name": data.name,
+        "email": data.email,
+        "password": hash_password(data.password),
+        "role": "student",
+    }
 
-        result = users_collection.insert_one(user_doc)
+    result = users_collection.insert_one(user_doc)
 
-        return {
-            "success": True,
-            "user_id": str(result.inserted_id),
-            "message": "User registered successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print("REGISTER ERROR >>>", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    return {
+        "success": True,
+        "user_id": str(result.inserted_id),
+        "message": "User registered successfully",
+    }
 
 # ================= MENU =================
-@app.get("/api/menu")
+@app.get("/menu")
 def get_menu():
     menu = []
     for item in menu_collection.find({"available": True}):
@@ -163,7 +146,7 @@ def get_menu():
     return menu
 
 # ================= STUDENT PLACE ORDER =================
-@app.post("/api/orders")
+@app.post("/orders")
 def place_order(data: CreateOrder, user=Depends(get_current_user)):
     now = datetime.now(IST)
     order_id = get_next_order_id()
@@ -178,7 +161,7 @@ def place_order(data: CreateOrder, user=Depends(get_current_user)):
 
         wallet_collection.update_one(
             {"user_id": ObjectId(user["_id"])},
-            {"$inc": {"balance": -total}}
+            {"$inc": {"balance": -total}},
         )
 
     orders_collection.insert_one({

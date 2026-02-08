@@ -8,7 +8,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import JoinPage from "./pages/JoinPage";
 
-// Student / Faculty pages
+// Student pages
 import MenuPage from "./pages/MenuPage";
 import MonthlyMenu from "./pages/MonthlyMenu";
 import CartPage from "./pages/CartPage";
@@ -17,6 +17,7 @@ import OrdersPage from "./pages/OrdersPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import OrderDetails from "./pages/OrderDetails";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+
 // Admin pages
 import AdminMonthlyMenu from "./pages/AdminMonthlyMenu";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -25,7 +26,7 @@ import AdminOrderHistory from "./pages/AdminOrderHistory";
 import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import AdminWalletPage from "./pages/AdminWalletPage";
 import AdminMenuPage from "./pages/AdminMenuPage";
-import AdminCounterMenu from "./pages/AdminCounterMenu"; // ✅ ADDED
+import AdminCounterMenu from "./pages/AdminCounterMenu";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -44,13 +45,10 @@ const App = () => {
 
   return (
     <>
-      {/* ✅ TOASTER */}
       <Toaster
         position="top-right"
         richColors
-        toastOptions={{
-          style: { zIndex: 9999 },
-        }}
+        toastOptions={{ style: { zIndex: 9999 } }}
       />
 
       {!hideNavbar && <Navbar />}
@@ -87,11 +85,13 @@ const App = () => {
           }
         />
 
-        {/* 👩‍🎓 STUDENT / 👨‍🏫 FACULTY */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+        {/* 👩‍🎓 STUDENT */}
         <Route
           path="/menu"
           element={
-            <ProtectedRoute allowedRoles={["student", "faculty"]}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <MenuPage />
             </ProtectedRoute>
           }
@@ -100,18 +100,16 @@ const App = () => {
         <Route
           path="/monthly-menu"
           element={
-            <ProtectedRoute allowedRoles={["student", "faculty"]}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <MonthlyMenu />
             </ProtectedRoute>
           }
         />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
 
         <Route
           path="/cart"
           element={
-            <ProtectedRoute allowedRoles={["student", "faculty"]}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <CartPage />
             </ProtectedRoute>
           }
@@ -120,7 +118,7 @@ const App = () => {
         <Route
           path="/checkout"
           element={
-            <ProtectedRoute allowedRoles={["student", "faculty"]}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <CheckoutPage />
             </ProtectedRoute>
           }
@@ -129,7 +127,7 @@ const App = () => {
         <Route
           path="/orders/success/:orderId"
           element={
-            <ProtectedRoute allowedRoles={["student", "faculty"]}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <OrderSuccessPage />
             </ProtectedRoute>
           }
@@ -138,7 +136,7 @@ const App = () => {
         <Route
           path="/orders"
           element={
-            <ProtectedRoute allowedRoles={["student", "faculty"]}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <OrdersPage />
             </ProtectedRoute>
           }
@@ -147,7 +145,7 @@ const App = () => {
         <Route
           path="/orders/:orderId"
           element={
-            <ProtectedRoute allowedRoles={["student", "faculty"]}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <OrderDetails />
             </ProtectedRoute>
           }

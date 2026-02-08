@@ -12,6 +12,8 @@ export const CartProvider = ({ children }) => {
      LOAD CART FROM STORAGE
   ========================= */
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const stored = localStorage.getItem("cart");
     if (stored) {
       try {
@@ -20,14 +22,26 @@ export const CartProvider = ({ children }) => {
         localStorage.removeItem("cart");
       }
     }
-  }, []);
+  }, [isAuthenticated]);
+
+  /* =========================
+     CLEAR CART ON LOGOUT
+  ========================= */
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setCart([]);
+      localStorage.removeItem("cart");
+    }
+  }, [isAuthenticated]);
 
   /* =========================
      PERSIST CART
   ========================= */
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+    if (isAuthenticated) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+  }, [cart, isAuthenticated]);
 
   /* =========================
      ADD TO CART
@@ -100,7 +114,6 @@ export const CartProvider = ({ children }) => {
 
   /* =========================
      REMOVE UNAVAILABLE ITEMS
-     (called when menu refreshes)
   ========================= */
   const syncCartWithMenu = (menuItems) => {
     setCart((prev) =>
@@ -156,7 +169,7 @@ export const CartProvider = ({ children }) => {
         clearCart,
         cartCount,
         cartTotal,
-        syncCartWithMenu, // 🔥 IMPORTANT
+        syncCartWithMenu,
       }}
     >
       {children}

@@ -10,7 +10,7 @@ import { Button } from "../components/ui/button";
 
 /* ================= HELPERS ================= */
 
-// SAFE TIME FORMAT (AUTO BROWSER TZ)
+// SAFE TIME FORMAT (IST)
 const formatIST = (date) => {
   if (!date) return "—";
 
@@ -21,7 +21,6 @@ const formatIST = (date) => {
     hour12: true,
   });
 };
-
 
 const statusColor = (status = "") => {
   const s = String(status).toLowerCase();
@@ -63,14 +62,14 @@ const AdminDashboard = () => {
       return;
     }
 
-    if (!["admin", "staff"].includes(user.role)) {
+    if (user.role !== "admin") {
       navigate("/", { replace: true });
     }
   }, [user, authLoading, navigate]);
 
   /* ================= FETCH ORDERS ================= */
   const fetchOrders = async (manual = false) => {
-    if (!user) return;
+    if (!user || user.role !== "admin") return;
 
     if (manual) {
       setRefreshing(true);
@@ -100,21 +99,35 @@ const AdminDashboard = () => {
 
   /* ================= AUTO REFRESH ================= */
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (!user || authLoading || user.role !== "admin") return;
 
     fetchOrders();
     const interval = setInterval(fetchOrders, 10000);
+
     return () => clearInterval(interval);
   }, [user, authLoading]);
 
-  if (authLoading || !user) return null;
+  /* ================= LOADING STATE ================= */
+  if (authLoading || loading) {
+    return (
+      <div className="p-10 text-center text-gray-500">
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   /* ================= DERIVED DATA ================= */
 
   const sortedOrders = useMemo(() => {
     return [...orders].sort((a, b) => {
-      const timeA = a?.created_at ? new Date(a.created_at).getTime() : 0;
-      const timeB = b?.created_at ? new Date(b.created_at).getTime() : 0;
+      const timeA = a?.created_at
+        ? new Date(a.created_at).getTime()
+        : 0;
+      const timeB = b?.created_at
+        ? new Date(b.created_at).getTime()
+        : 0;
       return timeA - timeB; // FIFO
     });
   }, [orders]);
@@ -132,19 +145,10 @@ const AdminDashboard = () => {
     0
   );
 
-  if (loading) {
-    return (
-      <div className="p-10 text-center text-gray-500">
-        Loading dashboard...
-      </div>
-    );
-  }
-
   /* ================= UI ================= */
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 bg-orange-50 min-h-screen rounded-2xl">
-
       {/* HEADER */}
       <div className="flex justify-between items-center flex-wrap gap-3">
         <h1 className="text-3xl font-extrabold text-orange-600 tracking-wide">
@@ -177,24 +181,15 @@ const AdminDashboard = () => {
           🧾 Counter Order
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/history")}
-        >
+        <Button variant="outline" onClick={() => navigate("/admin/history")}>
           Order History
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/menu")}
-        >
+        <Button variant="outline" onClick={() => navigate("/admin/menu")}>
           Menu Management
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/wallet")}
-        >
+        <Button variant="outline" onClick={() => navigate("/admin/wallet")}>
           Wallet Management
         </Button>
       </div>
@@ -231,59 +226,52 @@ const AdminDashboard = () => {
       </div>
 
       {/* ACTIVE ORDERS */}
-<Card className="p-6 rounded-2xl shadow bg-white">
-  <h2 className="text-xl font-bold text-orange-600 mb-4">
-    Active Orders (FIFO)
-  </h2>
+      <Card className="p-6 rounded-2xl shadow bg-white">
+        <h2 className="text-xl font-bold text-orange-600 mb-4">
+          Active Orders (FIFO)
+        </h2>
 
-  {activeOrders.length === 0 ? (
-    <p className="text-gray-500">No active orders right now.</p>
-  ) : (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="border-b bg-orange-50 text-left">
-          <th>Order</th>
-          <th>User</th>
-          <th>Payment</th>
-          <th>Total</th>
-          <th>Status</th>
-          <th>Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {activeOrders.map((o) => {
-          const isWalkIn = !o.user_name;
+        {activeOrders.length === 0 ? (
+          <p className="text-gray-500">No active orders right now.</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-orange-50 text-left">
+                <th>Order</th>
+                <th>User</th>
+                <th>Payment</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeOrders.map((o) => {
+                const isWalkIn = !o.user_name;
 
-          return (
-            <tr key={o._id} className="border-b hover:bg-orange-50">
-              <td className="font-medium">#{o.order_number}</td>
-
-              <td>{o.user_name || "Walk-in Customer"}</td>
-
-              <td>
-                {o.payment_method === "wallet"
-                  ? "Wallet"
-                  : o.payment_method === "counter"
-                  ? "Counter"
-                  : "Online"}
-              </td>
-
-              <td>₹{o.total_amount}</td>
-
-              {/* ✅ FIX HERE */}
-              <td className={!isWalkIn ? statusColor(o.status) : ""}>
-                {isWalkIn ? "-" : o.status}
-              </td>
-
-              <td>{formatIST(o.created_at)}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  )}
-</Card>
-
+                return (
+                  <tr key={o._id} className="border-b hover:bg-orange-50">
+                    <td className="font-medium">#{o.order_number}</td>
+                    <td>{o.user_name || "Walk-in Customer"}</td>
+                    <td>
+                      {o.payment_method === "wallet"
+                        ? "Wallet"
+                        : o.payment_method === "counter"
+                        ? "Counter"
+                        : "Online"}
+                    </td>
+                    <td>₹{o.total_amount}</td>
+                    <td className={!isWalkIn ? statusColor(o.status) : ""}>
+                      {isWalkIn ? "-" : o.status}
+                    </td>
+                    <td>{formatIST(o.created_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </div>
   );
 };

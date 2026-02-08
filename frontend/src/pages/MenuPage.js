@@ -1,4 +1,4 @@
-console.log("✅ MenuPage LOADED - NEW FILE");
+console.log("✅ MenuPage LOADED - FIXED FILE");
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
@@ -8,6 +8,8 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 
 import { getMenu, getMyWallet } from "../api";
+
+const BACKEND_URL = "https://e-canteen-7.onrender.com";
 
 const MenuPage = () => {
   const [menu, setMenu] = useState([]);
@@ -62,6 +64,7 @@ const MenuPage = () => {
         setWalletBalance(res.data?.balance ?? 0);
       } catch (err) {
         console.error("Wallet error ❌", err);
+        setWalletBalance(0);
       }
     };
 
@@ -131,7 +134,7 @@ const MenuPage = () => {
                       item.image
                         ? item.image.startsWith("http")
                           ? item.image
-                          : `https://e-canteen-4.onrender.com/uploads/${item.image}`
+                          : `${BACKEND_URL}/uploads/${item.image}`
                         : "/placeholder.png"
                     }
                     alt={item.name}

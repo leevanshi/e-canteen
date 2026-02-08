@@ -5,15 +5,14 @@ import axios from "axios";
    AXIOS INSTANCE
 ========================= */
 const API = axios.create({
-  baseURL:
-    "https://e-canteen-7.onrender.com",
+  baseURL: "https://e-canteen-7.onrender.com",
   headers: {
     "Content-Type": "application/json",
   },
   timeout: 60000,
 });
 
-// ✅ LOG AFTER INITIALIZATION (SAFE)
+// Debug (optional, safe)
 console.log("API BASE URL 👉", API.defaults.baseURL);
 
 /* =========================
@@ -49,78 +48,64 @@ API.interceptors.response.use(
    AUTH
 ========================= */
 export const loginUser = (data) =>
-  API.post("/api/auth/login", data);
+  API.post("/auth/login", data);
 
 export const registerUser = (data) =>
-  API.post("/api/auth/register", data);
-
+  API.post("/auth/register", data);
 
 /* =========================
    MENU
 ========================= */
-// GET /api/menu
 export const getMenu = () =>
-  API.get("/api/menu");
+  API.get("/menu");
 
-// GET /api/menu/all
 export const getAllMenu = () =>
-  API.get("/api/menu/all");
+  API.get("/menu/all");
 
 /* =========================
    ORDERS (USER)
 ========================= */
-// POST /api/orders
 export const createOrder = (data) =>
-  API.post("/api/orders", data);
+  API.post("/orders", data);
 
-// GET /api/orders
 export const getUserOrders = () =>
-  API.get("/api/orders");
+  API.get("/orders");
 
 /* =========================
    ADMIN
 ========================= */
-// GET /api/admin/orders
 export const getAdminOrders = () =>
-  API.get("/api/admin/orders");
+  API.get("/admin/orders");
 
-// GET /api/admin/orders/online
 export const getOnlineOrders = () =>
-  API.get("/api/admin/orders/online");
+  API.get("/admin/orders/online");
 
-// PUT /api/admin/orders/{order_id}/status
 export const updateOrderStatus = (orderId, status) =>
-  API.put(`/api/admin/orders/${orderId}/status`, { status });
+  API.put(`/admin/orders/${orderId}/status`, { status });
 
-// PUT /api/admin/menu/{menu_id}/availability
 export const toggleMenuAvailability = (itemId) =>
-  API.put(`/api/admin/menu/${itemId}/availability`);
+  API.put(`/admin/menu/${itemId}/availability`);
 
-// POST /api/admin/place-order
 export const placeCounterOrder = (data) =>
-  API.post("/api/admin/place-order", data);
+  API.post("/admin/place-order", data);
 
 /* =========================
    WALLET
 ========================= */
-// GET /api/wallet/me
 export const getMyWallet = () =>
-  API.get("/api/wallet/me");
+  API.get("/wallet/me");
 
-// POST /api/wallet/admin/add-money
 export const adminAddMoney = (data) =>
-  API.post("/api/wallet/admin/add-money", data);
+  API.post("/wallet/admin/add-money", data);
 
 /* =========================
    FEEDBACK
 ========================= */
-// POST /api/feedback
 export const submitFeedback = (data) =>
-  API.post("/api/feedback", data);
+  API.post("/feedback", data);
 
-// GET /api/feedback/admin
 export const getAllFeedback = () =>
-  API.get("/api/feedback/admin");
+  API.get("/feedback/admin");
 
 /* =========================
    LOGOUT

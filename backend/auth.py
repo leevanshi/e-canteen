@@ -28,12 +28,12 @@ pwd_context = CryptContext(
 )
 
 # ================= SCHEMAS =================
-class RegisterSchema(BaseModel):
-    name: str
+class LoginSchema(BaseModel):
     email: EmailStr
     password: str
 
-class LoginSchema(BaseModel):
+class AdminRegisterSchema(BaseModel):
+    name: str
     email: EmailStr
     password: str
 
@@ -65,9 +65,7 @@ def get_current_user(
                 detail="Invalid token"
             )
 
-        user = users_collection.find_one(
-            {"_id": ObjectId(user_id)}
-        )
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
 
         if not user:
             raise HTTPException(
@@ -76,10 +74,10 @@ def get_current_user(
             )
 
         return {
-            "id": str(user["_id"]),
+            "_id": str(user["_id"]),
             "name": user["name"],
             "email": user["email"],
-            "role": user["role"]
+            "role": user["role"],
         }
 
     except JWTError:
@@ -88,18 +86,17 @@ def get_current_user(
             detail="Invalid or expired token"
         )
 
-# ================= REGISTER (ADMIN) =================
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-def register_admin(data: RegisterSchema):
+# ================= ADMIN REGISTER =================
+@router.post("/admin/register", status_code=status.HTTP_201_CREATED)
+def register_admin(data: AdminRegisterSchema):
     if users_collection.find_one({"email": data.email}):
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise HTTPException(status_code=409, detail="User already exists")
 
     users_collection.insert_one({
         "name": data.name,
         "email": data.email,
         "password": hash_password(data.password),
         "role": "admin",
-        "is_wallet_initialized": False,
         "created_at": datetime.utcnow()
     })
 

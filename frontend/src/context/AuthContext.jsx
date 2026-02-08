@@ -51,25 +51,9 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  /* ================= WALLET UPDATE ================= */
-  const updateWallet = (balance) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-
-      const updatedUser = {
-        ...prev,
-        wallet_balance: balance,
-      };
-
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      return updatedUser;
-    });
-  };
-
   /* ================= ROLE HELPERS ================= */
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
-  const isStaff = user?.role === "staff";
 
   /* ================= CONTEXT VALUE ================= */
   return (
@@ -80,11 +64,9 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
-        updateWallet,
         isAuthenticated: Boolean(token),
         isAdmin,
         isStudent,
-        isStaff,
       }}
     >
       {!loading && children}
