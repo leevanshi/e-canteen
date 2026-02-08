@@ -1,36 +1,28 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-
+import API from "../api"; // ✅ central axios instance
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
 
-const API = "http://127.0.0.1:8000/api";
-
 const AdminWalletPage = () => {
   const { token } = useAuth();
-const navigate = useNavigate();
+  const navigate = useNavigate();
 
-  const [search, setSearch] = useState(""); // ✅ search state
+  const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
   const [amounts, setAmounts] = useState({});
   const [loading, setLoading] = useState(true);
 
-  /* 🔹 FETCH USERS WITH WALLET */
+  /* ================= FETCH USERS ================= */
   const fetchUsers = async () => {
     if (!token) return;
 
     try {
       setLoading(true);
-      const res = await axios.get(`${API}/admin/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const res = await API.get("/admin/users");
       setUsers(res.data || []);
     } catch (err) {
       console.error(err);
@@ -44,7 +36,7 @@ const navigate = useNavigate();
     fetchUsers();
   }, [token]);
 
-  /* 💸 ADD MONEY */
+  /* ================= ADD MONEY ================= */
   const addMoney = async (userId) => {
     const amount = parseFloat(amounts[userId]);
 
@@ -54,22 +46,14 @@ const navigate = useNavigate();
     }
 
     try {
-      await axios.post(
-        `${API}/wallet/admin/add-money`,
-        {
-          user_id: userId,
-          amount,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await API.post("/wallet/admin/add-money", {
+        user_id: userId,
+        amount,
+      });
 
       toast.success("Money credited 💸");
 
-      // ✅ UPDATE UI STATE
+      // ✅ Update UI instantly
       setUsers((prev) =>
         prev.map((u) =>
           u._id === userId
@@ -92,18 +76,16 @@ const navigate = useNavigate();
   };
 
   return (
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* HEADER */}
+      <div className="flex items-center gap-3">
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          ← Back
+        </Button>
+        <h1 className="text-3xl font-bold">Wallet Management</h1>
+      </div>
 
-     <div className="max-w-6xl mx-auto p-6 space-y-6">
-
-  <div className="flex items-center gap-3">
-    <Button variant="outline" onClick={() => navigate(-1)}>
-      ← Back
-    </Button>
-    <h1 className="text-3xl font-bold">Wallet Management</h1>
-  </div>
-
-
-      {/* 🔍 SEARCH BAR */}
+      {/* SEARCH */}
       <input
         type="text"
         placeholder="Search by name..."
@@ -118,7 +100,6 @@ const navigate = useNavigate();
         <p className="text-gray-500">No users found</p>
       ) : (
         users
-          // ✅ FILTER BY NAME (case-insensitive)
           .filter((u) =>
             u.name?.toLowerCase().includes(search.toLowerCase())
           )

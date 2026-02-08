@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "sonner";
+
+import API from "../api"; // ✅ central axios instance
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -14,8 +15,6 @@ import {
   CardDescription,
 } from "../components/ui/card";
 
-const API = "http://127.0.0.1:8000";
-
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
 
@@ -26,7 +25,6 @@ const ForgotPasswordPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (loading) return;
 
     if (!email || !newPassword || !confirmPassword) {
@@ -42,7 +40,7 @@ const ForgotPasswordPage = () => {
     try {
       setLoading(true);
 
-      await axios.post(`${API}/auth/reset-password`, {
+      await API.post("/auth/reset-password", {
         email: email.trim().toLowerCase(),
         password: newPassword,
       });
@@ -50,7 +48,7 @@ const ForgotPasswordPage = () => {
       toast.success("Password updated successfully");
       navigate("/login");
     } catch (err) {
-      console.error(err);
+      console.error("RESET PASSWORD ERROR:", err);
       toast.error(
         err?.response?.data?.detail || "Failed to update password"
       );
@@ -71,7 +69,6 @@ const ForgotPasswordPage = () => {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            
             {/* EMAIL */}
             <div>
               <Label>Email</Label>
@@ -102,13 +99,15 @@ const ForgotPasswordPage = () => {
               <Input
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) =>
+                  setConfirmPassword(e.target.value)
+                }
                 disabled={loading}
                 required
               />
             </div>
 
-            {/* SAVE BUTTON */}
+            {/* SAVE */}
             <Button
               type="submit"
               className="w-full bg-orange-500 hover:bg-orange-600"
@@ -127,7 +126,6 @@ const ForgotPasswordPage = () => {
             >
               Back to Login
             </Button>
-
           </form>
         </CardContent>
       </Card>

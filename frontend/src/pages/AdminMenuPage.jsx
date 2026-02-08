@@ -1,7 +1,7 @@
 // AdminMenuPage.jsx
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // ⭐ ADD
+import { useNavigate } from "react-router-dom";
 import API from "../api";
 import { toast } from "sonner";
 
@@ -9,7 +9,10 @@ const AdminMenuPage = () => {
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-  const navigate = useNavigate(); // ⭐ ADD
+  const navigate = useNavigate();
+
+  // 🔗 Use backend base URL from axios instance
+  const BASE_URL = API.defaults.baseURL;
 
   /* ================= FETCH MENU ================= */
   const fetchMenu = async () => {
@@ -36,7 +39,6 @@ const AdminMenuPage = () => {
 
     try {
       await API.put(`/admin/menu/${item._id}/availability`, {
-
         available: !item.available,
       });
 
@@ -80,20 +82,22 @@ const AdminMenuPage = () => {
           ← Back
         </button>
 
-        <h1 className="text-2xl font-bold">
-          Manage Menu
-        </h1>
+        <h1 className="text-2xl font-bold">Manage Menu</h1>
       </div>
 
       {menu.length === 0 && (
-        <p className="text-gray-500">
-          No menu items found.
-        </p>
+        <p className="text-gray-500">No menu items found.</p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {menu.map((item) => {
           const unavailable = item.available === false;
+
+          const imageUrl = item.image
+            ? item.image.startsWith("http")
+              ? item.image
+              : `${BASE_URL}/uploads/${item.image}`
+            : null;
 
           return (
             <div
@@ -103,13 +107,9 @@ const AdminMenuPage = () => {
               }`}
             >
               <div className="h-40 bg-gray-100 relative">
-                {item.image ? (
+                {imageUrl ? (
                   <img
-                    src={
-                      item.image.startsWith("http")
-                        ? item.image
-                        : `http://127.0.0.1:8000/uploads/${item.image}`
-                    }
+                    src={imageUrl}
                     alt={item.name}
                     className={`h-full w-full object-cover ${
                       unavailable ? "grayscale" : ""
@@ -129,19 +129,13 @@ const AdminMenuPage = () => {
               </div>
 
               <div className="p-4">
-                <h2 className="font-semibold text-lg">
-                  {item.name}
-                </h2>
+                <h2 className="font-semibold text-lg">{item.name}</h2>
 
-                <p className="text-gray-600">
-                  ₹{item.price}
-                </p>
+                <p className="text-gray-600">₹{item.price}</p>
 
                 <p
                   className={`text-sm mt-1 font-medium ${
-                    unavailable
-                      ? "text-red-600"
-                      : "text-green-600"
+                    unavailable ? "text-red-600" : "text-green-600"
                   }`}
                 >
                   {unavailable ? "Unavailable" : "Available"}
@@ -160,9 +154,7 @@ const AdminMenuPage = () => {
                       : ""
                   }`}
                 >
-                  {unavailable
-                    ? "Mark Available"
-                    : "Mark Unavailable"}
+                  {unavailable ? "Mark Available" : "Mark Unavailable"}
                 </button>
               </div>
             </div>

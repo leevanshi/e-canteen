@@ -1,108 +1,105 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
+import API from "../api"; // ✅ central axios instance
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { useAuth } from "../context/AuthContext";
 
-const API = "http://127.0.0.1:8000/api/";
+const MonthlyMenu = () => {
+  const navigate = useNavigate();
 
-const Wallet = () => {
-  const { token } = useAuth();
+  const [menu, setMenu] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [balance, setBalance] = useState(0);
-  const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
+  // 🔗 backend base URL (for PDF / uploads)
+  const BASE_URL = API.defaults.baseURL;
 
-  /* 🔁 FETCH WALLET BALANCE */
   useEffect(() => {
-    const fetchWallet = async () => {
+    const fetchMonthlyMenu = async () => {
       try {
-        const res = await axios.get(`${API}wallet`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await API.get("/monthly-menu");
 
-        setBalance(res.data.balance || 0);
+        const pdfUrl = res.data?.pdf_url
+          ? res.data.pdf_url.startsWith("http")
+            ? res.data.pdf_url
+            : `${BASE_URL}${res.data.pdf_url}`
+          : null;
+
+        setMenu({
+          ...res.data,
+          pdf_url: pdfUrl,
+        });
       } catch (err) {
-        console.error("Wallet fetch error:", err);
+        console.error(err);
+        setError("Monthly menu not available");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchWallet();
-  }, [token]);
+    fetchMonthlyMenu();
+  }, [BASE_URL]);
 
-  /* ➕ ADD MONEY */
-  const handleAddMoney = async () => {
-    if (!amount || amount <= 0) {
-      toast.error("Enter valid amount");
-      return;
-    }
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading monthly menu...
+      </div>
+    );
+  }
 
-    try {
-      setLoading(true);
-
-      const res = await axios.post(
-        `${API}wallet/add`,
-        { amount: Number(amount) },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setBalance(res.data.balance);
-      setAmount("");
-      toast.success("Money added successfully 💸");
-    } catch (err) {
-      console.error("Add money error:", err);
-      toast.error("Failed to add money");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (error || !menu?.pdf_url) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-gray-500">
+        <p>Monthly menu not uploaded yet</p>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          ← Back
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">My Wallet</h1>
+    <div className="p-6 max-w-5xl mx-auto">
+      {/* BACK BUTTON */}
+      <Button
+        variant="outline"
+        onClick={() => navigate(-1)}
+        className="mb-4"
+      >
+        ← Back
+      </Button>
 
-      {/* 💰 BALANCE */}
-      <Card className="mb-6 rounded-2xl shadow">
-        <CardContent className="p-6 text-center">
-          <p className="text-gray-500">Current Balance</p>
-          <h2 className="text-4xl font-bold text-green-600 mt-2">
-            ₹{balance}
-          </h2>
-        </CardContent>
-      </Card>
+      <h1 className="text-2xl font-semibold mb-6 text-center">
+        Monthly Menu {menu.month ? `– ${menu.month}` : ""}
+      </h1>
 
-      {/* ➕ ADD MONEY */}
-      <Card className="rounded-2xl shadow">
-        <CardContent className="p-6 space-y-4">
-          <h3 className="text-lg font-semibold">Add Money</h3>
-
-          <input
-            type="number"
-            placeholder="Enter amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="border p-2 rounded w-full"
+      <Card className="shadow-sm">
+        <CardContent className="p-4 space-y-4">
+          {/* PDF PREVIEW */}
+          <iframe
+            src={`${menu.pdf_url}#toolbar=0`}
+            title="Monthly Menu PDF"
+            className="w-full h-[600px] border rounded"
           />
 
-          <Button
-            onClick={handleAddMoney}
-            disabled={loading}
-            className="w-full bg-orange-500"
-          >
-            {loading ? "Adding..." : "Add Money"}
-          </Button>
+          {/* DOWNLOAD */}
+          <div className="text-center">
+            <a
+              href={menu.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="inline-block bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600 transition"
+            >
+              Download Monthly Menu (PDF)
+            </a>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default Wallet;
+export default MonthlyMenu;

@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
+import API from "../api"; // ✅ central axios instance
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-
-const API = "http://127.0.0.1:8000/api";
-const BASE_URL = "http://127.0.0.1:8000";
 
 const MonthlyMenu = () => {
   const navigate = useNavigate();
@@ -15,10 +12,13 @@ const MonthlyMenu = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // 🔗 backend base URL (for PDF / uploads)
+  const BASE_URL = API.defaults.baseURL;
+
   useEffect(() => {
     const fetchMonthlyMenu = async () => {
       try {
-        const res = await axios.get(`${API}/monthly-menu`);
+        const res = await API.get("/monthly-menu");
 
         const pdfUrl = res.data?.pdf_url
           ? res.data.pdf_url.startsWith("http")
@@ -31,6 +31,7 @@ const MonthlyMenu = () => {
           pdf_url: pdfUrl,
         });
       } catch (err) {
+        console.error(err);
         setError("Monthly menu not available");
       } finally {
         setLoading(false);
@@ -38,7 +39,7 @@ const MonthlyMenu = () => {
     };
 
     fetchMonthlyMenu();
-  }, []);
+  }, [BASE_URL]);
 
   if (loading) {
     return (
@@ -61,7 +62,6 @@ const MonthlyMenu = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-
       {/* BACK BUTTON */}
       <Button
         variant="outline"
@@ -77,7 +77,6 @@ const MonthlyMenu = () => {
 
       <Card className="shadow-sm">
         <CardContent className="p-4 space-y-4">
-
           {/* PDF PREVIEW */}
           <iframe
             src={`${menu.pdf_url}#toolbar=0`}
@@ -85,7 +84,7 @@ const MonthlyMenu = () => {
             className="w-full h-[600px] border rounded"
           />
 
-          {/* DOWNLOAD BUTTON */}
+          {/* DOWNLOAD */}
           <div className="text-center">
             <a
               href={menu.pdf_url}
@@ -97,7 +96,6 @@ const MonthlyMenu = () => {
               Download Monthly Menu (PDF)
             </a>
           </div>
-
         </CardContent>
       </Card>
     </div>
