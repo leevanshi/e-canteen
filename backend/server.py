@@ -27,16 +27,14 @@ def hash_password(password: str):
     return pwd_context.hash(password)
 
 # ================= CORS =================
-origins = os.getenv("CORS_ORIGINS")
 
-if origins:
-    origins = [o.strip() for o in origins.split(",")]
-else:
-    origins = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://ecanteen-nmims.vercel.app",
-    ]
+# ================= CORS =================
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://ecanteen-nmims.vercel.app",
+    "https://e-canteen-8x4z75rb5-leevanshis-projects.vercel.app",  # 🔥 ADD THIS
+]
 
 app.add_middleware(
     CORSMiddleware,
