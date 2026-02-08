@@ -23,7 +23,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  /* ✅ SAFE REDIRECT AFTER LOGIN */
+  /* ================= REDIRECT AFTER LOGIN ================= */
   useEffect(() => {
     if (!user) return;
 
@@ -34,6 +34,7 @@ const LoginPage = () => {
     }
   }, [user, navigate]);
 
+  /* ================= LOGIN HANDLER ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
@@ -46,23 +47,23 @@ const LoginPage = () => {
     setSubmitting(true);
 
     try {
-      // ✅ CORRECT ENDPOINT (as per Swagger)
-  const res = await API.post("/api/auth/login", {
-
+      // ✅ CORRECT & FINAL ENDPOINT
+      const res = await API.post("/api/auth/login", {
         email: email.trim().toLowerCase(),
         password,
       });
 
-      // ✅ BACKEND SENDS access_token
-      const token = res.data.access_token;
-      if (!token) {
-        throw new Error("Token missing in response");
+      const token = res.data?.access_token;
+      const userRes = res.data?.user;
+
+      if (!token || !userRes) {
+        throw new Error("Invalid login response");
       }
 
       const userData = {
-        id: res.data.user.id,
-        email: res.data.user.email,
-        role: res.data.user.role.toLowerCase(),
+        id: userRes.id,
+        email: userRes.email,
+        role: userRes.role.toLowerCase(),
       };
 
       login(userData, token);
@@ -82,9 +83,7 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-orange-50">
       <Card className="w-full max-w-md rounded-2xl shadow-lg">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">
-            Login
-          </CardTitle>
+          <CardTitle className="text-center text-2xl">Login</CardTitle>
         </CardHeader>
 
         <CardContent>

@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Coffee, Loader2 } from "lucide-react";
 
-import { registerUser } from "../api"; // ✅ central API helper
+import { registerUser } from "../api";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -21,9 +21,9 @@ const RegisterPage = () => {
   const { role } = useParams();
   const [loading, setLoading] = useState(false);
 
-  /* 🚫 BLOCK INVALID ROLE */
+  /* ================= VALIDATE ROLE ================= */
   useEffect(() => {
-    if (!["student", "faculty", "admin"].includes(role)) {
+    if (!["student", "staff", "admin"].includes(role)) {
       navigate("/join", { replace: true });
     }
   }, [role, navigate]);
@@ -38,6 +38,7 @@ const RegisterPage = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  /* ================= REGISTER ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -52,12 +53,11 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      // ✅ FINAL, CORRECT REGISTER CALL
       await registerUser({
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
-        role,
+        role, // student | staff | admin
       });
 
       toast.success("Account registered successfully. Please login.");
