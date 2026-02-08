@@ -8,16 +8,16 @@ import { CartProvider } from "./context/CartContext";
 
 import "./index.css";
 
-
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
-  <BrowserRouter>
-    <AuthProvider>
-      <CartProvider>
-        <App />
-       
-      </CartProvider>
-    </AuthProvider>
-  </BrowserRouter>
+  <React.StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <CartProvider>
+          <App />
+        </CartProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>
 );
