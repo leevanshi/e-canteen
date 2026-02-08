@@ -12,9 +12,6 @@ const API = axios.create({
   timeout: 60000,
 });
 
-// Debug (optional, safe)
-console.log("API BASE URL 👉", API.defaults.baseURL);
-
 /* =========================
    REQUEST INTERCEPTOR
 ========================= */
