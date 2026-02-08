@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "../components/ui/axios";
 import { CheckCircle, Clock } from "lucide-react";
+
+import API from "../api"; // ✅ correct import
 import { Button } from "../components/ui/button";
 
 const OrderDetails = () => {
@@ -17,7 +18,7 @@ const OrderDetails = () => {
     if (!orderId) return;
 
     try {
-      const res = await axios.get(`/api/orders/${orderId}`);
+      const res = await API.get(`/orders/${orderId}`);
       setOrder(res?.data || null);
     } catch (err) {
       console.error("Failed to fetch order", err);
@@ -53,10 +54,18 @@ const OrderDetails = () => {
   }, [orderId]);
 
   if (loading)
-    return <p className="text-center mt-10 text-gray-500">Loading...</p>;
+    return (
+      <p className="text-center mt-10 text-gray-500">
+        Loading...
+      </p>
+    );
 
   if (!order)
-    return <p className="text-center text-red-500 mt-10">Order not found</p>;
+    return (
+      <p className="text-center text-red-500 mt-10">
+        Order not found
+      </p>
+    );
 
   const status = String(order.status || "pending").toLowerCase();
   const steps = ["confirmed", "preparing", "ready", "completed"];
@@ -67,8 +76,7 @@ const OrderDetails = () => {
 
   return (
     <div className="relative max-w-3xl mx-auto mt-10">
-      
-      {/* BACK BUTTON TOP LEFT */}
+      {/* BACK BUTTON */}
       <Button
         variant="outline"
         onClick={() => navigate(-1)}
@@ -78,12 +86,16 @@ const OrderDetails = () => {
       </Button>
 
       <div className="bg-white p-6 rounded-xl shadow mt-8">
-        <h2 className="text-2xl font-bold mb-4">Order #{displayId}</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          Order #{displayId}
+        </h2>
 
-        {/* STATUS BADGE */}
+        {/* STATUS */}
         <div className="flex items-center gap-2 bg-green-50 p-3 rounded mb-4">
           <CheckCircle className="text-green-600" />
-          <span className="font-semibold capitalize">{status}</span>
+          <span className="font-semibold capitalize">
+            {status}
+          </span>
         </div>
 
         {/* DATES */}
@@ -121,7 +133,9 @@ const OrderDetails = () => {
               >
                 {i <= currentStep ? "✔" : <Clock size={16} />}
               </div>
-              <p className="text-sm mt-1 capitalize">{s}</p>
+              <p className="text-sm mt-1 capitalize">
+                {s}
+              </p>
             </div>
           ))}
         </div>
@@ -129,11 +143,16 @@ const OrderDetails = () => {
         {/* ITEMS */}
         <div className="mt-6 space-y-1">
           {order.items?.map((i, idx) => (
-            <div key={idx} className="flex justify-between text-sm">
+            <div
+              key={idx}
+              className="flex justify-between text-sm"
+            >
               <span>
                 {i.name} × {i.quantity}
               </span>
-              <span>₹{(i.price || 0) * (i.quantity || 1)}</span>
+              <span>
+                ₹{(i.price || 0) * (i.quantity || 1)}
+              </span>
             </div>
           ))}
 
@@ -143,7 +162,7 @@ const OrderDetails = () => {
           </div>
         </div>
 
-        {/* READY BANNER */}
+        {/* READY */}
         {status === "ready" && (
           <div className="mt-6 bg-green-100 p-4 text-center rounded font-bold animate-pulse">
             🎉 Ready for pickup!

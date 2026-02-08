@@ -1,9 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Confetti from "react-confetti";
-import axios from "../components/ui/axios";
 import { toast } from "sonner";
 
+import API from "../api"; // ✅ correct axios instance
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { CheckCircle } from "lucide-react";
@@ -18,7 +18,7 @@ const OrderSuccessPage = () => {
   const [feedback, setFeedback] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  /* FETCH ORDER */
+  /* ================= FETCH ORDER ================= */
   useEffect(() => {
     if (!id) {
       navigate("/menu", { replace: true });
@@ -27,7 +27,7 @@ const OrderSuccessPage = () => {
 
     const fetchOrder = async () => {
       try {
-        const res = await axios.get(`/orders/${id}`);
+        const res = await API.get(`/orders/${id}`);
         setOrder(res?.data ?? null);
       } catch {
         navigate("/orders");
@@ -40,7 +40,7 @@ const OrderSuccessPage = () => {
     return () => clearTimeout(timer);
   }, [id, navigate]);
 
-  /* SUBMIT FEEDBACK */
+  /* ================= SUBMIT FEEDBACK ================= */
   const submitFeedback = async () => {
     if (!rating) {
       toast.error("Please select a rating");
@@ -50,7 +50,7 @@ const OrderSuccessPage = () => {
     try {
       setSubmitted(true);
 
-      await axios.post("/feedback", {
+      await API.post("/feedback", {
         order_id: id,
         rating,
         feedback: feedback || "",
@@ -77,7 +77,7 @@ const OrderSuccessPage = () => {
     <div className="min-h-screen flex items-center justify-center bg-green-50 p-4 relative overflow-hidden">
       {showConfetti && <Confetti recycle={false} />}
 
-      {/* BACK BUTTON TOP LEFT */}
+      {/* BACK */}
       <Button
         variant="outline"
         onClick={() => navigate(-1)}
@@ -118,9 +118,11 @@ const OrderSuccessPage = () => {
             </p>
           </div>
 
-          {/* ⭐ RATING */}
+          {/* RATING */}
           <div className="mt-3">
-            <p className="font-medium mb-1">Rate your experience</p>
+            <p className="font-medium mb-1">
+              Rate your experience
+            </p>
             <div className="flex justify-center gap-2 text-3xl">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -128,7 +130,9 @@ const OrderSuccessPage = () => {
                   disabled={submitted}
                   onClick={() => setRating(star)}
                   className={
-                    star <= rating ? "text-yellow-400" : "text-gray-300"
+                    star <= rating
+                      ? "text-yellow-400"
+                      : "text-gray-300"
                   }
                 >
                   ★
@@ -137,7 +141,7 @@ const OrderSuccessPage = () => {
             </div>
           </div>
 
-          {/* FEEDBACK BOX */}
+          {/* FEEDBACK */}
           <textarea
             placeholder="Any feedback? (optional)"
             className="w-full border rounded p-2 text-sm"
@@ -146,7 +150,7 @@ const OrderSuccessPage = () => {
             onChange={(e) => setFeedback(e.target.value)}
           />
 
-          {/* ACTION BUTTONS */}
+          {/* ACTIONS */}
           <div className="flex gap-3 justify-center mt-4">
             <Button
               onClick={submitFeedback}

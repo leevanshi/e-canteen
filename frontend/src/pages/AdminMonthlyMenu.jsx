@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import axios from "../components/ui/axios";
-import { Button } from "../components/ui/button";
+import { useState } from "react";
 import { toast } from "sonner";
+
+import API from "../api"; // ✅ correct import
+import { Button } from "../components/ui/button";
 
 const AdminMonthlyMenu = () => {
   const [file, setFile] = useState(null);
@@ -18,13 +19,21 @@ const AdminMonthlyMenu = () => {
 
     try {
       setUploading(true);
-      await axios.post("/api/admin/monthly-menu/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+
+      await API.post(
+        "/admin/monthly-menu/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       toast.success("Monthly menu uploaded successfully");
       setFile(null);
     } catch (err) {
+      console.error(err);
       toast.error("Upload failed");
     } finally {
       setUploading(false);
