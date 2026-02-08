@@ -1,46 +1,40 @@
+console.log("✅ MenuPage LOADED - NEW FILE");
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 
-import API from "../api";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+
+import { getMenu, getMyWallet } from "../api";
 
 const MenuPage = () => {
   const [menu, setMenu] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const [search, setSearch] = useState(""); // ✅ search state
+  const [search, setSearch] = useState("");
 
   const { token } = useAuth();
-
-  const {
-    addToCart,
-    increaseQty,
-    decreaseQty,
-    getQuantity,
-  } = useCart();
+  const { addToCart, increaseQty, decreaseQty, getQuantity } = useCart();
 
   /* ================= 🍽️ FETCH MENU ================= */
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const res = await API.get("/menu");
+        const res = await getMenu();
 
         console.log("MENU RESPONSE 👉", res.data);
 
-        let items =
-          Array.isArray(res.data)
-            ? res.data
-            : Array.isArray(res.data?.menu)
-            ? res.data.menu
-            : Array.isArray(res.data?.data)
-            ? res.data.data
-            : [];
+        let items = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.menu)
+          ? res.data.menu
+          : Array.isArray(res.data?.data)
+          ? res.data.data
+          : [];
 
-        // Ensure _id exists
         items = items.map((item, index) => ({
           ...item,
           _id: item._id || item.id || index.toString(),
@@ -64,7 +58,7 @@ const MenuPage = () => {
 
     const fetchWallet = async () => {
       try {
-        const res = await API.get("/wallet/me");
+        const res = await getMyWallet();
         setWalletBalance(res.data?.balance ?? 0);
       } catch (err) {
         console.error("Wallet error ❌", err);
@@ -76,7 +70,7 @@ const MenuPage = () => {
 
   /* ================= 🔍 FILTER ================= */
   const filteredMenu = menu.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
+    item.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) {
@@ -89,7 +83,6 @@ const MenuPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
-
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Menu</h1>
@@ -133,13 +126,12 @@ const MenuPage = () => {
                 }`}
               >
                 <CardContent className="p-4 flex flex-col gap-3">
-
                   <img
                     src={
                       item.image
                         ? item.image.startsWith("http")
                           ? item.image
-                          : `http://127.0.0.1:8000/uploads/${item.image}`
+                          : `https://e-canteen-4.onrender.com/uploads/${item.image}`
                         : "/placeholder.png"
                     }
                     alt={item.name}
@@ -148,10 +140,7 @@ const MenuPage = () => {
                     }`}
                   />
 
-                  <h2 className="text-lg font-semibold">
-                    {item.name}
-                  </h2>
-
+                  <h2 className="text-lg font-semibold">{item.name}</h2>
                   <p className="font-bold">₹{item.price}</p>
 
                   {unavailable ? (
@@ -176,7 +165,6 @@ const MenuPage = () => {
                       <Button onClick={() => increaseQty(id)}>+</Button>
                     </div>
                   )}
-
                 </CardContent>
               </Card>
             );

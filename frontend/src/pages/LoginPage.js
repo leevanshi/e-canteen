@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import API from "../api";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -15,19 +15,17 @@ import {
   CardContent,
 } from "../components/ui/card";
 
-const API = "http://127.0.0.1:8000";
-
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  /* SAFE REDIRECT AFTER LOGIN */
+  /* ✅ SAFE REDIRECT AFTER LOGIN */
   useEffect(() => {
-    if (!user || !user.role) return;
+    if (!user) return;
 
     if (user.role === "admin") {
       navigate("/admin/dashboard", { replace: true });
@@ -38,43 +36,33 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loading) return;
+    if (submitting) return;
 
     if (!email || !password) {
       toast.error("Please fill all fields");
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
 
     try {
-      const res = await axios.post(
-        `${API}/auth/login`,
-        {
-          email: email.trim().toLowerCase(),
-          password,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      // ✅ CORRECT ENDPOINT (as per Swagger)
+  const res = await API.post("/api/auth/login", {
 
-      const token =
-        res.data.token ||
-        res.data.access_token ||
-        res.data.jwt;
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-      if (!token) throw new Error("Token missing");
-
-      const rawRole =
-        res.data.user?.role ||
-        res.data.role ||
-        "student";
+      // ✅ BACKEND SENDS access_token
+      const token = res.data.access_token;
+      if (!token) {
+        throw new Error("Token missing in response");
+      }
 
       const userData = {
-        id: res.data.user?.id || res.data.user_id,
-        email: res.data.user?.email || res.data.email,
-        role: rawRole.toLowerCase(),
+        id: res.data.user.id,
+        email: res.data.user.email,
+        role: res.data.user.role.toLowerCase(),
       };
 
       login(userData, token);
@@ -86,7 +74,7 @@ const LoginPage = () => {
           "Invalid email or password"
       );
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -101,38 +89,34 @@ const LoginPage = () => {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* EMAIL */}
             <div>
               <Label>Email</Label>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
+                disabled={submitting}
               />
             </div>
 
-            {/* PASSWORD */}
             <div>
               <Label>Password</Label>
               <Input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
+                disabled={submitting}
               />
             </div>
 
-            {/* LOGIN BUTTON */}
             <Button
               type="submit"
               className="w-full bg-orange-500 hover:bg-orange-600"
-              disabled={loading}
+              disabled={submitting}
             >
-              {loading ? "Logging in..." : "Login"}
+              {submitting ? "Logging in..." : "Login"}
             </Button>
 
-            {/* FORGOT PASSWORD */}
             <p className="text-center text-sm">
               <Link
                 to="/forgot-password"
@@ -142,7 +126,6 @@ const LoginPage = () => {
               </Link>
             </p>
 
-            {/* REGISTER LINK 🔥 */}
             <p className="text-center text-sm">
               Don’t have an account?{" "}
               <Link
@@ -153,13 +136,12 @@ const LoginPage = () => {
               </Link>
             </p>
 
-            {/* BACK BUTTON */}
             <Button
               type="button"
               variant="outline"
               className="w-full"
               onClick={() => navigate("/")}
-              disabled={loading}
+              disabled={submitting}
             >
               Back to Home
             </Button>

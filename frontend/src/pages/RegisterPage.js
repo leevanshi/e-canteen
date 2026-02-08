@@ -1,10 +1,9 @@
-// src/pages/RegisterPage.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import API from "../api";
-
 import { toast } from "sonner";
 import { Coffee, Loader2 } from "lucide-react";
+
+import { registerUser } from "../api"; // ✅ central API helper
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -16,8 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-
-
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -43,34 +40,39 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
 
-    if (!formData.name || !formData.email || !formData.password) {
+    const { name, email, password } = formData;
+
+    if (!name || !email || !password) {
       toast.error("Please fill all fields");
       return;
     }
 
     setLoading(true);
 
+    try {
+      // ✅ FINAL, CORRECT REGISTER CALL
+      await registerUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        role,
+      });
 
-  try {
-    await API.post("/api/register", {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role,
-    });
-
-    toast.success("Account registered successfully. Please login.");
-    navigate("/login", { replace: true });
+      toast.success("Account registered successfully. Please login.");
+      navigate("/login", { replace: true });
     } catch (err) {
       console.error("REGISTER ERROR:", err);
 
-      if (err.response?.status === 409) {
+      if (err?.response?.status === 409) {
         toast.info("Account already exists. Please login.");
         navigate("/login", { replace: true });
       } else {
         toast.error(
-          err.response?.data?.detail || "Registration failed"
+          err?.response?.data?.detail ||
+            err?.message ||
+            "Registration failed"
         );
       }
     } finally {
@@ -100,6 +102,7 @@ const RegisterPage = () => {
                 onChange={(e) =>
                   handleChange("name", e.target.value)
                 }
+                disabled={loading}
               />
             </div>
 
@@ -112,6 +115,7 @@ const RegisterPage = () => {
                 onChange={(e) =>
                   handleChange("email", e.target.value)
                 }
+                disabled={loading}
               />
             </div>
 
@@ -124,10 +128,12 @@ const RegisterPage = () => {
                 onChange={(e) =>
                   handleChange("password", e.target.value)
                 }
+                disabled={loading}
               />
             </div>
 
             <Button
+              type="submit"
               disabled={loading}
               className="w-full bg-orange-500 hover:bg-orange-600"
             >

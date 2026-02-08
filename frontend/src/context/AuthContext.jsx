@@ -2,7 +2,6 @@ import {
   createContext,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -12,9 +11,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // 🔒 Prevent double-login in React StrictMode
-  const loginOnceRef = useRef(false);
 
   /* ================= RESTORE AUTH ================= */
   useEffect(() => {
@@ -37,15 +33,22 @@ export const AuthProvider = ({ children }) => {
 
   /* ================= LOGIN ================= */
   const login = (userData, authToken) => {
-    if (loginOnceRef.current) return;
-    loginOnceRef.current = true;
+    if (!authToken || !userData) return;
 
-    // 🔑 backend-compatible storage
     localStorage.setItem("token", authToken);
     localStorage.setItem("user", JSON.stringify(userData));
 
     setToken(authToken);
     setUser(userData);
+  };
+
+  /* ================= LOGOUT ================= */
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setToken(null);
+    setUser(null);
   };
 
   /* ================= WALLET UPDATE ================= */
@@ -63,18 +66,9 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  /* ================= LOGOUT ================= */
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    loginOnceRef.current = false;
-    setToken(null);
-    setUser(null);
-  };
-
   /* ================= ROLE HELPERS ================= */
   const isAdmin = user?.role === "admin";
+  const isStudent = user?.role === "student";
   const isStaff = user?.role === "staff";
 
   /* ================= CONTEXT VALUE ================= */
@@ -89,6 +83,7 @@ export const AuthProvider = ({ children }) => {
         updateWallet,
         isAuthenticated: Boolean(token),
         isAdmin,
+        isStudent,
         isStaff,
       }}
     >
