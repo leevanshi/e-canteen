@@ -8,6 +8,7 @@ bcrypt==4.1.3
 black==25.12.0
 boto3==1.42.16
 botocore==1.42.16
+passlib[bcrypt]
 cachetools==6.2.4
 certifi==2025.11.12
 cffi==2.0.0

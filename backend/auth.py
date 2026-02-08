@@ -1,25 +1,31 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr
-from pymongo import MongoClient
+from database import users_collection
 from passlib.context import CryptContext
-from datetime import datetime
-from jose import jwt
+from datetime import datetime, timedelta
+from jose import jwt, JWTError
+from bson import ObjectId
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 
 # ================= ROUTER =================
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
-router = APIRouter(prefix="/api/auth", tags=["Auth"])
+# ================= SECURITY =================
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY not set")
 
-# ================= CONFIG =================
-SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = 7
 
-# ================= DB =================
-client = MongoClient("mongodb://localhost:27017")
-db = client["ecanteen"]
-users = db["users"]
+security = HTTPBearer()
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=10
+)
 
 # ================= SCHEMAS =================
 class RegisterSchema(BaseModel):
@@ -32,24 +38,42 @@ class LoginSchema(BaseModel):
     password: str
 
 # ================= HELPERS =================
-def hash_password(password: str):
+def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-def verify_password(plain, hashed):
+def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-def create_token(data: dict):
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+def create_token(data: dict) -> str:
+    payload = data.copy()
+    payload["exp"] = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_user(token: str = Depends(lambda: None)):
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+# ================= CURRENT USER =================
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user = users.find_one({"_id": payload["id"]})
+        user_id = payload.get("id")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+
+        user = users_collection.find_one(
+            {"_id": ObjectId(user_id)}
+        )
+
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
 
         return {
             "id": str(user["_id"]),
@@ -58,16 +82,19 @@ def get_current_user(token: str = Depends(lambda: None)):
             "role": user["role"]
         }
 
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
 
-# ================= REGISTER =================
+# ================= REGISTER (ADMIN) =================
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_admin(data: RegisterSchema):
-    if users.find_one({"email": data.email}):
+    if users_collection.find_one({"email": data.email}):
         raise HTTPException(status_code=400, detail="User already exists")
 
-    users.insert_one({
+    users_collection.insert_one({
         "name": data.name,
         "email": data.email,
         "password": hash_password(data.password),
@@ -81,7 +108,8 @@ def register_admin(data: RegisterSchema):
 # ================= LOGIN =================
 @router.post("/login")
 def login(data: LoginSchema):
-    user = users.find_one({"email": data.email})
+    user = users_collection.find_one({"email": data.email})
+
     if not user or not verify_password(data.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 

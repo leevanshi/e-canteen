@@ -10,7 +10,11 @@ from passlib.context import CryptContext
 import os
 from fastapi.responses import Response
 from fastapi import Request
+from dotenv import load_dotenv
+from routes.auth import get_current_user
 
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 # ================= TIMEZONE =================
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -25,17 +29,26 @@ def hash_password(password: str):
     return pwd_context.hash(password)
 
 # ================= CORS =================
+# ================= CORS =================
+origins = os.getenv("CORS_ORIGINS")
+
+if origins:
+    origins = [o.strip() for o in origins.split(",")]
+else:
+    # fallback for local + production
+    origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://e-canteen.vercel.app",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://ecanteen-nmims.vercel.app",
-        "http://localhost:3000",
-    ],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"],  # REQUIRED for Authorization
 )
-
 
 # ================= DATABASE =================
 from database import (
@@ -51,13 +64,13 @@ from routes.menu import router as menu_router
 from routes.orders import router as orders_router
 from routes.admin import router as admin_router
 from routes.feedback import router as feedback_router
-from routes.auth import get_current_user
-app.include_router(auth_router)   # 🔥 THIS LINE
-app.include_router(wallet_router)
-app.include_router(menu_router)
-app.include_router(orders_router)
-app.include_router(admin_router)
-app.include_router(feedback_router)
+
+app.include_router(auth_router, prefix="/api")
+app.include_router(wallet_router, prefix="/api")
+app.include_router(menu_router, prefix="/api")
+app.include_router(orders_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(feedback_router, prefix="/api")
 
 
 
