@@ -100,7 +100,10 @@ def register_admin(data: AdminRegisterSchema):
         "created_at": datetime.utcnow()
     })
 
-    return {"message": "Admin registered successfully"}
+    return {
+        "success": True,
+        "message": "Admin registered successfully"
+    }
 
 # ================= LOGIN =================
 @router.post("/login")
@@ -116,6 +119,7 @@ def login(data: LoginSchema):
     })
 
     return {
+        "success": True,  # 🔥 REQUIRED FOR FRONTEND
         "token": token,
         "user": {
             "id": str(user["_id"]),
