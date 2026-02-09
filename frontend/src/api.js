@@ -9,7 +9,7 @@ const API = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000,
+  timeout: 60000, // Render cold start safe
 });
 
 /* =========================
@@ -18,9 +18,11 @@ const API = axios.create({
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -32,11 +34,19 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401) {
+    const status = error?.response?.status;
+
+    // 🔒 Token expired / invalid
+    if (status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.replace("/login");
+
+      // prevent redirect loop
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -110,7 +120,10 @@ export const getAllFeedback = () =>
 export const logout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  window.location.replace("/login");
+
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
 };
 
 export default API;

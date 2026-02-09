@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext(null);
 
@@ -24,16 +19,19 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Auth restore failed:", err);
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      localStorage.clear();
     } finally {
       setLoading(false);
     }
   }, []);
 
   /* ================= LOGIN ================= */
+  // authToken MUST be access_token from backend
   const login = (userData, authToken) => {
-    if (!authToken || !userData) return;
+    if (!authToken || !userData) {
+      console.error("Invalid login data");
+      return;
+    }
 
     localStorage.setItem("token", authToken);
     localStorage.setItem("user", JSON.stringify(userData));
@@ -55,7 +53,6 @@ export const AuthProvider = ({ children }) => {
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
 
-  /* ================= CONTEXT VALUE ================= */
   return (
     <AuthContext.Provider
       value={{
@@ -64,7 +61,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
-        isAuthenticated: Boolean(token),
+        isAuthenticated: !!token,
         isAdmin,
         isStudent,
       }}
