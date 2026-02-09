@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -17,13 +17,12 @@ import {
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  /* ================= LOGIN HANDLER ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
@@ -42,9 +41,9 @@ const LoginPage = () => {
       });
 
       const token = res.data?.access_token;
-      const userRes = res.data?.user;
+      const user = res.data?.user;
 
-      // ✅ ONLY HARD REQUIREMENT
+      // 🔥 ONLY CHECK THAT MATTERS
       if (!token) {
         toast.error("Login failed");
         return;
@@ -52,17 +51,17 @@ const LoginPage = () => {
 
       login(
         {
-          id: userRes?.id,
-          email: userRes?.email,
-          role: userRes?.role,
+          id: user?.id,
+          email: user?.email,
+          role: user?.role,
         },
         token
       );
 
       toast.success("Login successful");
 
-      // ✅ FORCE NAVIGATION (no waiting for effect)
-      if (userRes?.role === "admin") {
+      // 🚀 Immediate redirect
+      if (user?.role === "admin") {
         navigate("/admin/dashboard", { replace: true });
       } else {
         navigate("/menu", { replace: true });
