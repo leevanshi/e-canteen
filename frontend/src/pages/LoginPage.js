@@ -52,13 +52,13 @@ const LoginPage = () => {
         password,
       });
 
-      console.log("LOGIN RESPONSE:", res.data); // 🔍 debug (optional)
+      console.log("LOGIN RESPONSE:", res.data);
 
-      // 🔥 FIX IS HERE
+      // ✅ ONLY TOKEN CHECK (SOURCE OF TRUTH)
       const token = res.data?.access_token;
-      const userRes = res.data?.user;
+      const userRes = res.data?.user || {};
 
-      if (!token || !userRes) {
+      if (!token) {
         throw new Error("Invalid login response");
       }
 
