@@ -47,13 +47,15 @@ const LoginPage = () => {
     setSubmitting(true);
 
     try {
-      // ✅ CORRECT ENDPOINT
       const res = await API.post("/auth/login", {
         email: email.trim().toLowerCase(),
         password,
       });
 
-      const token = res.data?.token;
+      console.log("LOGIN RESPONSE:", res.data); // 🔍 debug (optional)
+
+      // 🔥 FIX IS HERE
+      const token = res.data?.access_token;
       const userRes = res.data?.user;
 
       if (!token || !userRes) {
@@ -62,7 +64,6 @@ const LoginPage = () => {
 
       const userData = {
         id: userRes.id,
-        name: userRes.name,
         email: userRes.email,
         role: userRes.role,
       };
