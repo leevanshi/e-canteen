@@ -17,8 +17,15 @@ const API = axios.create({
 ========================= */
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    // 🚫 DO NOT attach token to auth routes
+    if (
+      config.url?.includes("/auth/login") ||
+      config.url?.includes("/auth/register")
+    ) {
+      return config;
+    }
 
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -36,12 +43,15 @@ API.interceptors.response.use(
   (error) => {
     const status = error?.response?.status;
 
-    // 🔒 Token expired / invalid
-    if (status === 401) {
+    // 🔒 Token expired / invalid (NOT login/register)
+    if (
+      status === 401 &&
+      !error.config?.url?.includes("/auth/login") &&
+      !error.config?.url?.includes("/auth/register")
+    ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
 
-      // prevent redirect loop
       if (window.location.pathname !== "/login") {
         window.location.replace("/login");
       }
