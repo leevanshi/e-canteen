@@ -23,17 +23,6 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  /* ================= REDIRECT AFTER LOGIN ================= */
-  useEffect(() => {
-    if (!user) return;
-
-    if (user.role === "admin") {
-      navigate("/admin/dashboard", { replace: true });
-    } else {
-      navigate("/menu", { replace: true });
-    }
-  }, [user, navigate]);
-
   /* ================= LOGIN HANDLER ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,28 +41,35 @@ const LoginPage = () => {
         password,
       });
 
-      console.log("LOGIN RESPONSE:", res.data);
-
-      // ✅ ONLY TOKEN CHECK (SOURCE OF TRUTH)
       const token = res.data?.access_token;
-      const userRes = res.data?.user || {};
+      const userRes = res.data?.user;
 
+      // ✅ ONLY HARD REQUIREMENT
       if (!token) {
-        throw new Error("Invalid login response");
+        toast.error("Login failed");
+        return;
       }
 
-      const userData = {
-        id: userRes.id,
-        email: userRes.email,
-        role: userRes.role,
-      };
+      login(
+        {
+          id: userRes?.id,
+          email: userRes?.email,
+          role: userRes?.role,
+        },
+        token
+      );
 
-      login(userData, token);
       toast.success("Login successful");
+
+      // ✅ FORCE NAVIGATION (no waiting for effect)
+      if (userRes?.role === "admin") {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/menu", { replace: true });
+      }
     } catch (err) {
       toast.error(
         err?.response?.data?.detail ||
-          err?.message ||
           "Invalid email or password"
       );
     } finally {
