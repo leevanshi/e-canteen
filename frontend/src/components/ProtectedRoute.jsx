@@ -2,9 +2,9 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
 
-  // ⏳ WAIT until auth is restored
+  // ⏳ Wait for auth restore
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -13,20 +13,22 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
-  // ❌ Not logged in
-  if (!user) {
+  // ❌ Not logged in OR token missing
+  if (!user || !token) {
     return <Navigate to="/login" replace />;
   }
 
   // ❌ Role not allowed
-  if (
-    allowedRoles &&
-    !allowedRoles.includes(user.role?.toLowerCase())
-  ) {
-    return <Navigate to="/" replace />;
+  if (allowedRoles) {
+    const userRole = user?.role?.toLowerCase();
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return <Navigate to="/login" replace />;
+      // OR: <Navigate to="/unauthorized" replace />
+    }
   }
 
-  // ✅ Allowed
+  // ✅ Access granted
   return children;
 };
 

@@ -1,181 +1,224 @@
-console.log("✅ MenuPage LOADED - FIXED FILE");
+import { useEffect, useMemo, useState } from "react";
+import API from "../api";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+/* ================= FORMAT TIME ================= */
+const formatIST = (date) => {
+  if (!date) return "—";
+  return new Date(date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+};
 
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
+/* ================= STATUS BADGE ================= */
+const statusBadge = (status = "") => {
+  switch (status.toLowerCase()) {
+    case "completed":
+      return "bg-green-100 text-green-700";
+    case "preparing":
+      return "bg-orange-100 text-orange-700";
+    case "pending":
+      return "bg-blue-100 text-blue-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
 
-import { getMenu, getMyWallet } from "../api";
+/* ================= STATUS ORDER (IMPORTANT) ================= */
+const STATUS_PRIORITY = {
+  pending: 1,
+  preparing: 2,
+  completed: 3,
+};
 
-const BACKEND_URL = "https://e-canteen-7.onrender.com";
-
-const MenuPage = () => {
-  const [menu, setMenu] = useState([]);
-  const [walletBalance, setWalletBalance] = useState(0);
+const AdminOrdersPage = () => {
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
+  const [updatingId, setUpdatingId] = useState(null);
 
-  const { token } = useAuth();
-  const { addToCart, increaseQty, decreaseQty, getQuantity } = useCart();
+  const navigate = useNavigate();
 
-  /* ================= 🍽️ FETCH MENU ================= */
+  /* ================= FETCH ================= */
+  const fetchOrders = async () => {
+    try {
+      const res = await API.get("/admin/orders");
+      const data = Array.isArray(res.data) ? res.data : [];
+      setOrders(data);
+    } catch {
+      toast.error("Failed to fetch orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        const res = await getMenu();
+    fetchOrders();
 
-        console.log("MENU RESPONSE 👉", res.data);
-
-        let items = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.menu)
-          ? res.data.menu
-          : Array.isArray(res.data?.data)
-          ? res.data.data
-          : [];
-
-        items = items.map((item, index) => ({
-          ...item,
-          _id: item._id || item.id || index.toString(),
-        }));
-
-        setMenu(items);
-      } catch (err) {
-        console.error("Menu error ❌", err);
-        setError("Menu load nahi hua");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMenu();
+    const interval = setInterval(fetchOrders, 8000); // faster refresh
+    return () => clearInterval(interval);
   }, []);
 
-  /* ================= 💰 FETCH WALLET ================= */
-  useEffect(() => {
-    if (!token) return;
+  /* ================= SORTED ORDERS ================= */
+  const sortedOrders = useMemo(() => {
+    return [...orders]
+      .filter((o) => o.order_type !== "walk-in")
+      .sort((a, b) => {
+        const statusDiff =
+          (STATUS_PRIORITY[a.status] || 99) -
+          (STATUS_PRIORITY[b.status] || 99);
 
-    const fetchWallet = async () => {
-      try {
-        const res = await getMyWallet();
-        setWalletBalance(res.data?.balance ?? 0);
-      } catch (err) {
-        console.error("Wallet error ❌", err);
-        setWalletBalance(0);
-      }
-    };
+        if (statusDiff !== 0) return statusDiff;
 
-    fetchWallet();
-  }, [token]);
+        // newest first
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+  }, [orders]);
 
-  /* ================= 🔍 FILTER ================= */
-  const filteredMenu = menu.filter((item) =>
-    item.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  /* ================= UPDATE STATUS ================= */
+  const updateStatus = async (mongoId, status) => {
+    try {
+      setUpdatingId(mongoId);
 
+      await API.put(`/admin/orders/${mongoId}/status`, { status });
+
+      toast.success(`Order → ${status}`);
+      fetchOrders();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to update");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  /* ================= LOADING ================= */
   if (loading) {
-    return <div className="p-10 text-center">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="p-10 text-red-500">{error}</div>;
+    return (
+      <p className="text-center mt-10 text-gray-500 animate-pulse">
+        Loading orders...
+      </p>
+    );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
+    <div className="p-6 max-w-6xl mx-auto">
+
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Menu</h1>
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
 
-        <Card>
-          <CardContent className="px-4 py-2">
-            <p className="text-sm text-gray-500">Wallet Balance</p>
-            <p className="text-lg font-bold text-green-600">
-              ₹{walletBalance}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="px-3 py-2 border rounded hover:bg-gray-100"
+          >
+            ← Back
+          </button>
 
-      {/* 🔍 SEARCH BAR */}
-      <div className="mb-8">
-        <input
-          type="text"
-          placeholder="Search food..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full md:w-96 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
-        />
-      </div>
-
-      {/* MENU GRID */}
-      {filteredMenu.length === 0 ? (
-        <p className="text-center text-gray-500">No items found</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {filteredMenu.map((item) => {
-            const id = String(item._id);
-            const qty = getQuantity(id);
-            const unavailable = item.available === false;
-
-            return (
-              <Card
-                key={id}
-                className={`transition ${
-                  unavailable ? "border-2 border-red-500 opacity-80" : ""
-                }`}
-              >
-                <CardContent className="p-4 flex flex-col gap-3">
-                  <img
-                    src={
-                      item.image
-                        ? item.image.startsWith("http")
-                          ? item.image
-                          : `${BACKEND_URL}/uploads/${item.image}`
-                        : "/placeholder.png"
-                    }
-                    alt={item.name}
-                    className={`h-40 w-full object-cover rounded ${
-                      unavailable ? "grayscale" : ""
-                    }`}
-                  />
-
-                  <h2 className="text-lg font-semibold">{item.name}</h2>
-                  <p className="font-bold">₹{item.price}</p>
-
-                  {unavailable ? (
-                    <Button disabled>Unavailable</Button>
-                  ) : qty === 0 ? (
-                    <Button
-                      onClick={() =>
-                        addToCart({
-                          _id: id,
-                          name: item.name,
-                          price: item.price,
-                          image: item.image,
-                        })
-                      }
-                    >
-                      Add to Cart
-                    </Button>
-                  ) : (
-                    <div className="flex justify-between items-center">
-                      <Button onClick={() => decreaseQty(id)}>−</Button>
-                      <span className="font-semibold">{qty}</span>
-                      <Button onClick={() => increaseQty(id)}>+</Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+          <h1 className="text-2xl font-bold">
+            Admin Dashboard – Orders
+          </h1>
         </div>
+
+        <button
+          onClick={fetchOrders}
+          className="px-4 py-2 rounded bg-black text-white hover:opacity-80"
+        >
+          🔄 Refresh
+        </button>
+      </div>
+
+      {/* EMPTY */}
+      {sortedOrders.length === 0 && (
+        <p className="text-center text-gray-500 mt-10">
+          No active orders
+        </p>
       )}
+
+      {/* ORDERS */}
+      {sortedOrders.map((order) => {
+        const mongoId = order._id;
+        const displayId = order.order_number || order.order_id || "—";
+        const currentStatus = order.status?.toLowerCase();
+
+        const isUrgent = currentStatus === "pending";
+
+        return (
+          <div
+            key={mongoId}
+            className={`bg-white rounded-xl shadow p-5 mb-6 border transition ${
+              isUrgent ? "border-blue-500 shadow-md" : ""
+            }`}
+          >
+            {/* HEADER */}
+            <div className="flex justify-between items-center">
+              <h2 className="font-semibold text-lg">
+                Order #{displayId}
+              </h2>
+
+              <span
+                className={`px-3 py-1 rounded-full text-sm capitalize ${statusBadge(
+                  currentStatus
+                )}`}
+              >
+                {currentStatus}
+              </span>
+            </div>
+
+            {/* DETAILS */}
+            <p className="mt-2">
+              Ordered by: <strong>{order.user_name || "User"}</strong>
+            </p>
+
+            <p className="font-medium">
+              Total: ₹{order.total_amount}
+            </p>
+
+            <p className="text-sm text-gray-500">
+              Payment: {order.payment_method} ({order.payment_status})
+            </p>
+
+            <p className="text-sm text-gray-500">
+              Placed at: {formatIST(order.created_at)}
+            </p>
+
+            {/* ITEMS */}
+            <ul className="mt-3 list-disc ml-5 text-sm">
+              {(order.items || []).map((item, idx) => (
+                <li key={idx}>
+                  {item.name} × {item.quantity}
+                </li>
+              ))}
+            </ul>
+
+            {/* ACTIONS */}
+            <div className="flex gap-2 mt-4 flex-wrap">
+              {["pending", "preparing", "completed"].map((status) => (
+                <button
+                  key={status}
+                  disabled={
+                    updatingId === mongoId ||
+                    currentStatus === status
+                  }
+                  onClick={() => updateStatus(mongoId, status)}
+                  className={`px-4 py-1 rounded border text-sm capitalize transition ${
+                    currentStatus === status
+                      ? "bg-black text-white"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  {updatingId === mongoId
+                    ? "Updating..."
+                    : status}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
 
-export default MenuPage;
+export default AdminOrdersPage;

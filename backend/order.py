@@ -2,18 +2,16 @@ from enum import Enum
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from bson import ObjectId
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import List
 
 from auth import get_current_user
 from database import orders_collection
 
 router = APIRouter(
-    prefix="/api/orders",
+    prefix="/orders",
     tags=["Orders"]
 )
-
-IST = timezone(timedelta(hours=5, minutes=30))
 
 # =========================
 # ENUMS & SCHEMAS
@@ -29,7 +27,7 @@ class OrderStatusUpdate(BaseModel):
 
 
 # =========================
-# GET ALL ONLINE ORDERS (ADMIN / STAFF)
+# GET ALL ONLINE ORDERS
 # =========================
 
 @router.get("/")
@@ -45,7 +43,7 @@ def get_all_orders(current_user=Depends(get_current_user)):
 
     for order in orders:
         order["_id"] = str(order["_id"])
-        order["user_id"] = str(order.get("user_id"))
+        order["user_id"] = str(order["user_id"]) if order.get("user_id") else None
 
     return orders
 
@@ -63,10 +61,10 @@ def update_order_status(
     if current_user.get("role") not in ["admin", "staff"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    try:
-        oid = ObjectId(order_id)
-    except Exception:
+    if not ObjectId.is_valid(order_id):
         raise HTTPException(status_code=400, detail="Invalid order id")
+
+    oid = ObjectId(order_id)
 
     order = orders_collection.find_one(
         {"_id": oid, "order_type": "online"}
@@ -75,7 +73,7 @@ def update_order_status(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    now = datetime.now(IST)
+    now = datetime.utcnow()
 
     orders_collection.update_one(
         {"_id": oid},
@@ -94,7 +92,6 @@ def update_order_status(
     )
 
     return {
-        "success": True,
         "order_id": order_id,
         "status": data.status.value
     }

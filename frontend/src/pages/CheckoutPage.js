@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext";
 
 import { getMyWallet, createOrder } from "../api";
 
-/* ⏰ TIME SLOTS */
+/* ⏰ TIME SLOTS (FIXED) */
 const generateTimeSlots = () => {
   const slots = [];
   const now = new Date();
@@ -23,7 +23,8 @@ const generateTimeSlots = () => {
   while (start < end) {
     const next = new Date(start.getTime() + 15 * 60000);
 
-    if (next > now) {
+    // ✅ only future slots
+    if (start > now) {
       slots.push(
         `${start.toTimeString().slice(0, 5)}-${next
           .toTimeString()
@@ -40,7 +41,7 @@ const generateTimeSlots = () => {
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart = [], clearCart } = useCart();
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
 
   const [pickupTimeSlot, setPickupTimeSlot] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,25 +51,30 @@ const CheckoutPage = () => {
 
   const timeSlots = useMemo(generateTimeSlots, []);
 
-  const totalAmount = cart.reduce(
-    (sum, item) => sum + (item?.price || 0) * (item?.quantity || 1),
-    0
-  );
+  const totalAmount = useMemo(() => {
+    return cart.reduce(
+      (sum, item) =>
+        sum + (item?.price || 0) * (item?.quantity || 1),
+      0
+    );
+  }, [cart]);
 
   /* EMPTY CART GUARD */
   useEffect(() => {
     if (cart.length === 0 && !orderPlaced) {
-      navigate(-1);
+      navigate("/menu");
     }
   }, [cart, orderPlaced, navigate]);
 
   /* FETCH WALLET */
   const fetchWallet = async () => {
     if (!token) return;
+
     try {
       const res = await getMyWallet();
       setWalletBalance(res?.data?.balance ?? 0);
-    } catch {
+    } catch (err) {
+      console.error("Wallet fetch failed", err);
       setWalletBalance(0);
     }
   };
@@ -77,10 +83,32 @@ const CheckoutPage = () => {
     fetchWallet();
   }, [token]);
 
+  /* VALIDATE TIME SLOT */
+  const isValidSlot = (slot) => {
+    if (!slot) return false;
+
+    const [startTime] = slot.split("-");
+    const now = new Date();
+
+    const [h, m] = startTime.split(":");
+    const slotDate = new Date();
+    slotDate.setHours(h, m, 0, 0);
+
+    return slotDate > now;
+  };
+
   /* PLACE ORDER */
   const handlePlaceOrder = async () => {
-    if (!pickupTimeSlot) {
-      toast.error("Please select pickup time");
+    if (loading) return;
+
+    if (!token) {
+      toast.error("Session expired. Please login again.");
+      logout();
+      return;
+    }
+
+    if (!pickupTimeSlot || !isValidSlot(pickupTimeSlot)) {
+      toast.error("Please select a valid future time slot");
       return;
     }
 
@@ -89,16 +117,26 @@ const CheckoutPage = () => {
       return;
     }
 
+    // ✅ clean items (IMPORTANT)
+    const cleanItems = cart
+      .filter((item) => item?._id && item?.quantity > 0)
+      .map((item) => ({
+        item_id: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      }));
+
+    if (cleanItems.length === 0) {
+      toast.error("Invalid cart items");
+      return;
+    }
+
     try {
       setLoading(true);
 
       const res = await createOrder({
-        items: cart.map((item) => ({
-          item_id: item?._id,
-          name: item?.name,
-          price: item?.price,
-          quantity: item?.quantity,
-        })),
+        items: cleanItems,
         pickup_time: pickupTimeSlot,
         payment_method: "wallet",
       });
@@ -112,12 +150,19 @@ const CheckoutPage = () => {
       setOrderId(id);
       setOrderPlaced(true);
       clearCart();
+
       await fetchWallet();
 
       toast.success("Order placed successfully 🎉");
     } catch (err) {
-      console.error(err);
-      toast.error("Order failed");
+      console.error("Order error", err);
+
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        "Order failed";
+
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -129,15 +174,6 @@ const CheckoutPage = () => {
       <div className="min-h-[70vh] flex items-center justify-center p-6">
         <Card className="max-w-md w-full text-center shadow-lg rounded-2xl">
           <CardContent className="p-6 space-y-4">
-
-            <Button
-              variant="outline"
-              onClick={() => navigate(-1)}
-              className="w-full"
-            >
-              ← Back
-            </Button>
-
             <h1 className="text-3xl font-bold text-green-600">
               ✅ Order Placed!
             </h1>
@@ -160,7 +196,6 @@ const CheckoutPage = () => {
             >
               View My Orders
             </Button>
-
           </CardContent>
         </Card>
       </div>
@@ -173,7 +208,7 @@ const CheckoutPage = () => {
 
       <Button
         variant="outline"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/menu")}
         className="mb-4"
       >
         ← Back
@@ -220,12 +255,12 @@ const CheckoutPage = () => {
       <div className="mt-6 p-4 border rounded bg-gray-50 space-y-2">
         <h3 className="font-semibold">Payment Method</h3>
         <p className="text-green-700 font-medium">
-          ✅ Wallet Payment (Balance: ₹{walletBalance ?? 0})
+          ✅ Wallet (Balance: ₹{walletBalance})
         </p>
       </div>
 
       <div className="mt-4 font-semibold text-lg">
-        Total: ₹{totalAmount ?? 0}
+        Total: ₹{totalAmount}
       </div>
 
       <Button

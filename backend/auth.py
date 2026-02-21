@@ -12,10 +12,7 @@ import os
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ================= SECURITY =================
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError("SECRET_KEY not set")
-
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
@@ -23,8 +20,7 @@ security = HTTPBearer()
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=10
+    deprecated="auto"
 )
 
 # ================= SCHEMAS =================
@@ -46,20 +42,39 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_token(data: dict) -> str:
     payload = data.copy()
-    payload["exp"] = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    payload.update({
+        "type": "access",
+        "exp": datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
+        "iat": datetime.utcnow(),
+    })
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 # ================= CURRENT USER =================
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
+    # 🔒 Check scheme
+    if credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication scheme"
+        )
+
     token = credentials.credentials
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        # 🔒 Token type validation
+        if payload.get("type") != "access":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+
         user_id = payload.get("id")
 
-        if not user_id:
+        if not user_id or not ObjectId.is_valid(user_id):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
@@ -89,26 +104,28 @@ def get_current_user(
 # ================= ADMIN REGISTER =================
 @router.post("/admin/register", status_code=status.HTTP_201_CREATED)
 def register_admin(data: AdminRegisterSchema):
-    if users_collection.find_one({"email": data.email}):
+    email = data.email.lower().strip()
+
+    if users_collection.find_one({"email": email}):
         raise HTTPException(status_code=409, detail="User already exists")
 
     users_collection.insert_one({
         "name": data.name,
-        "email": data.email,
+        "email": email,
         "password": hash_password(data.password),
         "role": "admin",
         "created_at": datetime.utcnow()
     })
 
     return {
-        "success": True,
         "message": "Admin registered successfully"
     }
 
 # ================= LOGIN =================
 @router.post("/login")
 def login(data: LoginSchema):
-    user = users_collection.find_one({"email": data.email})
+    email = data.email.lower().strip()
+    user = users_collection.find_one({"email": email})
 
     if not user or not verify_password(data.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -119,8 +136,8 @@ def login(data: LoginSchema):
     })
 
     return {
-        "success": True,  # 🔥 REQUIRED FOR FRONTEND
-        "token": token,
+        "access_token": token,
+        "token_type": "bearer",
         "user": {
             "id": str(user["_id"]),
             "name": user["name"],

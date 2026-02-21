@@ -10,16 +10,18 @@ import { Button } from "../components/ui/button";
 
 /* ================= HELPERS ================= */
 
-// SAFE TIME FORMAT (IST)
 const formatIST = (date) => {
   if (!date) return "—";
-
-  return new Date(date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    dateStyle: "medium",
-    timeStyle: "short",
-    hour12: true,
-  });
+  try {
+    return new Date(date).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "short",
+      hour12: true,
+    });
+  } catch {
+    return "—";
+  }
 };
 
 const statusColor = (status = "") => {
@@ -28,12 +30,12 @@ const statusColor = (status = "") => {
   switch (s) {
     case "pending":
     case "placed":
-      return "text-red-600";
+      return "text-red-600 font-semibold";
     case "paid":
     case "preparing":
-      return "text-orange-600";
+      return "text-orange-600 font-semibold";
     case "completed":
-      return "text-green-600";
+      return "text-green-600 font-semibold";
     default:
       return "text-gray-500";
   }
@@ -67,7 +69,7 @@ const AdminDashboard = () => {
     }
   }, [user, authLoading, navigate]);
 
-  /* ================= FETCH ORDERS ================= */
+  /* ================= FETCH ================= */
   const fetchOrders = async (manual = false) => {
     if (!user || user.role !== "admin") return;
 
@@ -78,15 +80,22 @@ const AdminDashboard = () => {
 
     try {
       const res = await getAdminOrders();
-      const data = Array.isArray(res?.data) ? res.data : [];
+
+      const data = Array.isArray(res?.data)
+        ? res.data
+        : res?.data?.orders || [];
 
       const fixed = data.map((o, idx) => ({
         ...o,
-        order_number: o.order_number || o.order_id || 101 + idx,
+        _id: o._id || `${idx}-${Date.now()}`, // fallback safety
+        order_number: o.order_number || o.order_id || 100 + idx,
+        total_amount: Number(o.total_amount || 0),
       }));
 
       setOrders(fixed);
-    } catch {
+    } catch (err) {
+      console.error("Fetch error ❌", err);
+
       if (!errorToastShown.current) {
         toast.error("Failed to load orders");
         errorToastShown.current = true;
@@ -102,15 +111,15 @@ const AdminDashboard = () => {
     if (!user || authLoading || user.role !== "admin") return;
 
     fetchOrders();
-    const interval = setInterval(fetchOrders, 10000);
 
+    const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, [user, authLoading]);
 
-  /* ================= LOADING STATE ================= */
+  /* ================= LOADING ================= */
   if (authLoading || loading) {
     return (
-      <div className="p-10 text-center text-gray-500">
+      <div className="p-10 text-center text-gray-500 animate-pulse">
         Loading dashboard...
       </div>
     );
@@ -118,37 +127,46 @@ const AdminDashboard = () => {
 
   if (!user) return null;
 
-  /* ================= DERIVED DATA ================= */
+  /* ================= DERIVED ================= */
 
   const sortedOrders = useMemo(() => {
     return [...orders].sort((a, b) => {
-      const timeA = a?.created_at
-        ? new Date(a.created_at).getTime()
-        : 0;
-      const timeB = b?.created_at
-        ? new Date(b.created_at).getTime()
-        : 0;
+      const timeA = new Date(a?.created_at || 0).getTime();
+      const timeB = new Date(b?.created_at || 0).getTime();
       return timeA - timeB; // FIFO
     });
   }, [orders]);
 
-  const activeOrders = sortedOrders.filter((o) =>
-    ACTIVE_STATUSES.includes(String(o.status).toLowerCase())
+  const activeOrders = useMemo(
+    () =>
+      sortedOrders.filter((o) =>
+        ACTIVE_STATUSES.includes(String(o.status).toLowerCase())
+      ),
+    [sortedOrders]
   );
 
-  const completedOrders = sortedOrders.filter(
-    (o) => String(o.status).toLowerCase() === "completed"
+  const completedOrders = useMemo(
+    () =>
+      sortedOrders.filter(
+        (o) => String(o.status).toLowerCase() === "completed"
+      ),
+    [sortedOrders]
   );
 
-  const totalRevenue = completedOrders.reduce(
-    (sum, o) => sum + Number(o.total_amount || 0),
-    0
+  const totalRevenue = useMemo(
+    () =>
+      completedOrders.reduce(
+        (sum, o) => sum + Number(o.total_amount || 0),
+        0
+      ),
+    [completedOrders]
   );
 
   /* ================= UI ================= */
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 bg-orange-50 min-h-screen rounded-2xl">
+
       {/* HEADER */}
       <div className="flex justify-between items-center flex-wrap gap-3">
         <h1 className="text-3xl font-extrabold text-orange-600 tracking-wide">

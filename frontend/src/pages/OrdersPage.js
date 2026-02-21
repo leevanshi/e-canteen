@@ -34,6 +34,8 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("active");
+  const [error, setError] = useState("");
+
   const navigate = useNavigate();
 
   /* ================= FETCH ================= */
@@ -41,8 +43,10 @@ const OrdersPage = () => {
     try {
       const res = await getUserOrders();
       setOrders(Array.isArray(res.data) ? res.data : []);
+      setError("");
     } catch (err) {
-      console.error("Failed to fetch orders", err);
+      console.error("Failed to fetch orders ❌", err);
+      setError("Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -50,7 +54,9 @@ const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
+
     const interval = setInterval(fetchOrders, 10000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -65,6 +71,7 @@ const OrdersPage = () => {
         );
   }, [orders, tab]);
 
+  /* ================= LOADING ================= */
   if (loading) {
     return (
       <div className="min-h-screen flex justify-center items-center text-gray-500">
@@ -73,11 +80,22 @@ const OrdersPage = () => {
     );
   }
 
+  /* ================= ERROR ================= */
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center gap-4">
+        <p className="text-red-500">{error}</p>
+        <Button onClick={fetchOrders}>Retry</Button>
+      </div>
+    );
+  }
+
+  /* ================= UI ================= */
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-4">My Orders</h1>
 
-      {/* 🔹 BACK BUTTON HERE */}
+      {/* BACK BUTTON */}
       <Button
         variant="outline"
         onClick={() => navigate(-1)}
@@ -107,10 +125,17 @@ const OrdersPage = () => {
         </button>
       </div>
 
+      {/* ================= EMPTY ================= */}
       {filteredOrders.length === 0 ? (
-        <p className="text-gray-500">
-          No {tab === "active" ? "active orders" : "past orders"}.
-        </p>
+        <div className="text-center text-gray-500">
+          <p>No {tab === "active" ? "active orders" : "past orders"}.</p>
+          <Button
+            className="mt-4"
+            onClick={() => navigate("/menu")}
+          >
+            Order Now
+          </Button>
+        </div>
       ) : (
         <div className="space-y-4">
           {filteredOrders.map((order) => {
@@ -125,6 +150,7 @@ const OrdersPage = () => {
 
             const isPrepared =
               status === "prepared" || status === "ready";
+
             const isCompleted =
               COMPLETED_STATUSES.has(status);
 

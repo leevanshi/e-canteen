@@ -2,32 +2,40 @@
 import axios from "axios";
 
 /* =========================
-   AXIOS INSTANCE
+   BASE CONFIG
 ========================= */
+const BASE_URL = "https://e-canteen-7.onrender.com";
+
 const API = axios.create({
-  baseURL: "https://e-canteen-7.onrender.com",
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000, // Render cold start safe
+  timeout: 60000, // render cold start safe
 });
+
+/* =========================
+   HELPERS
+========================= */
+const getToken = () => localStorage.getItem("token");
+
+const isAuthRoute = (url = "") =>
+  url.includes("/auth/login") || url.includes("/auth/register");
 
 /* =========================
    REQUEST INTERCEPTOR
 ========================= */
 API.interceptors.request.use(
   (config) => {
-    // 🚫 DO NOT attach token to auth routes
-    if (
-      config.url?.includes("/auth/login") ||
-      config.url?.includes("/auth/register")
-    ) {
-      return config;
-    }
-
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      if (!isAuthRoute(config.url)) {
+        const token = getToken();
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
+    } catch (err) {
+      console.error("Request interceptor error:", err);
     }
 
     return config;
@@ -42,19 +50,25 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
+    const url = error?.config?.url || "";
 
-    // 🔒 Token expired / invalid (NOT login/register)
-    if (
-      status === 401 &&
-      !error.config?.url?.includes("/auth/login") &&
-      !error.config?.url?.includes("/auth/register")
-    ) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+    // 🔒 Handle unauthorized globally
+    if (status === 401 && !isAuthRoute(url)) {
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
 
-      if (window.location.pathname !== "/login") {
-        window.location.replace("/login");
+        if (!window.location.pathname.includes("/login")) {
+          window.location.replace("/login");
+        }
+      } catch (err) {
+        console.error("Logout redirect failed:", err);
       }
+    }
+
+    // 🌐 Network / timeout error
+    if (!error.response) {
+      console.error("Network error / server down");
     }
 
     return Promise.reject(error);
@@ -125,14 +139,18 @@ export const getAllFeedback = () =>
   API.get("/feedback/admin");
 
 /* =========================
-   LOGOUT
+   LOGOUT (SAFE GLOBAL)
 ========================= */
 export const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  try {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
 
-  if (window.location.pathname !== "/login") {
-    window.location.replace("/login");
+    if (!window.location.pathname.includes("/login")) {
+      window.location.replace("/login");
+    }
+  } catch (err) {
+    console.error("Logout failed:", err);
   }
 };
 

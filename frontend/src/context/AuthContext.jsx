@@ -7,6 +7,26 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  /* ================= HELPERS ================= */
+  const clearAuth = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
+  };
+
+  const parseUser = (storedUser) => {
+    try {
+      const parsed = JSON.parse(storedUser);
+      return {
+        ...parsed,
+        role: parsed?.role?.toLowerCase(), // ✅ normalize role
+      };
+    } catch {
+      return null;
+    }
+  };
+
   /* ================= RESTORE AUTH ================= */
   useEffect(() => {
     try {
@@ -14,39 +34,50 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem("user");
 
       if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        const parsedUser = parseUser(storedUser);
+
+        if (!parsedUser) {
+          clearAuth();
+        } else {
+          setToken(storedToken);
+          setUser(parsedUser);
+        }
       }
     } catch (err) {
       console.error("Auth restore failed:", err);
-      localStorage.clear();
+      clearAuth();
     } finally {
       setLoading(false);
     }
   }, []);
 
   /* ================= LOGIN ================= */
-  // authToken MUST be access_token from backend
   const login = (userData, authToken) => {
     if (!authToken || !userData) {
-      console.error("Invalid login data");
-      return;
+      throw new Error("Invalid login data received");
     }
 
-    localStorage.setItem("token", authToken);
-    localStorage.setItem("user", JSON.stringify(userData));
+    try {
+      const normalizedUser = {
+        ...userData,
+        role: userData?.role?.toLowerCase(),
+      };
 
-    setToken(authToken);
-    setUser(userData);
+      localStorage.setItem("token", authToken);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+      setToken(authToken);
+      setUser(normalizedUser);
+    } catch (err) {
+      console.error("Login storage failed:", err);
+      throw new Error("Login failed");
+    }
   };
 
   /* ================= LOGOUT ================= */
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    setToken(null);
-    setUser(null);
+    clearAuth();
+    window.location.replace("/login"); // ✅ force sync everywhere
   };
 
   /* ================= ROLE HELPERS ================= */

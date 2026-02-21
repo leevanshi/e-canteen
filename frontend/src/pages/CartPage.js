@@ -6,19 +6,22 @@ import { useCart } from "../context/CartContext";
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const { cart, increaseQty, decreaseQty } = useCart();
+  const { cart = [], increaseQty, decreaseQty } = useCart();
 
+  /* ✅ SAFE TOTAL */
   const totalAmount = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) =>
+      sum + (item?.price || 0) * (item?.quantity || 1),
     0
   );
 
-  if (!cart || cart.length === 0) {
+  /* ✅ EMPTY CART */
+  if (!cart.length) {
     return (
       <div className="p-10 text-center">
         <Button
           variant="outline"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/menu")}
           className="mb-4"
         >
           ← Back
@@ -27,6 +30,7 @@ const CartPage = () => {
         <h2 className="text-2xl font-semibold mb-4">
           Your cart is empty
         </h2>
+
         <Button onClick={() => navigate("/menu")}>
           Go to Menu
         </Button>
@@ -40,7 +44,7 @@ const CartPage = () => {
       {/* BACK BUTTON */}
       <Button
         variant="outline"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/menu")}
         className="mb-4"
       >
         ← Back
@@ -49,27 +53,30 @@ const CartPage = () => {
       <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
 
       <div className="space-y-4">
-        {cart.map((item) => {
-          const itemId = item._id || item.id;
+        {cart.map((item, index) => {
+          const itemId = item?._id || item?.id || index;
+
+          const price = item?.price || 0;
+          const quantity = item?.quantity || 1;
 
           return (
             <Card key={itemId}>
               <CardContent className="flex items-center justify-between gap-4 p-4">
-                
+
                 {/* IMAGE + NAME */}
                 <div className="flex items-center gap-4">
                   <img
-                    src={item.image}
-                    alt={item.name}
+                    src={item?.image || "/placeholder.png"}
+                    alt={item?.name || "item"}
                     className="w-20 h-20 object-cover rounded-lg border"
                   />
 
                   <div>
                     <h3 className="font-semibold text-lg">
-                      {item.name}
+                      {item?.name || "Item"}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      ₹{item.price}
+                      ₹{price}
                     </p>
                   </div>
                 </div>
@@ -80,12 +87,13 @@ const CartPage = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => decreaseQty(itemId)}
+                    disabled={quantity <= 1} // ✅ prevent negative qty
                   >
                     −
                   </Button>
 
                   <span className="font-semibold">
-                    {item.quantity}
+                    {quantity}
                   </span>
 
                   <Button
@@ -99,7 +107,7 @@ const CartPage = () => {
 
                 {/* ITEM TOTAL */}
                 <div className="font-semibold">
-                  ₹{item.price * item.quantity}
+                  ₹{price * quantity}
                 </div>
 
               </CardContent>

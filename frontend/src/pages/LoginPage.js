@@ -34,42 +34,57 @@ const LoginPage = () => {
 
     setSubmitting(true);
 
+    const slowTimer = setTimeout(() => {
+      toast.info("⏳ Server is waking up, please wait...");
+    }, 4000);
+
     try {
       const res = await API.post("/auth/login", {
         email: email.trim().toLowerCase(),
         password,
       });
 
-      const token = res.data?.access_token;
-      const user = res.data?.user;
+      clearTimeout(slowTimer);
 
-      // 🔥 ONLY CHECK THAT MATTERS
-      if (!token) {
-        toast.error("Login failed");
+      console.log("LOGIN RESPONSE:", res.data); // 🔍 DEBUG
+
+      const token = res?.data?.access_token;
+      const user = res?.data?.user;
+
+      // ✅ Strong validation
+      if (!token || !user) {
+        toast.error("Invalid login response from server");
         return;
       }
 
+      // ✅ Safe login call
       login(
         {
-          id: user?.id,
-          email: user?.email,
-          role: user?.role,
+          id: user.id,
+          email: user.email,
+          role: user.role,
         },
         token
       );
 
       toast.success("Login successful");
 
-      // 🚀 Immediate redirect
-      if (user?.role === "admin") {
+      // ✅ Role-based redirect
+      if (user.role === "admin") {
         navigate("/admin/dashboard", { replace: true });
       } else {
         navigate("/menu", { replace: true });
       }
+
     } catch (err) {
+      clearTimeout(slowTimer);
+
+      console.error("LOGIN ERROR:", err);
+
       toast.error(
         err?.response?.data?.detail ||
-          "Invalid email or password"
+        err?.response?.data?.message ||
+        "Invalid email or password"
       );
     } finally {
       setSubmitting(false);
@@ -123,7 +138,7 @@ const LoginPage = () => {
             </p>
 
             <p className="text-center text-sm">
-              Don’t have an account?{" "}
+              Don't have an account?{" "}
               <Link
                 to="/join"
                 className="text-orange-500 font-medium hover:underline"

@@ -1,27 +1,93 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import API from "../api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-
+/* ================= FORMAT TIME ================= */
 const formatIST = (date) => {
   if (!date) return "—";
-  return new Date(date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  try {
+    return new Date(date).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return "—";
+  }
 };
 
+/* ================= STATUS BADGE ================= */
 const statusBadge = (status = "") => {
-  switch (status.toLowerCase()) {
+  switch (status?.toLowerCase()) {
     case "completed":
       return "bg-green-100 text-green-700";
     case "preparing":
       return "bg-orange-100 text-orange-700";
-    default:
+    case "pending":
       return "bg-blue-100 text-blue-700";
+    default:
+      return "bg-gray-100 text-gray-700";
   }
+};
+
+/* ================= STATUS ORDER ================= */
+const STATUS_PRIORITY = {
+  pending: 1,
+  preparing: 2,
+  completed: 3,
+};
+
+/* ================= 🔊 SOUND ================= */
+const playSound = () => {
+  const audio = new Audio("/notification.mp3");
+  audio.play().catch(() => {});
+};
+
+/* ================= 🖨️ RECEIPT FORMAT ================= */
+const formatReceipt = (order) => {
+  return `
+COLLEGE CANTEEN
+--------------------------------
+Order ID: ${order.order_number || order._id}
+Time: ${formatIST(order.created_at)}
+
+Items:
+${(order.items || [])
+  .map(
+    (i) =>
+      `${i.name} x${i.quantity} - ₹${i.quantity * (i.price || 0)}`
+  )
+  .join("\n")}
+
+--------------------------------
+Total: ₹${order.total_amount || 0}
+--------------------------------
+Thank You!
+`;
+};
+
+/* ================= 🖨️ AUTO PRINT ================= */
+const autoPrint = (content) => {
+  const printWindow = window.open("", "", "width=300,height=600");
+
+  printWindow.document.write(`
+    <pre style="
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    ">
+${content}
+    </pre>
+  `);
+
+  printWindow.document.close();
+  printWindow.focus();
+
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 500);
 };
 
 const AdminOrdersPage = () => {
@@ -29,138 +95,231 @@ const AdminOrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
+  // ✅ FIX: use Set instead of array
+  const printedOrdersRef = useRef(new Set());
+
+  // ✅ FIX: prevent first load printing
+  const isFirstLoad = useRef(true);
+
+  const navigate = useNavigate();
+
+  /* ================= FETCH ================= */
   const fetchOrders = async () => {
     try {
       const res = await API.get("/admin/orders");
-      setOrders(Array.isArray(res.data) ? res.data : []);
-    } catch {
+
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data?.orders || [];
+
+      // ✅ FIRST LOAD: just store IDs, don't print
+      if (isFirstLoad.current) {
+        printedOrdersRef.current = new Set(data.map((o) => o._id));
+        isFirstLoad.current = false;
+        setOrders(data);
+        return;
+      }
+
+      // ✅ FIND NEW ORDERS (FAST)
+      const newOrders = data.filter(
+        (o) => !printedOrdersRef.current.has(o._id)
+      );
+
+      if (newOrders.length > 0) {
+        newOrders.forEach((order) => {
+          playSound();
+          const receipt = formatReceipt(order);
+          autoPrint(receipt);
+
+          // mark as printed
+          printedOrdersRef.current.add(order._id);
+        });
+
+        toast.success("New order received!");
+      }
+
+      setOrders(data);
+    } catch (err) {
+      console.error("Fetch error ❌", err);
       toast.error("Failed to fetch orders");
     } finally {
       setLoading(false);
     }
   };
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 10000);
+
+    const interval = setInterval(fetchOrders, 8000);
     return () => clearInterval(interval);
   }, []);
 
+  /* ================= SORT ================= */
+  const sortedOrders = useMemo(() => {
+    return [...orders]
+      .filter((o) => o?.order_type !== "walk-in")
+      .sort((a, b) => {
+        const statusA = a?.status?.toLowerCase();
+        const statusB = b?.status?.toLowerCase();
+
+        const statusDiff =
+          (STATUS_PRIORITY[statusA] || 99) -
+          (STATUS_PRIORITY[statusB] || 99);
+
+        if (statusDiff !== 0) return statusDiff;
+
+        return new Date(b?.created_at || 0) - new Date(a?.created_at || 0);
+      });
+  }, [orders]);
+
+  /* ================= UPDATE ================= */
   const updateStatus = async (mongoId, status) => {
+    if (!mongoId) return;
+
     try {
       setUpdatingId(mongoId);
 
       await API.put(`/admin/orders/${mongoId}/status`, { status });
 
-      toast.success(`Order marked as ${status}`);
-      fetchOrders();
+      toast.success(`Order updated → ${status}`);
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o._id === mongoId ? { ...o, status } : o
+        )
+      );
     } catch (err) {
+      console.error("Update error ❌", err);
       toast.error(err.response?.data?.detail || "Failed to update");
     } finally {
       setUpdatingId(null);
     }
   };
 
+  /* ================= LOADING ================= */
   if (loading) {
-    return <p className="text-center mt-10 text-gray-500">Loading orders...</p>;
+    return (
+      <p className="text-center mt-10 text-gray-500 animate-pulse">
+        Loading orders...
+      </p>
+    );
   }
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-<div className="flex justify-between items-center mb-6 flex-wrap gap-3">
 
-  {/* LEFT SIDE */}
-  <div className="flex items-center gap-3">
-    <button
-      onClick={() => navigate(-1)}
-      className="px-3 py-2 border rounded hover:bg-gray-100"
-    >
-      ← Back
-    </button>
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
 
-    <h1 className="text-2xl font-bold">Admin Dashboard – Orders</h1>
-  </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="px-3 py-2 border rounded hover:bg-gray-100"
+          >
+            ← Back
+          </button>
 
-  {/* RIGHT SIDE */}
-  <button
-    onClick={fetchOrders}
-    className="px-4 py-2 rounded bg-black text-white"
-  >
-    🔄 Refresh
-  </button>
-</div>
+          <h1 className="text-2xl font-bold">
+            Admin Dashboard – Orders
+          </h1>
+        </div>
 
+        <button
+          onClick={fetchOrders}
+          className="px-4 py-2 rounded bg-black text-white hover:opacity-80"
+        >
+          🔄 Refresh
+        </button>
+      </div>
 
-      {orders
-        .filter((order) => order.order_type !== "walk-in")
-        .map((order) => {
-          const mongoId = order._id;
-          const displayId = order.order_number || order.order_id || "—";
-          const currentStatus = order.status?.toLowerCase();
+      {/* EMPTY */}
+      {sortedOrders.length === 0 && (
+        <p className="text-center text-gray-500 mt-10">
+          No active orders
+        </p>
+      )}
 
-          return (
-            <div
-              key={mongoId}
-              className="bg-white rounded-xl shadow p-5 mb-6 border"
-            >
-              <div className="flex justify-between">
-                <h2 className="font-semibold text-lg">
-                  Order #{displayId}
-                </h2>
+      {/* ORDERS */}
+      {sortedOrders.map((order) => {
+        const mongoId = order?._id;
+        if (!mongoId) return null;
 
-                <span
-                  className={`px-3 py-1 rounded-full text-sm capitalize ${statusBadge(
-                    currentStatus
-                  )}`}
-                >
-                  {currentStatus}
-                </span>
-              </div>
+        const displayId =
+          order.order_number || order.order_id || "—";
 
-              <p className="mt-2">
-                Ordered by: <strong>{order.user_name || "User"}</strong>
-              </p>
+        const currentStatus = order?.status?.toLowerCase() || "pending";
+        const isUrgent = currentStatus === "pending";
 
-              <p>Total Amount: ₹{order.total_amount}</p>
-              <p className="text-sm text-gray-500">
-                Payment: {order.payment_method} ({order.payment_status})
-              </p>
+        return (
+          <div
+            key={mongoId}
+            className={`bg-white rounded-xl shadow p-5 mb-6 border transition ${
+              isUrgent ? "border-blue-500 shadow-md" : ""
+            }`}
+          >
+            <div className="flex justify-between items-center">
+              <h2 className="font-semibold text-lg">
+                Order #{displayId}
+              </h2>
 
-              <p className="text-sm text-gray-500">
-                Placed at: {formatIST(order.created_at)}
-              </p>
-
-              <ul className="mt-3 list-disc ml-5">
-                {(order.items || []).map((item, idx) => (
-                  <li key={idx}>
-                    {item.name} × {item.quantity}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="flex gap-2 mt-4">
-                {["pending", "preparing", "completed"].map((status) => (
-                  <button
-                    key={status}
-                    disabled={
-                      updatingId === mongoId ||
-                      currentStatus === status
-                    }
-                    onClick={() => updateStatus(mongoId, status)}
-                    className={`px-4 py-1 rounded border text-sm capitalize ${
-                      currentStatus === status
-                        ? "bg-black text-white"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    {updatingId === mongoId ? "Updating..." : status}
-                  </button>
-                ))}
-              </div>
+              <span
+                className={`px-3 py-1 rounded-full text-sm capitalize ${statusBadge(
+                  currentStatus
+                )}`}
+              >
+                {currentStatus}
+              </span>
             </div>
-          );
-        })}
+
+            <p className="mt-2">
+              Ordered by: <strong>{order.user_name || "User"}</strong>
+            </p>
+
+            <p className="font-medium">
+              Total: ₹{order.total_amount ?? 0}
+            </p>
+
+            <p className="text-sm text-gray-500">
+              Payment: {order.payment_method || "—"} (
+              {order.payment_status || "—"})
+            </p>
+
+            <p className="text-sm text-gray-500">
+              Placed at: {formatIST(order.created_at)}
+            </p>
+
+            <ul className="mt-3 list-disc ml-5 text-sm">
+              {(order.items || []).map((item, idx) => (
+                <li key={idx}>
+                  {item?.name || "Item"} × {item?.quantity || 0}
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex gap-2 mt-4 flex-wrap">
+              {["pending", "preparing", "completed"].map((status) => (
+                <button
+                  key={status}
+                  disabled={
+                    updatingId === mongoId ||
+                    currentStatus === status
+                  }
+                  onClick={() => updateStatus(mongoId, status)}
+                  className={`px-4 py-1 rounded border text-sm capitalize transition ${
+                    currentStatus === status
+                      ? "bg-black text-white"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  {updatingId === mongoId
+                    ? "Updating..."
+                    : status}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

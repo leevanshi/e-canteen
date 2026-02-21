@@ -1,6 +1,19 @@
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
 from datetime import datetime
+from enum import Enum
+
+# =========================
+# ENUMS
+# =========================
+
+class PaymentMethod(str, Enum):
+    cash = "cash"
+    online = "online"
+
+# =========================
+# MODELS
+# =========================
 
 class OrderItem(BaseModel):
     name: str
@@ -12,25 +25,27 @@ class OrderCreate(BaseModel):
     user_name: str
     items: List[OrderItem]
     total_amount: float
-    pickup_time: str
-    payment_method: str
+    pickup_time: datetime
+    payment_method: PaymentMethod
+    instruction: Optional[str] = None
 
 class StatusHistory(BaseModel):
     status: str
     time: datetime
 
 class OrderResponse(BaseModel):
-    order_id: int
+    order_id: str
+    user_id: Optional[str]
+
     user_name: str
     items: List[OrderItem]
     total_amount: float
-    pickup_time: str
-    payment_method: str
+    pickup_time: datetime
+    payment_method: PaymentMethod
 
-    status: str
-    instruction: str
+    status: str = "pending"
+    instruction: Optional[str] = None
     created_at: datetime
-    status_history: List[StatusHistory]
+    status_history: List[StatusHistory] = []
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
