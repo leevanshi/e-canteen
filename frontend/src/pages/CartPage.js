@@ -40,7 +40,6 @@ const CartPage = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-
       {/* BACK BUTTON */}
       <Button
         variant="outline"
@@ -55,14 +54,12 @@ const CartPage = () => {
       <div className="space-y-4">
         {cart.map((item, index) => {
           const itemId = item?._id || item?.id || index;
-
           const price = item?.price || 0;
           const quantity = item?.quantity || 1;
 
           return (
             <Card key={itemId}>
               <CardContent className="flex items-center justify-between gap-4 p-4">
-
                 {/* IMAGE + NAME */}
                 <div className="flex items-center gap-4">
                   <img
@@ -87,7 +84,7 @@ const CartPage = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => decreaseQty(itemId)}
-                    disabled={quantity <= 1} // ✅ prevent negative qty
+                    disabled={quantity <= 1}
                   >
                     −
                   </Button>
@@ -109,7 +106,6 @@ const CartPage = () => {
                 <div className="font-semibold">
                   ₹{price * quantity}
                 </div>
-
               </CardContent>
             </Card>
           );
@@ -133,4 +129,4 @@ const CartPage = () => {
   );
 };
 
-export default CartPage;s
+export default CartPage;
