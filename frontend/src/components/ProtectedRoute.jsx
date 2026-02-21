@@ -1,3 +1,5 @@
+// components/ProtectedRoute.jsx
+
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -13,18 +15,17 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
-  // ❌ Not logged in OR token missing
+  // ❌ Not logged in
   if (!user || !token) {
     return <Navigate to="/login" replace />;
   }
 
   // ❌ Role not allowed
-  if (allowedRoles) {
+  if (Array.isArray(allowedRoles)) {
     const userRole = user?.role?.toLowerCase();
 
     if (!userRole || !allowedRoles.includes(userRole)) {
-      return <Navigate to="/login" replace />;
-      // OR: <Navigate to="/unauthorized" replace />
+      return <Navigate to="/unauthorized" replace />;
     }
   }
 

@@ -12,17 +12,18 @@ const Navbar = () => {
   const { user, logout, loading, isAuthenticated } = useAuth();
   const { cartCount = 0 } = useCart();
 
-  /* ⏳ WAIT FOR AUTH RESTORE */
+  // ⏳ Wait for auth restore
   if (loading) return null;
 
+  // 🎭 Role flags
   const isAdmin = user?.role === "admin";
-  const isCustomer =
-    user?.role === "student" || user?.role === "faculty";
+  const isStudent = user?.role === "student";
+  const isFaculty = user?.role === "faculty";
 
-  /* 🔒 ADMIN NEVER SEES NAVBAR */
+  // 🔒 ADMIN NEVER SEES NAVBAR
   if (isAdmin) return null;
 
-  /* ❌ HIDE AUTH BUTTONS ON AUTH ROUTES */
+  // ❌ Hide auth buttons on auth pages
   const hideAuthButtons =
     location.pathname === "/login" ||
     location.pathname === "/join" ||
@@ -34,11 +35,9 @@ const Navbar = () => {
   };
 
   const handleLogoClick = () => {
-    if (isCustomer) {
-      navigate("/menu");
-    } else {
-      navigate("/");
-    }
+    if (isStudent) navigate("/menu");
+    else if (isFaculty) navigate("/faculty/dashboard");
+    else navigate("/");
   };
 
   return (
@@ -51,8 +50,8 @@ const Navbar = () => {
         ☕ E-Canteen
       </button>
 
-      {/* CENTER LINKS (ONLY STUDENT / FACULTY) */}
-      {isCustomer && (
+      {/* STUDENT NAV */}
+      {isStudent && (
         <div className="flex items-center gap-6 text-sm font-medium">
           <Link to="/menu" className="hover:text-orange-500">
             Menu
@@ -68,10 +67,29 @@ const Navbar = () => {
         </div>
       )}
 
+      {/* FACULTY NAV */}
+      {isFaculty && (
+        <div className="flex items-center gap-6 text-sm font-medium">
+          <Link
+            to="/faculty/dashboard"
+            className="hover:text-orange-500"
+          >
+            Dashboard
+          </Link>
+
+          <Link
+            to="/faculty/orders"
+            className="hover:text-orange-500"
+          >
+            Orders
+          </Link>
+        </div>
+      )}
+
       {/* RIGHT ACTIONS */}
       <div className="flex items-center gap-4">
-        {/* CART */}
-        {isCustomer && (
+        {/* CART (STUDENT ONLY) */}
+        {isStudent && (
           <Link to="/cart" className="relative">
             <ShoppingCart className="w-6 h-6 text-gray-700" />
             {cartCount > 0 && (

@@ -1,10 +1,12 @@
+// components/PublicRoute.jsx
+
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const PublicRoute = ({ children }) => {
   const { user, token, loading } = useAuth();
 
-  // ⏳ Show loader instead of blank screen
+  // ⏳ Wait for auth restore
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -13,7 +15,7 @@ const PublicRoute = ({ children }) => {
     );
   }
 
-  // 🔐 Already logged in (must have BOTH user + token)
+  // 🔐 Already logged in → redirect by role
   if (user && token) {
     const role = user?.role?.toLowerCase();
 
@@ -21,10 +23,15 @@ const PublicRoute = ({ children }) => {
       return <Navigate to="/admin/dashboard" replace />;
     }
 
+    if (role === "faculty") {
+      return <Navigate to="/faculty/dashboard" replace />;
+    }
+
+    // student (default)
     return <Navigate to="/menu" replace />;
   }
 
-  // ✅ Not logged in
+  // ✅ Not logged in → allow public page
   return children;
 };
 

@@ -15,12 +15,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const parseUser = (storedUser) => {
+  const normalizeUser = (storedUser) => {
     try {
       const parsed = JSON.parse(storedUser);
+      if (!parsed?.role) return null;
+
       return {
         ...parsed,
-        role: parsed?.role?.toLowerCase(), // ✅ normalize role
+        role: parsed.role.toLowerCase(), // normalize
       };
     } catch {
       return null;
@@ -34,7 +36,7 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem("user");
 
       if (storedToken && storedUser) {
-        const parsedUser = parseUser(storedUser);
+        const parsedUser = normalizeUser(storedUser);
 
         if (!parsedUser) {
           clearAuth();
@@ -53,36 +55,34 @@ export const AuthProvider = ({ children }) => {
 
   /* ================= LOGIN ================= */
   const login = (userData, authToken) => {
-    if (!authToken || !userData) {
-      throw new Error("Invalid login data received");
+    if (!userData || !authToken) {
+      throw new Error("Invalid login data");
     }
 
-    try {
-      const normalizedUser = {
-        ...userData,
-        role: userData?.role?.toLowerCase(),
-      };
+    const normalizedUser = {
+      ...userData,
+      role: userData.role.toLowerCase(),
+    };
 
-      localStorage.setItem("token", authToken);
-      localStorage.setItem("user", JSON.stringify(normalizedUser));
+    localStorage.setItem("token", authToken);
+    localStorage.setItem("user", JSON.stringify(normalizedUser));
 
-      setToken(authToken);
-      setUser(normalizedUser);
-    } catch (err) {
-      console.error("Login storage failed:", err);
-      throw new Error("Login failed");
-    }
+    setToken(authToken);
+    setUser(normalizedUser);
   };
 
   /* ================= LOGOUT ================= */
   const logout = () => {
     clearAuth();
-    window.location.replace("/login"); // ✅ force sync everywhere
+    window.location.replace("/login");
   };
 
   /* ================= ROLE HELPERS ================= */
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
+  const isFaculty = user?.role === "faculty";
+
+  const isAuthenticated = !!token && !!user;
 
   return (
     <AuthContext.Provider
@@ -92,9 +92,10 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
-        isAuthenticated: !!token,
+        isAuthenticated,
         isAdmin,
         isStudent,
+        isFaculty,
       }}
     >
       {!loading && children}
