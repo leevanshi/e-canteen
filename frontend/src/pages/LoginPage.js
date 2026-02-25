@@ -77,19 +77,21 @@ const LoginPage = () => {
       }
 
     } catch (err) {
-      clearTimeout(slowTimer);
+  clearTimeout(slowTimer);
 
-      console.error("LOGIN ERROR:", err);
+  console.error("LOGIN ERROR:", err);
 
-      toast.error(
-        err?.response?.data?.detail ||
-        err?.response?.data?.message ||
-        "Invalid email or password"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  if (!err.response) {
+    // 🔥 THIS is your main issue case
+    toast.error("🚀 Server is starting... please wait 30–60 seconds and try again");
+  } else {
+    toast.error(
+      err.response?.data?.detail ||
+      err.response?.data?.message ||
+      "Invalid email or password"
+    );
+  }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-orange-50">

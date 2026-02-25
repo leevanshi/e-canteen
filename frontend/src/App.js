@@ -1,7 +1,7 @@
 // src/App.js
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
-
+import { useEffect } from "react";
 // Public pages
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -42,7 +42,19 @@ const App = () => {
     location.pathname === "/login" ||
     location.pathname === "/join" ||
     location.pathname.startsWith("/register");
+useEffect(() => {
+  const wakeBackend = async () => {
+    try {
+      await fetch("https://e-canteen-7.onrender.com");
+      console.log("✅ Backend is awake");
+    } catch {
+      console.log("Retrying...");
+      setTimeout(wakeBackend, 5000);
+    }
+  };
 
+  wakeBackend();
+}, []);
   return (
     <>
       <Toaster

@@ -51,7 +51,9 @@ const RegisterPage = () => {
     }
 
     setLoading(true);
-
+const slowTimer = setTimeout(() => {
+  toast.info("⏳ Server is waking up, please wait...");
+}, 2000);
     try {
       await registerUser({
         name: name.trim(),
@@ -62,22 +64,25 @@ const RegisterPage = () => {
       toast.success("Account registered successfully. Please login.");
       navigate("/login", { replace: true });
     } catch (err) {
-      console.error("REGISTER ERROR:", err);
+  console.error("REGISTER ERROR:", err);
 
-      if (err?.response?.status === 409) {
-        toast.info("Account already exists. Please login.");
-        navigate("/login", { replace: true });
-      } else {
-        toast.error(
-          err?.response?.data?.detail ||
-            err?.message ||
-            "Registration failed"
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!err.response) {
+    // 🔥 Main fix for your issue
+    toast.error("🚀 Server is starting... please wait 30–60 seconds and try again");
+    return;
+  }
+
+  if (err.response.status === 409) {
+    toast.info("Account already exists. Please login.");
+    navigate("/login", { replace: true });
+  } else {
+    toast.error(
+      err.response?.data?.detail ||
+      err.response?.data?.message ||
+      "Registration failed"
+    );
+  }
+}
 
   const roleLabel =
     role?.charAt(0).toUpperCase() + role?.slice(1);
