@@ -8,8 +8,9 @@ from pymongo import ReturnDocument
 # ================= CONFIG =================
 IST = timezone(timedelta(hours=5, minutes=30))
 
+# 🔥 FIXED PREFIX
 router = APIRouter(
-    prefix="/api/admin",
+    prefix="/admin",
     tags=["Admin"]
 )
 
@@ -18,7 +19,7 @@ from database import (
     orders_collection,
     users_collection,
     counters_collection,
-    menu_collection   # ✅ FIXED (was missing)
+    menu_collection
 )
 
 # ================= AUTH =================
@@ -33,20 +34,20 @@ def ensure_admin_or_staff(user: dict):
             detail="Admin or Staff access required"
         )
 
+
 # ================= ORDER ID COUNTER =================
-
-
-
 def get_next_order_id() -> int:
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
-        {"$inc": {"seq": 1}},
+        {
+            "$inc": {"seq": 1},
+            "$setOnInsert": {"seq": 99}  # 🔥 ensures start from 100
+        },
         upsert=True,
         return_document=ReturnDocument.AFTER
     )
-
-    # If document was newly created, seq may start at 1
     return counter["seq"]
+
 
 # ================= SCHEMAS =================
 class OrderStatusUpdate(BaseModel):
@@ -56,14 +57,15 @@ class AdminPlaceOrder(BaseModel):
     items: List[Dict[str, Any]]
     total_amount: float
 
-# ✅ NEW MODEL (IMPORTANT)
 class AvailabilityUpdate(BaseModel):
     available: bool
 
 
 # ================= GET ALL ORDERS =================
 @router.get("/orders")
-def get_admin_orders():
+def get_admin_orders(current_user=Depends(get_current_user)):
+    ensure_admin_or_staff(current_user)
+
     orders = orders_collection.find().sort("created_at", -1)
 
     result = []
@@ -95,12 +97,12 @@ def get_online_orders(current_user=Depends(get_current_user)):
     for o in orders:
         result.append({
             "_id": str(o["_id"]),
-            "user_id": str(o["user_id"]),
-            "user_name": o["user_name"],
-            "items": o["items"],
-            "total_amount": o["total_amount"],
-            "status": o["status"],
-            "created_at": o["created_at"]
+            "user_id": str(o["user_id"]) if o.get("user_id") else None,
+            "user_name": o.get("user_name"),
+            "items": o.get("items"),
+            "total_amount": o.get("total_amount"),
+            "status": o.get("status"),
+            "created_at": o.get("created_at")
         })
 
     return result
@@ -120,11 +122,12 @@ def update_order_status(
 
     now = datetime.now(IST)
 
-    query = (
-        {"order_id": int(order_id)}
-        if order_id.isdigit()
-        else {"_id": ObjectId(order_id)}
-    )
+    if order_id.isdigit():
+        query = {"order_id": int(order_id)}
+    else:
+        if not ObjectId.is_valid(order_id):
+            raise HTTPException(status_code=400, detail="Invalid order ID")
+        query = {"_id": ObjectId(order_id)}
 
     result = orders_collection.update_one(
         query,
@@ -160,6 +163,9 @@ def toggle_menu_availability(
     current_user=Depends(get_current_user)
 ):
     ensure_admin_or_staff(current_user)
+
+    if not ObjectId.is_valid(menu_id):
+        raise HTTPException(status_code=400, detail="Invalid menu ID")
 
     item = menu_collection.find_one_and_update(
         {"_id": ObjectId(menu_id)},

@@ -1,10 +1,10 @@
 from pymongo import MongoClient, ReturnDocument
-from datetime import timedelta, timezone
+from datetime import timedelta, timezone, datetime
 import os
 from dotenv import load_dotenv
 
 # =========================
-# LOAD ENV (🔥 MUST BE FIRST)
+# LOAD ENV
 # =========================
 load_dotenv()
 
@@ -22,19 +22,25 @@ if not MONGO_URL:
 # =========================
 IST = timezone(timedelta(hours=5, minutes=30))
 
+def now_ist():
+    return datetime.now(IST)
+
 # =========================
-# MONGODB CLIENT (FAIL FAST)
+# MONGODB CLIENT
 # =========================
 client = MongoClient(
     MONGO_URL,
     serverSelectionTimeoutMS=5000,
     connectTimeoutMS=5000,
     socketTimeoutMS=5000,
+    retryWrites=True,
+    uuidRepresentation="standard"
 )
 
-# 🔥 Force MongoDB connection at startup
+# 🔥 Check connection at startup
 try:
-    client.server_info()
+    client.admin.command("ping")
+    print("✅ MongoDB connected successfully")
 except Exception as e:
     raise RuntimeError(f"MongoDB connection failed: {e}")
 
@@ -52,6 +58,13 @@ wallet_txn_collection = db["wallet_transactions"]
 counters_collection = db["counters"]
 
 # =========================
+# INDEXES (VERY IMPORTANT)
+# =========================
+users_collection.create_index("email", unique=True)
+orders_collection.create_index("order_id", unique=True)
+wallet_collection.create_index("user_id")
+
+# =========================
 # ORDER ID COUNTER
 # =========================
 def get_next_order_id() -> int:
@@ -59,7 +72,7 @@ def get_next_order_id() -> int:
         {"_id": "order_id"},
         {
             "$inc": {"seq": 1},
-            "$setOnInsert": {"seq": 100}
+            "$setOnInsert": {"seq": 99}
         },
         upsert=True,
         return_document=ReturnDocument.AFTER

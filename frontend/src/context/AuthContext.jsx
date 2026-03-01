@@ -18,13 +18,15 @@ export const AuthProvider = ({ children }) => {
   const normalizeUser = (storedUser) => {
     try {
       const parsed = JSON.parse(storedUser);
-      if (!parsed?.role) return null;
+
+      if (!parsed || typeof parsed !== "object") return null;
 
       return {
         ...parsed,
-        role: parsed.role.toLowerCase(), // normalize
+        role: (parsed.role || "").toLowerCase(), // 🔥 safe role handling
       };
-    } catch {
+    } catch (err) {
+      console.error("User parse error:", err);
       return null;
     }
   };
@@ -38,12 +40,14 @@ export const AuthProvider = ({ children }) => {
       if (storedToken && storedUser) {
         const parsedUser = normalizeUser(storedUser);
 
-        if (!parsedUser) {
+        if (!parsedUser || !parsedUser.role) {
           clearAuth();
         } else {
           setToken(storedToken);
           setUser(parsedUser);
         }
+      } else {
+        clearAuth();
       }
     } catch (err) {
       console.error("Auth restore failed:", err);
@@ -61,8 +65,12 @@ export const AuthProvider = ({ children }) => {
 
     const normalizedUser = {
       ...userData,
-      role: userData.role.toLowerCase(),
+      role: (userData.role || "").toLowerCase(),
     };
+
+    if (!normalizedUser.role) {
+      throw new Error("User role missing");
+    }
 
     localStorage.setItem("token", authToken);
     localStorage.setItem("user", JSON.stringify(normalizedUser));
@@ -74,15 +82,34 @@ export const AuthProvider = ({ children }) => {
   /* ================= LOGOUT ================= */
   const logout = () => {
     clearAuth();
-    window.location.replace("/login");
+
+    // 🔥 safer redirect (no infinite reload issues)
+    if (!window.location.pathname.includes("/login")) {
+      window.location.href = "/login";
+    }
   };
+
+  /* ================= SYNC BETWEEN TABS ================= */
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedToken = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
+
+      if (!storedToken || !storedUser) {
+        clearAuth();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   /* ================= ROLE HELPERS ================= */
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
   const isFaculty = user?.role === "faculty";
 
-  const isAuthenticated = !!token && !!user;
+  const isAuthenticated = Boolean(token && user);
 
   return (
     <AuthContext.Provider

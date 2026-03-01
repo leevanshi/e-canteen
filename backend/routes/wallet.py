@@ -6,14 +6,14 @@ from pydantic import BaseModel
 # ================= CONFIG =================
 IST = timezone(timedelta(hours=5, minutes=30))
 
+# 🔥 FIXED PREFIX
 router = APIRouter(
-    prefix="/api/wallet",
+    prefix="/wallet",
     tags=["Wallet"]
 )
 
 # ================= DATABASE =================
 from database import wallet_collection, users_collection
-
 from routes.auth import get_current_user
 
 
@@ -25,6 +25,7 @@ class AdminAddMoney(BaseModel):
     user_id: str
     amount: float
 
+
 # ================= GET MY WALLET =================
 @router.get("/me")
 def get_my_wallet(current_user=Depends(get_current_user)):
@@ -33,11 +34,12 @@ def get_my_wallet(current_user=Depends(get_current_user)):
     )
 
     if not wallet:
-        raise HTTPException(status_code=404, detail="Wallet not found")
+        return {"balance": 0}  # 🔥 better UX (avoid 404 crash)
 
     return {
-        "balance": wallet["balance"]
+        "balance": wallet.get("balance", 0)
     }
+
 
 # ================= ADD MONEY (USER SELF) =================
 @router.post("/add")
@@ -62,6 +64,7 @@ def add_money(
         "amount_added": data.amount
     }
 
+
 # ================= ADMIN ADD MONEY =================
 @router.post("/admin/add-money")
 def admin_add_money(
@@ -73,6 +76,9 @@ def admin_add_money(
 
     if not ObjectId.is_valid(data.user_id):
         raise HTTPException(status_code=400, detail="Invalid user ID")
+
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid amount")
 
     wallet_collection.find_one_and_update(
         {"user_id": ObjectId(data.user_id)},

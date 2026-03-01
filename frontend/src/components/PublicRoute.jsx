@@ -1,10 +1,9 @@
-// components/PublicRoute.jsx
-
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const PublicRoute = ({ children }) => {
   const { user, token, loading } = useAuth();
+  const location = useLocation();
 
   // ⏳ Wait for auth restore
   if (loading) {
@@ -15,7 +14,7 @@ const PublicRoute = ({ children }) => {
     );
   }
 
-  // 🔐 Already logged in → redirect by role
+  // 🔐 Already logged in → redirect safely
   if (user && token) {
     const role = user?.role?.toLowerCase();
 
@@ -24,14 +23,15 @@ const PublicRoute = ({ children }) => {
     }
 
     if (role === "faculty") {
-      return <Navigate to="/faculty/dashboard" replace />;
+      // ⚠️ fallback if route not built yet
+      return <Navigate to="/" replace />;
     }
 
-    // student (default)
+    // default → student
     return <Navigate to="/menu" replace />;
   }
 
-  // ✅ Not logged in → allow public page
+  // ✅ Not logged in → allow access
   return children;
 };
 

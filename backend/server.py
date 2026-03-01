@@ -10,7 +10,8 @@ from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
 
-from routes.auth import get_current_user
+# ❌ REMOVE THIS (wrong import here)
+# from routes.auth import get_current_user
 
 load_dotenv()
 
@@ -27,8 +28,6 @@ def hash_password(password: str):
     return pwd_context.hash(password)
 
 # ================= CORS =================
-
-# ================= CORS =================
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex="https://.*vercel.app",
@@ -36,6 +35,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # ================= DATABASE =================
 from database import (
     wallet_collection,
@@ -53,7 +53,7 @@ from routes.orders import router as orders_router
 from routes.admin import router as admin_router
 from routes.feedback import router as feedback_router
 
-# 🔥 IMPORTANT FIX: REMOVE `/api` PREFIX
+# ✅ KEEP ONLY ROUTERS (NO DUPLICATE APIs BELOW)
 app.include_router(auth_router)
 app.include_router(wallet_router)
 app.include_router(menu_router)
@@ -65,6 +65,7 @@ app.include_router(feedback_router)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # ================= ORDER ID COUNTER =================
@@ -86,17 +87,6 @@ def get_next_order_id():
     return counter["value"]
 
 # ================= SCHEMAS =================
-class OrderItem(BaseModel):
-    item_id: str
-    name: str
-    price: float
-    quantity: int
-
-class CreateOrder(BaseModel):
-    items: List[OrderItem]
-    pickup_time: Optional[str] = None
-    payment_method: str
-
 class RegisterUser(BaseModel):
     name: str
     email: EmailStr
@@ -126,51 +116,10 @@ def register_user(data: RegisterUser):
         "message": "User registered successfully",
     }
 
-# ================= MENU =================
-@app.get("/menu")
-def get_menu():
-    menu = []
-    for item in menu_collection.find({"available": True}):
-        item["_id"] = str(item["_id"])
-        menu.append(item)
-    return menu
-
-# ================= STUDENT PLACE ORDER =================
-@app.post("/orders")
-def place_order(data: CreateOrder, user=Depends(get_current_user)):
-    now = datetime.now(IST)
-    order_id = get_next_order_id()
-
-    total = sum(i.price * i.quantity for i in data.items)
-    payment_status = "paid" if data.payment_method == "wallet" else "pending"
-
-    if data.payment_method == "wallet":
-        wallet = wallet_collection.find_one({"user_id": ObjectId(user["_id"])})
-        if not wallet or wallet["balance"] < total:
-            raise HTTPException(status_code=400, detail="Insufficient wallet balance")
-
-        wallet_collection.update_one(
-            {"user_id": ObjectId(user["_id"])},
-            {"$inc": {"balance": -total}},
-        )
-
-    orders_collection.insert_one({
-        "order_id": order_id,
-        "order_source": "online",
-        "user_id": ObjectId(user["_id"]),
-        "user_name": user.get("name"),
-        "items": [i.dict() for i in data.items],
-        "total_amount": total,
-        "pickup_time": data.pickup_time,
-        "payment_method": data.payment_method,
-        "payment_status": payment_status,
-        "status": "pending",
-        "status_history": [{"status": "pending", "time": now}],
-        "created_at": now,
-        "updated_at": now,
-    })
-
-    return {"success": True, "order_id": order_id}
+# ================= HEALTH CHECK =================
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 # ================= ROOT =================
 @app.get("/")

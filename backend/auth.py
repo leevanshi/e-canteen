@@ -12,7 +12,10 @@ import os
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ================= SECURITY =================
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY must be set in environment variables")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
@@ -53,7 +56,6 @@ def create_token(data: dict) -> str:
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-    # 🔒 Check scheme
     if credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,7 +67,6 @@ def get_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
-        # 🔒 Token type validation
         if payload.get("type") != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -90,9 +91,9 @@ def get_current_user(
 
         return {
             "_id": str(user["_id"]),
-            "name": user["name"],
-            "email": user["email"],
-            "role": user["role"],
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "role": user.get("role"),
         }
 
     except JWTError:
@@ -106,20 +107,19 @@ def get_current_user(
 def register_admin(data: AdminRegisterSchema):
     email = data.email.lower().strip()
 
-    if users_collection.find_one({"email": email}):
+    existing_user = users_collection.find_one({"email": email})
+    if existing_user:
         raise HTTPException(status_code=409, detail="User already exists")
 
     users_collection.insert_one({
-        "name": data.name,
+        "name": data.name.strip(),
         "email": email,
         "password": hash_password(data.password),
         "role": "admin",
         "created_at": datetime.utcnow()
     })
 
-    return {
-        "message": "Admin registered successfully"
-    }
+    return {"message": "Admin registered successfully"}
 
 # ================= LOGIN =================
 @router.post("/login")
@@ -140,8 +140,8 @@ def login(data: LoginSchema):
         "token_type": "bearer",
         "user": {
             "id": str(user["_id"]),
-            "name": user["name"],
-            "email": user["email"],
-            "role": user["role"]
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "role": user.get("role")
         }
     }

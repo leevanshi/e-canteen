@@ -1,186 +1,113 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { useAuth } from "./AuthContext";
+import { createContext, useContext, useEffect, useState } from "react";
 
-const CartContext = createContext(null);
+const AuthContext = createContext(null);
 
-export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
-  const { isAuthenticated } = useAuth();
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  /* =========================
-     LOAD CART FROM STORAGE
-  ========================= */
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const stored = localStorage.getItem("cart");
-    if (stored) {
-      try {
-        setCart(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem("cart");
-      }
-    }
-  }, [isAuthenticated]);
-
-  /* =========================
-     CLEAR CART ON LOGOUT
-  ========================= */
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setCart([]);
-      localStorage.removeItem("cart");
-    }
-  }, [isAuthenticated]);
-
-  /* =========================
-     PERSIST CART
-  ========================= */
-  useEffect(() => {
-    if (isAuthenticated) {
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
-  }, [cart, isAuthenticated]);
-
-  /* =========================
-     ADD TO CART
-  ========================= */
-  const addToCart = (item) => {
-    if (!isAuthenticated) {
-      toast.error("Please login to add items");
-      return;
-    }
-
-    if (!item?._id) {
-      console.error("Item missing _id", item);
-      return;
-    }
-
-    if (item.available === false) {
-      toast.error("Item is currently unavailable");
-      return;
-    }
-
-    setCart((prev) => {
-      const existing = prev.find((i) => i._id === item._id);
-
-      if (existing) {
-        toast.success("Item quantity updated");
-        return prev.map((i) =>
-          i._id === item._id
-            ? { ...i, quantity: i.quantity + 1 }
-            : i
-        );
-      }
-
-      toast.success("Item added to cart");
-
-      return [
-        ...prev,
-        {
-          _id: item._id,
-          name: item.name,
-          price: item.price,
-          image: item.image,
-          quantity: 1,
-        },
-      ];
-    });
+  /* ================= HELPERS ================= */
+  const clearAuth = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
   };
 
-  /* =========================
-     QUANTITY CONTROLS
-  ========================= */
-  const increaseQty = (_id) => {
-    setCart((prev) =>
-      prev.map((i) =>
-        i._id === _id ? { ...i, quantity: i.quantity + 1 } : i
-      )
-    );
+  const normalizeUser = (storedUser) => {
+    try {
+      const parsed = JSON.parse(storedUser);
+      if (!parsed?.role) return null;
+
+      return {
+        ...parsed,
+        role: parsed.role.toLowerCase(), // normalize
+      };
+    } catch {
+      return null;
+    }
   };
 
-  const decreaseQty = (_id) => {
-    setCart((prev) =>
-      prev
-        .map((i) =>
-          i._id === _id
-            ? { ...i, quantity: i.quantity - 1 }
-            : i
-        )
-        .filter((i) => i.quantity > 0)
-    );
-  };
+  /* ================= RESTORE AUTH ================= */
+  useEffect(() => {
+    try {
+      const storedToken = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
 
-  /* =========================
-     REMOVE UNAVAILABLE ITEMS
-  ========================= */
-  const syncCartWithMenu = (menuItems) => {
-    setCart((prev) =>
-      prev.filter((cartItem) => {
-        const menuItem = menuItems.find(
-          (m) => m._id === cartItem._id
-        );
+      if (storedToken && storedUser) {
+        const parsedUser = normalizeUser(storedUser);
 
-        if (!menuItem || menuItem.available === false) {
-          toast.error(
-            `${cartItem.name} removed (unavailable)`
-          );
-          return false;
+        if (!parsedUser) {
+          clearAuth();
+        } else {
+          setToken(storedToken);
+          setUser(parsedUser);
         }
+      }
+    } catch (err) {
+      console.error("Auth restore failed:", err);
+      clearAuth();
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-        return true;
-      })
-    );
+  /* ================= LOGIN ================= */
+  const login = (userData, authToken) => {
+    if (!userData || !authToken) {
+      throw new Error("Invalid login data");
+    }
+
+    const normalizedUser = {
+      ...userData,
+      role: userData.role.toLowerCase(),
+    };
+
+    localStorage.setItem("token", authToken);
+    localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+    setToken(authToken);
+    setUser(normalizedUser);
   };
 
-  /* =========================
-     HELPERS
-  ========================= */
-  const getQuantity = (_id) =>
-    cart.find((i) => i._id === _id)?.quantity || 0;
-
-  const clearCart = () => {
-    setCart([]);
-    localStorage.removeItem("cart");
+  /* ================= LOGOUT ================= */
+  const logout = () => {
+    clearAuth();
+    window.location.replace("/login");
   };
 
-  /* =========================
-     DERIVED VALUES
-  ========================= */
-  const cartCount = useMemo(
-    () => cart.reduce((sum, i) => sum + i.quantity, 0),
-    [cart]
-  );
+  /* ================= ROLE HELPERS ================= */
+  const isAdmin = user?.role === "admin";
+  const isStudent = user?.role === "student";
+  const isFaculty = user?.role === "faculty";
 
-  const cartTotal = useMemo(
-    () => cart.reduce((sum, i) => sum + i.price * i.quantity, 0),
-    [cart]
-  );
+  const isAuthenticated = !!token && !!user;
 
   return (
-    <CartContext.Provider
+    <AuthContext.Provider
       value={{
-        cart,
-        addToCart,
-        increaseQty,
-        decreaseQty,
-        getQuantity,
-        clearCart,
-        cartCount,
-        cartTotal,
-        syncCartWithMenu,
+        user,
+        token,
+        loading,
+        login,
+        logout,
+        isAuthenticated,
+        isAdmin,
+        isStudent,
+        isFaculty,
       }}
     >
-      {children}
-    </CartContext.Provider>
+      {!loading && children}
+    </AuthContext.Provider>
   );
 };
 
-export const useCart = () => {
-  const ctx = useContext(CartContext);
-  if (!ctx) {
-    throw new Error("useCart must be used inside CartProvider");
+/* ================= HOOK ================= */
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
   }
-  return ctx;
+  return context;
 };

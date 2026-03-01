@@ -3,7 +3,6 @@ from bson import ObjectId
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from typing import List, Optional
-from database import get_next_order_id
 
 # ================= CONFIG =================
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -23,8 +22,6 @@ from database import (
 # ================= AUTH =================
 from routes.auth import get_current_user
 
-print("DB NAME:", orders_collection.database.name)
-
 # ================= COUNTER HELPER =================
 def get_next_order_id():
     counter = orders_collection.database.counters.find_one_and_update(
@@ -34,7 +31,6 @@ def get_next_order_id():
         return_document=True
     )
     return counter["seq"]
-
 
 # ================= SCHEMAS =================
 class OrderItem(BaseModel):
@@ -47,7 +43,6 @@ class CreateOrder(BaseModel):
     items: List[OrderItem]
     pickup_time: Optional[str] = None
     payment_method: str  # wallet | counter
-
 
 # ================= PLACE ORDER =================
 @router.post("")
@@ -92,7 +87,7 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
     order_id = get_next_order_id()
 
     orders_collection.insert_one({
-        "order_id": order_id,                # ✅ NUMERIC ORDER ID
+        "order_id": order_id,
         "order_type": "online",
         "user_id": ObjectId(current_user["_id"]),
         "user_name": current_user["name"],
@@ -108,9 +103,8 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
     return {
         "message": "Order placed successfully",
-        "order_id": order_id                # ✅ SEND TO FRONTEND
+        "order_id": order_id
     }
-
 
 # ================= GET MY ORDERS =================
 @router.get("")
@@ -134,19 +128,16 @@ def get_my_orders(current_user=Depends(get_current_user)):
 
     return result
 
-
 # ================= GET SINGLE ORDER =================
 @router.get("/{order_id}")
 def get_order(order_id: str, current_user=Depends(get_current_user)):
 
-    # Case 1: numeric order_id (175)
     if order_id.isdigit():
         order = orders_collection.find_one({
             "order_id": int(order_id),
             "user_id": ObjectId(current_user["_id"])
         })
     else:
-        # Case 2: Mongo ObjectId
         if not ObjectId.is_valid(order_id):
             raise HTTPException(status_code=400, detail="Invalid order ID")
 

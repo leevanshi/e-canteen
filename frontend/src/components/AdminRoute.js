@@ -1,10 +1,9 @@
-// components/AdminRoute.jsx
-
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const AdminRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
+  const location = useLocation();
 
   // ⏳ Wait for auth restore
   if (loading) {
@@ -15,14 +14,14 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  // ❌ Not logged in
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  // ❌ Not logged in (check BOTH user + token)
+  if (!user || !token) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // ❌ Logged in but not admin
-  if (user.role !== "admin") {
-    return <Navigate to="/unauthorized" replace />;
+  // ❌ Not admin (safe lowercase check)
+  if (user?.role?.toLowerCase() !== "admin") {
+    return <Navigate to="/" replace />;
   }
 
   // ✅ Admin allowed

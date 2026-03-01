@@ -7,7 +7,8 @@ from datetime import datetime, timezone, timedelta
 from routes.auth import get_current_user
 from database import menu_collection
 
-router = APIRouter(prefix="/api/menu", tags=["Menu"])
+# 🔥 FIXED PREFIX
+router = APIRouter(prefix="/menu", tags=["Menu"])
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -35,9 +36,9 @@ class MenuItemUpdate(BaseModel):
 
 # =========================
 # PUBLIC ROUTE
-# GET /api/menu
+# GET /menu
 # =========================
-@router.get("", response_model=List[dict])
+@router.get("/", response_model=List[dict])
 def get_menu():
     items = list(menu_collection.find({"available": True}))
 
@@ -52,11 +53,11 @@ def get_menu():
 # =========================
 
 # GET ALL (including unavailable)
-# /api/menu/all
+# /menu/all
 @router.get("/all")
 def get_all_menu(current_user=Depends(get_current_user)):
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     items = list(menu_collection.find({}))
 
@@ -66,7 +67,7 @@ def get_all_menu(current_user=Depends(get_current_user)):
     return items
 
 
-@router.post("")
+@router.post("/")
 def add_menu_item(
     data: MenuItemCreate,
     current_user=Depends(get_current_user)
@@ -99,14 +100,14 @@ def update_menu_item(
     current_user=Depends(get_current_user)
 ):
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     try:
         mid = ObjectId(menu_id)
     except:
         raise HTTPException(status_code=400, detail="Invalid menu id")
 
-    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
 
     if not update_data:
         raise HTTPException(status_code=400, detail="Nothing to update")
@@ -130,7 +131,7 @@ def delete_menu_item(
     current_user=Depends(get_current_user)
 ):
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     try:
         mid = ObjectId(menu_id)

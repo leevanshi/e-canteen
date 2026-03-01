@@ -2,21 +2,23 @@ from enum import Enum
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from bson import ObjectId
-from datetime import datetime
-from typing import List
+from datetime import datetime, timedelta, timezone
 
-from auth import get_current_user
-from database import orders_collection
+# ================= CONFIG =================
+IST = timezone(timedelta(hours=5, minutes=30))
 
 router = APIRouter(
-    prefix="/orders",
-    tags=["Orders"]
+    prefix="/api/admin/orders",
+    tags=["Admin Orders"]
 )
 
-# =========================
-# ENUMS & SCHEMAS
-# =========================
+# ================= DATABASE =================
+from database import orders_collection
 
+# ================= AUTH =================
+from auth import get_current_user
+
+# ================= ENUMS =================
 class OrderStatus(str, Enum):
     pending = "pending"
     preparing = "preparing"
@@ -25,11 +27,7 @@ class OrderStatus(str, Enum):
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
 
-
-# =========================
-# GET ALL ONLINE ORDERS
-# =========================
-
+# ================= GET ALL ONLINE ORDERS =================
 @router.get("/")
 def get_all_orders(current_user=Depends(get_current_user)):
     if current_user.get("role") not in ["admin", "staff"]:
@@ -47,11 +45,7 @@ def get_all_orders(current_user=Depends(get_current_user)):
 
     return orders
 
-
-# =========================
-# UPDATE ORDER STATUS
-# =========================
-
+# ================= UPDATE ORDER STATUS =================
 @router.put("/{order_id}/status")
 def update_order_status(
     order_id: str,
@@ -61,22 +55,44 @@ def update_order_status(
     if current_user.get("role") not in ["admin", "staff"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    if not ObjectId.is_valid(order_id):
-        raise HTTPException(status_code=400, detail="Invalid order id")
+    # ================= FIND ORDER =================
+    if order_id.isdigit():
+        order = orders_collection.find_one({
+            "order_id": int(order_id),
+            "order_type": "online"
+        })
+        query = {"order_id": int(order_id)}
+    else:
+        if not ObjectId.is_valid(order_id):
+            raise HTTPException(status_code=400, detail="Invalid order id")
 
-    oid = ObjectId(order_id)
-
-    order = orders_collection.find_one(
-        {"_id": oid, "order_type": "online"}
-    )
+        oid = ObjectId(order_id)
+        order = orders_collection.find_one({
+            "_id": oid,
+            "order_type": "online"
+        })
+        query = {"_id": oid}
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    now = datetime.utcnow()
+    # ================= STATUS VALIDATION =================
+    valid_transitions = {
+        "pending": ["preparing"],
+        "preparing": ["completed"],
+        "completed": []
+    }
 
+    current_status = order.get("status")
+
+    if data.status.value not in valid_transitions.get(current_status, []):
+        raise HTTPException(status_code=400, detail="Invalid status transition")
+
+    now = datetime.now(IST)
+
+    # ================= UPDATE =================
     orders_collection.update_one(
-        {"_id": oid},
+        query,
         {
             "$set": {
                 "status": data.status.value,
@@ -92,6 +108,6 @@ def update_order_status(
     )
 
     return {
-        "order_id": order_id,
+        "order_id": order.get("order_id"),
         "status": data.status.value
     }

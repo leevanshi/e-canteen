@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from enum import Enum
 
@@ -10,16 +10,17 @@ class UserRole(str, Enum):
 
 
 class UserRegister(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    password: str
-    roll_number: Optional[str] = None
-    phone: Optional[str] = None
+    password: str = Field(..., min_length=6)
 
-    # ✅ Wallet logic (default: not initialized)
+    roll_number: Optional[str] = Field(None, max_length=20)
+    phone: Optional[str] = Field(None, max_length=15)
+
+    # ✅ Wallet flag (better naming clarity)
     is_wallet_initialized: bool = False
 
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=6)
