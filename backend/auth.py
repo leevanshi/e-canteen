@@ -1,15 +1,24 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from database import users_collection
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from bson import ObjectId
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dotenv import load_dotenv
 import os
+import logging
+
+# ================= LOAD ENV =================
+load_dotenv()
 
 # ================= ROUTER =================
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+# ================= LOGGING =================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ================= SECURITY =================
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -26,6 +35,12 @@ pwd_context = CryptContext(
     deprecated="auto"
 )
 
+# ================= DB INDEX =================
+try:
+    users_collection.create_index("email", unique=True)
+except Exception as e:
+    logger.warning(f"Index creation skipped: {str(e)}")
+
 # ================= SCHEMAS =================
 class LoginSchema(BaseModel):
     email: EmailStr
@@ -35,6 +50,12 @@ class AdminRegisterSchema(BaseModel):
     name: str
     email: EmailStr
     password: str
+
+    @validator("password")
+    def strong_password(cls, v):
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return v
 
 # ================= HELPERS =================
 def hash_password(password: str) -> str:
@@ -73,7 +94,7 @@ def get_current_user(
                 detail="Invalid token type"
             )
 
-        user_id = payload.get("id")
+        user_id = payload.get("sub")
 
         if not user_id or not ObjectId.is_valid(user_id):
             raise HTTPException(
@@ -96,11 +117,21 @@ def get_current_user(
             "role": user.get("role"),
         }
 
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWT Error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token"
         )
+
+# ================= ROLE GUARD =================
+def require_admin(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return user
 
 # ================= ADMIN REGISTER =================
 @router.post("/admin/register", status_code=status.HTTP_201_CREATED)
@@ -131,17 +162,26 @@ def login(data: LoginSchema):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_token({
-        "id": str(user["_id"]),
+        "sub": str(user["_id"]),
         "role": user["role"]
     })
 
     return {
         "access_token": token,
         "token_type": "bearer",
+        "expires_in_days": ACCESS_TOKEN_EXPIRE_DAYS,
         "user": {
             "id": str(user["_id"]),
             "name": user.get("name"),
             "email": user.get("email"),
             "role": user.get("role")
         }
+    }
+
+# ================= SAMPLE ADMIN ROUTE =================
+@router.get("/admin/me")
+def get_admin_profile(user=Depends(require_admin)):
+    return {
+        "message": "Welcome Admin",
+        "user": user
     }
