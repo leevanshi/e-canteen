@@ -11,13 +11,19 @@ const API = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000,
+  timeout: 90000, // Increased for Render cold start
 });
 
 /* =========================
    HELPERS
 ========================= */
-const getToken = () => localStorage.getItem("token");
+const getToken = () => {
+  try {
+    return localStorage.getItem("token");
+  } catch {
+    return null;
+  }
+};
 
 const isAuthRoute = (url = "") =>
   url.includes("/auth/login") || url.includes("/auth/register");
@@ -51,19 +57,22 @@ API.interceptors.response.use(
     const status = error?.response?.status;
     const url = error?.config?.url || "";
 
-    // 🔒 Auto logout on 401
+    // 🔒 Auto logout on 401 (except auth routes)
     if (status === 401 && !isAuthRoute(url)) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      } catch {}
 
       if (!window.location.pathname.includes("/login")) {
+        alert("Session expired. Please login again.");
         window.location.replace("/login");
       }
     }
 
-    // 🌐 Network issue
+    // 🌐 Network issue (Render sleeping / backend down)
     if (!error.response) {
-      console.error("Network error or backend down");
+      console.error("Network error or backend unavailable.");
     }
 
     return Promise.reject(error);
@@ -73,26 +82,38 @@ API.interceptors.response.use(
 /* =========================
    AUTH
 ========================= */
-export const loginUser = (data) => API.post("/auth/login", data);
-export const registerUser = (data) => API.post("/auth/register", data);
+export const loginUser = (data) =>
+  API.post("/auth/login", data);
+
+export const registerUser = (data) =>
+  API.post("/auth/register", data);
 
 /* =========================
    MENU
 ========================= */
-export const getMenu = () => API.get("/menu");
-export const getAllMenu = () => API.get("/menu/all");
+export const getMenu = () =>
+  API.get("/menu");
+
+export const getAllMenu = () =>
+  API.get("/menu/all");
 
 /* =========================
    ORDERS (USER)
 ========================= */
-export const createOrder = (data) => API.post("/orders", data);
-export const getUserOrders = () => API.get("/orders");
+export const createOrder = (data) =>
+  API.post("/orders", data);
+
+export const getUserOrders = () =>
+  API.get("/orders");
 
 /* =========================
    ADMIN
 ========================= */
-export const getAdminOrders = () => API.get("/admin/orders");
-export const getOnlineOrders = () => API.get("/admin/orders/online");
+export const getAdminOrders = () =>
+  API.get("/admin/orders");
+
+export const getOnlineOrders = () =>
+  API.get("/admin/orders/online");
 
 export const updateOrderStatus = (orderId, status) =>
   API.put(`/admin/orders/${orderId}/status`, { status });
@@ -106,7 +127,8 @@ export const placeCounterOrder = (data) =>
 /* =========================
    WALLET
 ========================= */
-export const getMyWallet = () => API.get("/wallet/me");
+export const getMyWallet = () =>
+  API.get("/wallet/me");
 
 export const adminAddMoney = (data) =>
   API.post("/wallet/admin/add-money", data);
@@ -124,8 +146,10 @@ export const getAllFeedback = () =>
    LOGOUT
 ========================= */
 export const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  try {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  } catch {}
 
   if (!window.location.pathname.includes("/login")) {
     window.location.replace("/login");

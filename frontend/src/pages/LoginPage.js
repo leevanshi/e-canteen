@@ -46,18 +46,15 @@ const LoginPage = () => {
 
       clearTimeout(slowTimer);
 
-      console.log("LOGIN RESPONSE:", res.data); // 🔍 DEBUG
-
       const token = res?.data?.access_token;
       const user = res?.data?.user;
 
-      // ✅ Strong validation
       if (!token || !user) {
         toast.error("Invalid login response from server");
+        setSubmitting(false);
         return;
       }
 
-      // ✅ Safe login call
       login(
         {
           id: user.id,
@@ -69,7 +66,6 @@ const LoginPage = () => {
 
       toast.success("Login successful");
 
-      // ✅ Role-based redirect
       if (user.role === "admin") {
         navigate("/admin/dashboard", { replace: true });
       } else {
@@ -77,21 +73,25 @@ const LoginPage = () => {
       }
 
     } catch (err) {
-  clearTimeout(slowTimer);
+      clearTimeout(slowTimer);
 
-  console.error("LOGIN ERROR:", err);
+      console.error("LOGIN ERROR:", err);
 
-  if (!err.response) {
-    // 🔥 THIS is your main issue case
-    toast.error("🚀 Server is starting... please wait 30–60 seconds and try again");
-  } else {
-    toast.error(
-      err.response?.data?.detail ||
-      err.response?.data?.message ||
-      "Invalid email or password"
-    );
-  }
-}
+      if (!err.response) {
+        toast.error(
+          "🚀 Server is starting... please wait 30–60 seconds and try again"
+        );
+      } else {
+        toast.error(
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Invalid email or password"
+        );
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-orange-50">

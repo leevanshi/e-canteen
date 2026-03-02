@@ -21,7 +21,6 @@ const RegisterPage = () => {
   const { role } = useParams();
   const [loading, setLoading] = useState(false);
 
-  /* ================= VALIDATE ROLE ================= */
   useEffect(() => {
     if (!["student", "staff", "admin"].includes(role)) {
       navigate("/join", { replace: true });
@@ -38,7 +37,6 @@ const RegisterPage = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  /* ================= REGISTER ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -51,9 +49,11 @@ const RegisterPage = () => {
     }
 
     setLoading(true);
-const slowTimer = setTimeout(() => {
-  toast.info("⏳ Server is waking up, please wait...");
-}, 2000);
+
+    const slowTimer = setTimeout(() => {
+      toast.info("⏳ Server is waking up, please wait...");
+    }, 2000);
+
     try {
       await registerUser({
         name: name.trim(),
@@ -61,28 +61,34 @@ const slowTimer = setTimeout(() => {
         password,
       });
 
+      clearTimeout(slowTimer);
+
       toast.success("Account registered successfully. Please login.");
       navigate("/login", { replace: true });
+
     } catch (err) {
-  console.error("REGISTER ERROR:", err);
+      clearTimeout(slowTimer);
 
-  if (!err.response) {
-    // 🔥 Main fix for your issue
-    toast.error("🚀 Server is starting... please wait 30–60 seconds and try again");
-    return;
-  }
+      console.error("REGISTER ERROR:", err);
 
-  if (err.response.status === 409) {
-    toast.info("Account already exists. Please login.");
-    navigate("/login", { replace: true });
-  } else {
-    toast.error(
-      err.response?.data?.detail ||
-      err.response?.data?.message ||
-      "Registration failed"
-    );
-  }
-}
+      if (!err.response) {
+        toast.error(
+          "🚀 Server is starting... please wait 30–60 seconds and try again"
+        );
+      } else if (err.response.status === 409) {
+        toast.info("Account already exists. Please login.");
+        navigate("/login", { replace: true });
+      } else {
+        toast.error(
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Registration failed"
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const roleLabel =
     role?.charAt(0).toUpperCase() + role?.slice(1);
