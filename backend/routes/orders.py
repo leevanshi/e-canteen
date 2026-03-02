@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -16,21 +16,27 @@ router = APIRouter(
 from database import (
     orders_collection,
     wallet_collection,
-    menu_collection
+    menu_collection,
+    counters_collection
 )
 
 # ================= AUTH =================
 from routes.auth import get_current_user
 
+
 # ================= COUNTER HELPER =================
-def get_next_order_id():
-    counter = orders_collection.database.counters.find_one_and_update(
+def get_next_order_id() -> int:
+    counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
-        {"$inc": {"seq": 1}},
+        {
+            "$inc": {"seq": 1},
+            "$setOnInsert": {"seq": 99}  # ensures start from 100
+        },
         upsert=True,
         return_document=True
     )
     return counter["seq"]
+
 
 # ================= SCHEMAS =================
 class OrderItem(BaseModel):
@@ -39,10 +45,12 @@ class OrderItem(BaseModel):
     price: float
     quantity: int
 
+
 class CreateOrder(BaseModel):
     items: List[OrderItem]
     pickup_time: Optional[str] = None
     payment_method: str  # wallet | counter
+
 
 # ================= PLACE ORDER =================
 @router.post("")
@@ -56,7 +64,13 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Order items required")
 
     total = 0
+
     for item in data.items:
+
+        # 🔥 Quantity validation
+        if item.quantity <= 0:
+            raise HTTPException(status_code=400, detail="Invalid quantity")
+
         if not ObjectId.is_valid(item.item_id):
             raise HTTPException(status_code=400, detail="Invalid menu item ID")
 
@@ -74,8 +88,11 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
     # ================= WALLET PAYMENT =================
     if data.payment_method == "wallet":
-        wallet = wallet_collection.find_one({"user_id": ObjectId(current_user["_id"])})
-        if not wallet or wallet["balance"] < total:
+        wallet = wallet_collection.find_one(
+            {"user_id": ObjectId(current_user["_id"])}
+        )
+
+        if not wallet or wallet.get("balance", 0) < total:
             raise HTTPException(status_code=400, detail="Insufficient wallet balance")
 
         wallet_collection.update_one(
@@ -91,12 +108,15 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
         "order_type": "online",
         "user_id": ObjectId(current_user["_id"]),
         "user_name": current_user["name"],
-        "items": [i.dict() for i in data.items],
+        "items": [i.model_dump() for i in data.items],
         "total_amount": total,
         "pickup_time": data.pickup_time,
         "payment_method": data.payment_method,
         "payment_status": payment_status,
         "status": "pending",
+        "status_history": [
+            {"status": "pending", "time": now}
+        ],
         "created_at": now,
         "updated_at": now
     })
@@ -105,6 +125,7 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
         "message": "Order placed successfully",
         "order_id": order_id
     }
+
 
 # ================= GET MY ORDERS =================
 @router.get("")
@@ -127,6 +148,7 @@ def get_my_orders(current_user=Depends(get_current_user)):
         })
 
     return result
+
 
 # ================= GET SINGLE ORDER =================
 @router.get("/{order_id}")

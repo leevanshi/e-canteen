@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "e-canteen-frontend",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -37,7 +37,13 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test"
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19"
   },
   "browserslist": {
     "production": [
@@ -50,15 +56,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.7.0",
-    "ajv": "^6.12.6",
-    "ajv-formats": "^2.1.1",
-    "ajv-keywords": "3.5.2",
-    "autoprefixer": "^10.4.23",
-    "postcss": "^8.5.6",
-    "schema-utils": "^3.3.0",
-    "tailwindcss": "^3.4.19"
   }
 }

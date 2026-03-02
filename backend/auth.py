@@ -136,10 +136,17 @@ def require_admin(user=Depends(get_current_user)):
 # ================= ADMIN REGISTER =================
 @router.post("/admin/register", status_code=status.HTTP_201_CREATED)
 def register_admin(data: AdminRegisterSchema):
+    # 🚨 Block if admin already exists
+    existing_admin = users_collection.find_one({"role": "admin"})
+    if existing_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin already exists"
+        )
+
     email = data.email.lower().strip()
 
-    existing_user = users_collection.find_one({"email": email})
-    if existing_user:
+    if users_collection.find_one({"email": email}):
         raise HTTPException(status_code=409, detail="User already exists")
 
     users_collection.insert_one({
