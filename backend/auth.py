@@ -9,6 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 import os
 import logging
+import re
 
 # ================= LOAD ENV =================
 load_dotenv()
@@ -37,7 +38,7 @@ pwd_context = CryptContext(
 
 # ================= DB INDEX =================
 try:
-    users_collection.create_index("email", unique=True)
+    users_collection.create_index([("email", 1)], unique=True)
 except Exception as e:
     logger.warning(f"Index creation skipped: {str(e)}")
 
@@ -46,23 +47,34 @@ class LoginSchema(BaseModel):
     email: EmailStr
     password: str
 
-class AdminRegisterSchema(BaseModel):
+
+class RegisterSchema(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role: str
 
     @validator("password")
     def strong_password(cls, v):
-        if len(v) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Must include uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Must include lowercase letter")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Must include a number")
         return v
+
 
 # ================= HELPERS =================
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
+
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
+
 
 def create_token(data: dict) -> str:
     payload = data.copy()
@@ -72,6 +84,7 @@ def create_token(data: dict) -> str:
         "iat": datetime.utcnow(),
     })
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
 
 # ================= CURRENT USER =================
 def get_current_user(
@@ -124,6 +137,7 @@ def get_current_user(
             detail="Invalid or expired token"
         )
 
+
 # ================= ROLE GUARD =================
 def require_admin(user=Depends(get_current_user)):
     if user["role"] != "admin":
@@ -133,31 +147,43 @@ def require_admin(user=Depends(get_current_user)):
         )
     return user
 
-# ================= ADMIN REGISTER =================
-@router.post("/admin/register", status_code=status.HTTP_201_CREATED)
-def register_admin(data: AdminRegisterSchema):
-    # 🚨 Block if admin already exists
-    existing_admin = users_collection.find_one({"role": "admin"})
-    if existing_admin:
-        raise HTTPException(
-            status_code=403,
-            detail="Admin already exists"
-        )
+
+# ================= USER REGISTER =================
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+def register_user(data: RegisterSchema):
 
     email = data.email.lower().strip()
 
+    # ✅ Strict domain validation
+    domain = email.split("@")[-1]
+    allowed_domains = ["nmims.in", "nmims.edu.in", "nmims.edu"]
+
+    if domain not in allowed_domains:
+        raise HTTPException(
+            status_code=400,
+            detail="Only NMIMS email allowed"
+        )
+
     if users_collection.find_one({"email": email}):
         raise HTTPException(status_code=409, detail="User already exists")
+
+    # ✅ Validate role (NO ADMIN PUBLIC REGISTRATION)
+    if data.role not in ["student", "faculty"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid role"
+        )
 
     users_collection.insert_one({
         "name": data.name.strip(),
         "email": email,
         "password": hash_password(data.password),
-        "role": "admin",
+        "role": data.role,
         "created_at": datetime.utcnow()
     })
 
-    return {"message": "Admin registered successfully"}
+    return {"message": f"{data.role.capitalize()} registered successfully"}
+
 
 # ================= LOGIN =================
 @router.post("/login")
@@ -184,6 +210,7 @@ def login(data: LoginSchema):
             "role": user.get("role")
         }
     }
+
 
 # ================= SAMPLE ADMIN ROUTE =================
 @router.get("/admin/me")
