@@ -1,12 +1,15 @@
+
 // src/App.js
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
+
 // Public pages
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import JoinPage from "./pages/JoinPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
 // Student pages
 import MenuPage from "./pages/MenuPage";
@@ -16,7 +19,6 @@ import CheckoutPage from "./pages/CheckoutPage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import OrderDetails from "./pages/OrderDetails";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
 // Admin pages
 import AdminMonthlyMenu from "./pages/AdminMonthlyMenu";
@@ -33,28 +35,32 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 
+const BACKEND_URL = "https://e-canteen-7.onrender.com";
+
 const App = () => {
   const location = useLocation();
 
-  // 🚫 Hide navbar on auth & admin routes
+  // Hide navbar on auth & admin routes
   const hideNavbar =
     location.pathname.startsWith("/admin") ||
-    location.pathname === "/login" ||
-    location.pathname === "/join" ||
+    ["/login", "/join"].includes(location.pathname) ||
     location.pathname.startsWith("/register");
-useEffect(() => {
-  const wakeBackend = async () => {
-    try {
-      await fetch("https://e-canteen-7.onrender.com");
-      console.log("✅ Backend is awake");
-    } catch {
-      console.log("Retrying...");
-      setTimeout(wakeBackend, 5000);
-    }
-  };
 
-  wakeBackend();
-}, []);
+  // Wake backend (Render sleeps after inactivity)
+  useEffect(() => {
+    const wakeBackend = async () => {
+      try {
+        await fetch(`${BACKEND_URL}/health`);
+        console.log("Backend awake");
+      } catch {
+        console.log("Retrying backend wake...");
+        setTimeout(wakeBackend, 5000);
+      }
+    };
+
+    wakeBackend();
+  }, []);
+
   return (
     <>
       <Toaster
@@ -66,10 +72,10 @@ useEffect(() => {
       {!hideNavbar && <Navbar />}
 
       <Routes>
-        {/* 🌍 LANDING */}
+        {/* Landing */}
         <Route path="/" element={<LandingPage />} />
 
-        {/* 🌍 PUBLIC */}
+        {/* Public */}
         <Route
           path="/login"
           element={
@@ -99,7 +105,7 @@ useEffect(() => {
 
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* 👩‍🎓 STUDENT */}
+        {/* Student */}
         <Route
           path="/menu"
           element={
@@ -163,7 +169,7 @@ useEffect(() => {
           }
         />
 
-        {/* 🔐 ADMIN */}
+        {/* Admin */}
         <Route
           path="/admin/dashboard"
           element={
@@ -236,7 +242,7 @@ useEffect(() => {
           }
         />
 
-        {/* ❌ FALLBACK */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

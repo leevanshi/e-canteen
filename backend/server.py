@@ -16,10 +16,11 @@ app = FastAPI(title="E-Canteen Backend")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "https://ecanteen-nmims.vercel.app"
-    ],
-    allow_origin_regex="https://.*vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://ecanteen-nmims.vercel.app"
+],
+    allow_origin_regex="https://ecanteen-.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -50,7 +50,7 @@ const LoginPage = () => {
 
       console.log("LOGIN RESPONSE:", response);
 
-      const payload = response?.data?.data || response?.data;
+      const data = response.data;
 
       if (!payload) {
         toast.error("Server returned empty response");

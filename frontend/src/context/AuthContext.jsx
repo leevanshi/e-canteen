@@ -7,28 +7,26 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= HELPERS ================= */
+  /* ================= CLEAR AUTH ================= */
   const clearAuth = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    try {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    } catch {}
+
     setToken(null);
     setUser(null);
   };
 
-  const normalizeUser = (storedUser) => {
-    try {
-      const parsed = JSON.parse(storedUser);
+  /* ================= NORMALIZE USER ================= */
+  const normalizeUser = (rawUser) => {
+    if (!rawUser || typeof rawUser !== "object") return null;
 
-      if (!parsed || typeof parsed !== "object") return null;
-
-      return {
-        ...parsed,
-        role: (parsed.role || "").toLowerCase(), // 🔥 safe role handling
-      };
-    } catch (err) {
-      console.error("User parse error:", err);
-      return null;
-    }
+    return {
+      id: rawUser.id || rawUser._id || null,
+      email: rawUser.email || "",
+      role: (rawUser.role || "").toLowerCase(),
+    };
   };
 
   /* ================= RESTORE AUTH ================= */
@@ -37,18 +35,21 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
-      if (storedToken && storedUser) {
-        const parsedUser = normalizeUser(storedUser);
-
-        if (!parsedUser || !parsedUser.role) {
-          clearAuth();
-        } else {
-          setToken(storedToken);
-          setUser(parsedUser);
-        }
-      } else {
+      if (!storedToken || !storedUser) {
         clearAuth();
+        return;
       }
+
+      const parsedUser = normalizeUser(JSON.parse(storedUser));
+
+      if (!parsedUser || !parsedUser.role) {
+        clearAuth();
+        return;
+      }
+
+      setToken(storedToken);
+      setUser(parsedUser);
+
     } catch (err) {
       console.error("Auth restore failed:", err);
       clearAuth();
@@ -63,12 +64,9 @@ export const AuthProvider = ({ children }) => {
       throw new Error("Invalid login data");
     }
 
-    const normalizedUser = {
-      ...userData,
-      role: (userData.role || "").toLowerCase(),
-    };
+    const normalizedUser = normalizeUser(userData);
 
-    if (!normalizedUser.role) {
+    if (!normalizedUser || !normalizedUser.role) {
       throw new Error("User role missing");
     }
 
@@ -83,13 +81,12 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     clearAuth();
 
-    // 🔥 safer redirect (no infinite reload issues)
     if (!window.location.pathname.includes("/login")) {
-      window.location.href = "/login";
+      window.location.replace("/login");
     }
   };
 
-  /* ================= SYNC BETWEEN TABS ================= */
+  /* ================= SYNC TABS ================= */
   useEffect(() => {
     const handleStorageChange = () => {
       const storedToken = localStorage.getItem("token");
@@ -133,8 +130,10 @@ export const AuthProvider = ({ children }) => {
 /* ================= HOOK ================= */
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error("useAuth must be used inside AuthProvider");
   }
+
   return context;
 };
