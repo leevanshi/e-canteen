@@ -25,9 +25,10 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (submitting) return;
 
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       toast.error("Please fill all fields");
       return;
     }
@@ -39,19 +40,26 @@ const LoginPage = () => {
     }, 4000);
 
     try {
-      const res = await API.post("/auth/login", {
+      const response = await API.post("/auth/login", {
         email: email.trim().toLowerCase(),
-        password,
+        password: password,
       });
 
       clearTimeout(slowTimer);
 
-      const token = res?.data?.access_token;
-      const user = res?.data?.user;
+      const data = response?.data;
+
+      if (!data) {
+        toast.error("Server returned empty response");
+        return;
+      }
+
+      const token = data.access_token;
+      const user = data.user;
 
       if (!token || !user) {
+        console.error("Unexpected login response:", data);
         toast.error("Invalid login response from server");
-        setSubmitting(false);
         return;
       }
 
@@ -82,12 +90,14 @@ const LoginPage = () => {
           "🚀 Server is starting... please wait 30–60 seconds and try again"
         );
       } else {
-        toast.error(
+        const message =
           err.response?.data?.detail ||
           err.response?.data?.message ||
-          "Invalid email or password"
-        );
+          "Invalid email or password";
+
+        toast.error(message);
       }
+
     } finally {
       setSubmitting(false);
     }
@@ -102,10 +112,12 @@ const LoginPage = () => {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <div>
               <Label>Email</Label>
               <Input
                 type="email"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={submitting}
@@ -116,6 +128,7 @@ const LoginPage = () => {
               <Label>Password</Label>
               <Input
                 type="password"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={submitting}
@@ -158,6 +171,7 @@ const LoginPage = () => {
             >
               Back to Home
             </Button>
+
           </form>
         </CardContent>
       </Card>
