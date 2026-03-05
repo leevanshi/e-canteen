@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -8,11 +9,7 @@ from pymongo import ReturnDocument
 # ================= CONFIG =================
 IST = timezone(timedelta(hours=5, minutes=30))
 
-# 🔥 FIXED PREFIX
-router = APIRouter(
-    prefix="/admin",
-    tags=["Admin"]
-)
+router = APIRouter(tags=["Admin"])
 
 # ================= DATABASE =================
 from database import (
@@ -41,7 +38,7 @@ def get_next_order_id() -> int:
         {"_id": "order_id"},
         {
             "$inc": {"seq": 1},
-            "$setOnInsert": {"seq": 99}  # 🔥 ensures start from 100
+            "$setOnInsert": {"seq": 99}
         },
         upsert=True,
         return_document=ReturnDocument.AFTER
@@ -53,9 +50,11 @@ def get_next_order_id() -> int:
 class OrderStatusUpdate(BaseModel):
     status: str
 
+
 class AdminPlaceOrder(BaseModel):
     items: List[Dict[str, Any]]
     total_amount: float
+
 
 class AvailabilityUpdate(BaseModel):
     available: bool
@@ -64,11 +63,13 @@ class AvailabilityUpdate(BaseModel):
 # ================= GET ALL ORDERS =================
 @router.get("/orders")
 def get_admin_orders(current_user=Depends(get_current_user)):
+
     ensure_admin_or_staff(current_user)
 
     orders = orders_collection.find().sort("created_at", -1)
 
     result = []
+
     for o in orders:
         result.append({
             "_id": str(o["_id"]),
@@ -78,7 +79,8 @@ def get_admin_orders(current_user=Depends(get_current_user)):
             "payment_method": o.get("payment_method"),
             "total_amount": o.get("total_amount"),
             "status": o.get("status"),
-            "created_at": o.get("created_at"),
+            "created_at": o.get("created_at").isoformat()
+            if o.get("created_at") else None
         })
 
     return result
@@ -87,6 +89,7 @@ def get_admin_orders(current_user=Depends(get_current_user)):
 # ================= GET ONLINE ORDERS =================
 @router.get("/orders/online")
 def get_online_orders(current_user=Depends(get_current_user)):
+
     ensure_admin_or_staff(current_user)
 
     orders = orders_collection.find(
@@ -94,6 +97,7 @@ def get_online_orders(current_user=Depends(get_current_user)):
     ).sort("created_at", 1)
 
     result = []
+
     for o in orders:
         result.append({
             "_id": str(o["_id"]),
@@ -102,7 +106,8 @@ def get_online_orders(current_user=Depends(get_current_user)):
             "items": o.get("items"),
             "total_amount": o.get("total_amount"),
             "status": o.get("status"),
-            "created_at": o.get("created_at")
+            "created_at": o.get("created_at").isoformat()
+            if o.get("created_at") else None
         })
 
     return result
@@ -115,6 +120,7 @@ def update_order_status(
     data: OrderStatusUpdate,
     current_user=Depends(get_current_user)
 ):
+
     ensure_admin_or_staff(current_user)
 
     if data.status not in ["pending", "preparing", "completed", "cancelled"]:
@@ -127,6 +133,7 @@ def update_order_status(
     else:
         if not ObjectId.is_valid(order_id):
             raise HTTPException(status_code=400, detail="Invalid order ID")
+
         query = {"_id": ObjectId(order_id)}
 
     result = orders_collection.update_one(
@@ -162,6 +169,7 @@ def toggle_menu_availability(
     data: AvailabilityUpdate,
     current_user=Depends(get_current_user)
 ):
+
     ensure_admin_or_staff(current_user)
 
     if not ObjectId.is_valid(menu_id):
@@ -188,6 +196,7 @@ def place_walkin_order(
     data: AdminPlaceOrder,
     current_user=Depends(get_current_user)
 ):
+
     ensure_admin_or_staff(current_user)
 
     now = datetime.now(IST)
@@ -222,9 +231,11 @@ def place_walkin_order(
 # ================= USERS LIST =================
 @router.get("/users")
 def get_users(current_user=Depends(get_current_user)):
+
     ensure_admin_or_staff(current_user)
 
     users = []
+
     for u in users_collection.find({}, {"password": 0}):
         u["_id"] = str(u["_id"])
         users.append(u)

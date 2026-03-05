@@ -1,17 +1,18 @@
-// src/api.js
+
 import axios from "axios";
 
 /* =========================
    BASE CONFIG
 ========================= */
-const BASE_URL = "https://e-canteen-7.onrender.com";
+const BASE_URL =
+  import.meta.env.VITE_API_URL || "https://e-canteen-7.onrender.com";
 
 const API = axios.create({
   baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 90000, // Increased for Render cold start
+  timeout: 90000, // Render cold start protection
 });
 
 /* =========================
@@ -43,6 +44,7 @@ API.interceptors.request.use(
     } catch (err) {
       console.error("Request interceptor error:", err);
     }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -57,7 +59,7 @@ API.interceptors.response.use(
     const status = error?.response?.status;
     const url = error?.config?.url || "";
 
-    // 🔒 Auto logout on 401 (except auth routes)
+    // Auto logout on token expiry
     if (status === 401 && !isAuthRoute(url)) {
       try {
         localStorage.removeItem("token");
@@ -65,12 +67,12 @@ API.interceptors.response.use(
       } catch {}
 
       if (!window.location.pathname.includes("/login")) {
-        alert("Session expired. Please login again.");
+        console.warn("Session expired. Redirecting to login...");
         window.location.replace("/login");
       }
     }
 
-    // 🌐 Network issue (Render sleeping / backend down)
+    // Backend unavailable / network issue
     if (!error.response) {
       console.error("Network error or backend unavailable.");
     }

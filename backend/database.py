@@ -30,10 +30,11 @@ def now_ist():
 # =========================
 client = MongoClient(
     MONGO_URL,
-    serverSelectionTimeoutMS=5000,
-    connectTimeoutMS=5000,
-    socketTimeoutMS=5000,
+    serverSelectionTimeoutMS=10000,
+    connectTimeoutMS=10000,
+    socketTimeoutMS=10000,
     retryWrites=True,
+    tls=True,
     uuidRepresentation="standard"
 )
 

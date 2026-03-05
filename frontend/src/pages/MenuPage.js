@@ -44,7 +44,7 @@ const AdminOrdersPage = () => {
   /* ================= FETCH ================= */
   const fetchOrders = async () => {
     try {
-      const res = await API.get("/admin/orders");
+      const res = await API.get("/orders");
       const data = Array.isArray(res.data) ? res.data : [];
       setOrders(data);
     } catch {

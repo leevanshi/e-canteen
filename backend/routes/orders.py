@@ -1,16 +1,15 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 from typing import List, Optional
+from pymongo import ReturnDocument
 
 # ================= CONFIG =================
 IST = timezone(timedelta(hours=5, minutes=30))
 
-router = APIRouter(
-    prefix="/api/orders",
-    tags=["Orders"]
-)
+router = APIRouter(tags=["Orders"])
 
 # ================= DATABASE =================
 from database import (
@@ -30,10 +29,10 @@ def get_next_order_id() -> int:
         {"_id": "order_id"},
         {
             "$inc": {"seq": 1},
-            "$setOnInsert": {"seq": 99}  # ensures start from 100
+            "$setOnInsert": {"seq": 99}
         },
         upsert=True,
-        return_document=True
+        return_document=ReturnDocument.AFTER
     )
     return counter["seq"]
 
@@ -55,6 +54,7 @@ class CreateOrder(BaseModel):
 # ================= PLACE ORDER =================
 @router.post("")
 def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
+
     now = datetime.now(IST)
 
     if data.payment_method not in ["wallet", "counter"]:
@@ -67,7 +67,6 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
     for item in data.items:
 
-        # 🔥 Quantity validation
         if item.quantity <= 0:
             raise HTTPException(status_code=400, detail="Invalid quantity")
 
@@ -80,7 +79,10 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
         })
 
         if not menu_item:
-            raise HTTPException(status_code=400, detail=f"{item.name} is not available")
+            raise HTTPException(
+                status_code=400,
+                detail=f"{item.name} is not available"
+            )
 
         total += menu_item["price"] * item.quantity
 
@@ -88,12 +90,16 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
     # ================= WALLET PAYMENT =================
     if data.payment_method == "wallet":
-        wallet = wallet_collection.find_one(
-            {"user_id": ObjectId(current_user["_id"])}
-        )
+
+        wallet = wallet_collection.find_one({
+            "user_id": ObjectId(current_user["_id"])
+        })
 
         if not wallet or wallet.get("balance", 0) < total:
-            raise HTTPException(status_code=400, detail="Insufficient wallet balance")
+            raise HTTPException(
+                status_code=400,
+                detail="Insufficient wallet balance"
+            )
 
         wallet_collection.update_one(
             {"user_id": ObjectId(current_user["_id"])},
@@ -130,11 +136,13 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 # ================= GET MY ORDERS =================
 @router.get("")
 def get_my_orders(current_user=Depends(get_current_user)):
-    orders = orders_collection.find(
-        {"user_id": ObjectId(current_user["_id"])}
-    ).sort("created_at", -1)
+
+    orders = orders_collection.find({
+        "user_id": ObjectId(current_user["_id"])
+    }).sort("created_at", -1)
 
     result = []
+
     for o in orders:
         result.append({
             "_id": str(o["_id"]),
@@ -144,7 +152,8 @@ def get_my_orders(current_user=Depends(get_current_user)):
             "payment_method": o.get("payment_method"),
             "total_amount": o.get("total_amount"),
             "status": o.get("status"),
-            "created_at": o.get("created_at")
+            "created_at": o.get("created_at").isoformat()
+            if o.get("created_at") else None
         })
 
     return result
@@ -180,5 +189,6 @@ def get_order(order_id: str, current_user=Depends(get_current_user)):
         "payment_method": order["payment_method"],
         "payment_status": order["payment_status"],
         "status": order["status"],
-        "created_at": order["created_at"]
+        "created_at": order["created_at"].isoformat()
+        if order.get("created_at") else None
     }

@@ -15,6 +15,10 @@ app = FastAPI(title="E-Canteen Backend")
 # ================= CORS =================
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "https://ecanteen-nmims.vercel.app"
+    ],
     allow_origin_regex="https://.*vercel.app",
     allow_credentials=True,
     allow_methods=["*"],
@@ -50,19 +54,19 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 def get_next_order_id():
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
-        {"$inc": {"value": 1}},
+        {"$inc": {"seq": 1}},
         upsert=True,
         return_document=ReturnDocument.AFTER,
     )
 
-    if counter["value"] < 101:
+    if counter["seq"] < 101:
         counters_collection.update_one(
             {"_id": "order_id"},
-            {"$set": {"value": 101}},
+            {"$set": {"seq": 101}},
         )
         return 101
 
-    return counter["value"]
+    return counter["seq"]
 
 # ================= HEALTH =================
 @app.get("/health")
