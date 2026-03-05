@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr, validator
 from database import users_collection
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # ================= SECURITY =================
 SECRET_KEY = os.getenv("SECRET_KEY")
+
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY must be set in environment variables")
 
@@ -41,6 +43,7 @@ try:
     users_collection.create_index([("email", 1)], unique=True)
 except Exception as e:
     logger.warning(f"Index creation skipped: {str(e)}")
+
 
 # ================= SCHEMAS =================
 class LoginSchema(BaseModel):
@@ -78,11 +81,13 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_token(data: dict) -> str:
     payload = data.copy()
+
     payload.update({
         "type": "access",
         "exp": datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
-        "iat": datetime.utcnow(),
+        "iat": datetime.utcnow()
     })
+
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -90,6 +95,7 @@ def create_token(data: dict) -> str:
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
+
     if credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -127,11 +133,12 @@ def get_current_user(
             "_id": str(user["_id"]),
             "name": user.get("name"),
             "email": user.get("email"),
-            "role": user.get("role"),
+            "role": user.get("role", "student")
         }
 
     except JWTError as e:
         logger.error(f"JWT Error: {str(e)}")
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token"
@@ -140,11 +147,13 @@ def get_current_user(
 
 # ================= ROLE GUARD =================
 def require_admin(user=Depends(get_current_user)):
-    if user["role"] != "admin":
+
+    if user.get("role") != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
+
     return user
 
 
@@ -154,9 +163,13 @@ def register_user(data: RegisterSchema):
 
     email = data.email.lower().strip()
 
-    # ✅ Strict domain validation
     domain = email.split("@")[-1]
-    allowed_domains = ["nmims.in", "nmims.edu.in", "nmims.edu"]
+
+    allowed_domains = [
+        "nmims.in",
+        "nmims.edu.in",
+        "nmims.edu"
+    ]
 
     if domain not in allowed_domains:
         raise HTTPException(
@@ -165,9 +178,11 @@ def register_user(data: RegisterSchema):
         )
 
     if users_collection.find_one({"email": email}):
-        raise HTTPException(status_code=409, detail="User already exists")
+        raise HTTPException(
+            status_code=409,
+            detail="User already exists"
+        )
 
-    # ✅ Validate role (NO ADMIN PUBLIC REGISTRATION)
     if data.role not in ["student", "faculty"]:
         raise HTTPException(
             status_code=400,
@@ -182,21 +197,30 @@ def register_user(data: RegisterSchema):
         "created_at": datetime.utcnow()
     })
 
-    return {"message": f"{data.role.capitalize()} registered successfully"}
+    return {
+        "message": f"{data.role.capitalize()} registered successfully"
+    }
 
 
 # ================= LOGIN =================
 @router.post("/login")
 def login(data: LoginSchema):
+
     email = data.email.lower().strip()
+
     user = users_collection.find_one({"email": email})
 
     if not user or not verify_password(data.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials"
+        )
+
+    role = user.get("role", "student")
 
     token = create_token({
         "sub": str(user["_id"]),
-        "role": user["role"]
+        "role": role
     })
 
     return {
@@ -207,7 +231,7 @@ def login(data: LoginSchema):
             "id": str(user["_id"]),
             "name": user.get("name"),
             "email": user.get("email"),
-            "role": user.get("role")
+            "role": role
         }
     }
 
@@ -215,6 +239,7 @@ def login(data: LoginSchema):
 # ================= SAMPLE ADMIN ROUTE =================
 @router.get("/admin/me")
 def get_admin_profile(user=Depends(require_admin)):
+
     return {
         "message": "Welcome Admin",
         "user": user

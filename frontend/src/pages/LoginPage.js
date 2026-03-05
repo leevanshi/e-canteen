@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
@@ -47,19 +48,21 @@ const LoginPage = () => {
 
       clearTimeout(slowTimer);
 
-      const data = response?.data;
+      console.log("LOGIN RESPONSE:", response);
 
-      if (!data) {
+      const payload = response?.data?.data || response?.data;
+
+      if (!payload) {
         toast.error("Server returned empty response");
         return;
       }
 
-      const token = data.access_token;
-      const user = data.user;
+      const token = payload.access_token;
+      const user = payload.user;
 
       if (!token || !user) {
-        console.error("Unexpected login response:", data);
-        toast.error("Invalid login response from server");
+        console.error("Invalid API response:", payload);
+        toast.error("Invalid login response");
         return;
       }
 
@@ -97,7 +100,6 @@ const LoginPage = () => {
 
         toast.error(message);
       }
-
     } finally {
       setSubmitting(false);
     }
