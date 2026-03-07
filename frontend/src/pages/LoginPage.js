@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
@@ -23,6 +22,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -48,8 +48,6 @@ const handleSubmit = async (e) => {
 
     clearTimeout(slowTimer);
 
-    console.log("LOGIN RESPONSE:", response.data);
-
     const data = response.data;
 
     if (!data) {
@@ -61,7 +59,6 @@ const handleSubmit = async (e) => {
     const user = data.user;
 
     if (!token || !user) {
-      console.error("Invalid API response:", data);
       toast.error("Invalid login response");
       return;
     }
@@ -85,8 +82,6 @@ const handleSubmit = async (e) => {
 
   } catch (err) {
     clearTimeout(slowTimer);
-
-    console.error("LOGIN ERROR:", err);
 
     if (!err.response) {
       toast.error(
@@ -128,13 +123,24 @@ const handleSubmit = async (e) => {
 
             <div>
               <Label>Password</Label>
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={submitting}
-              />
+
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={submitting}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2 text-sm text-gray-500"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
 
             <Button

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Coffee, Loader2 } from "lucide-react";
+import { Coffee, Loader2, Eye, EyeOff } from "lucide-react";
 
 import { registerUser } from "../api";
 
@@ -19,10 +19,12 @@ import {
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { role } = useParams();
+
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (!["student", "staff", "admin"].includes(role)) {
+    if (!["student", "faculty", "admin"].includes(role)) {
       navigate("/join", { replace: true });
     }
   }, [role, navigate]);
@@ -59,6 +61,7 @@ const RegisterPage = () => {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
+        role: role, // ✅ send role to backend
       });
 
       clearTimeout(slowTimer);
@@ -104,6 +107,7 @@ const RegisterPage = () => {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <div>
               <Label>Name</Label>
               <Input
@@ -131,15 +135,32 @@ const RegisterPage = () => {
 
             <div>
               <Label>Password</Label>
-              <Input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) =>
-                  handleChange("password", e.target.value)
-                }
-                disabled={loading}
-              />
+
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.password}
+                  onChange={(e) =>
+                    handleChange("password", e.target.value)
+                  }
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword(!showPassword)
+                  }
+                  className="absolute right-3 top-2 text-gray-500"
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
+                </button>
+              </div>
             </div>
 
             <Button
@@ -153,6 +174,7 @@ const RegisterPage = () => {
                 "Register"
               )}
             </Button>
+
           </form>
 
           <p className="mt-4 text-center text-sm">
