@@ -2,33 +2,43 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, token, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // ⏳ Wait for auth restore (prevents flicker issue)
+  /* ================= LOADING ================= */
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 text-sm">Loading...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Loading...</p>
       </div>
     );
   }
 
-  // ❌ Not logged in → redirect to login + remember page
-  if (!user || !token) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  /* ================= NOT AUTHENTICATED ================= */
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
-  // ❌ Role not allowed
+  /* ================= ROLE CHECK ================= */
   if (allowedRoles.length > 0) {
-    const userRole = user?.role?.toLowerCase();
+    const userRole = user?.role?.toLowerCase() || "";
 
-    if (!userRole || !allowedRoles.includes(userRole)) {
-      return <Navigate to="/" replace />; // safer than /unauthorized (in case route doesn't exist)
+    const normalizedRoles = allowedRoles.map((role) =>
+      role.toLowerCase()
+    );
+
+    if (!normalizedRoles.includes(userRole)) {
+      return <Navigate to="/" replace />;
     }
   }
 
-  // ✅ Access granted
+  /* ================= ACCESS GRANTED ================= */
   return children;
 };
 

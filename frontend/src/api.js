@@ -1,4 +1,3 @@
-
 import axios from "axios";
 
 /* =========================
@@ -12,7 +11,7 @@ const API = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 90000, // Render cold start protection
+  timeout: 45000, // better for Render cold start
 });
 
 /* =========================
@@ -26,8 +25,7 @@ const getToken = () => {
   }
 };
 
-const isAuthRoute = (url = "") =>
-  url.includes("/auth/login") || url.includes("/auth/register");
+const isAuthRoute = (url = "") => url.startsWith("/auth/");
 
 /* =========================
    REQUEST INTERCEPTOR
@@ -37,8 +35,12 @@ API.interceptors.request.use(
     try {
       if (!isAuthRoute(config.url)) {
         const token = getToken();
+
         if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+          config.headers = {
+            ...config.headers,
+            Authorization: `Bearer ${token}`,
+          };
         }
       }
     } catch (err) {
@@ -59,7 +61,7 @@ API.interceptors.response.use(
     const status = error?.response?.status;
     const url = error?.config?.url || "";
 
-    // Auto logout on token expiry
+    /* ===== TOKEN EXPIRED ===== */
     if (status === 401 && !isAuthRoute(url)) {
       try {
         localStorage.removeItem("token");
@@ -67,12 +69,14 @@ API.interceptors.response.use(
       } catch {}
 
       if (!window.location.pathname.includes("/login")) {
-        console.warn("Session expired. Redirecting to login...");
+        console.warn("Session expired → redirecting to login");
         window.location.replace("/login");
       }
+
+      return Promise.reject(error);
     }
 
-    // Backend unavailable / network issue
+    /* ===== NETWORK ERROR ===== */
     if (!error.response) {
       console.error("Network error or backend unavailable.");
     }

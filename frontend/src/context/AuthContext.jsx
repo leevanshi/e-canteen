@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useMemo } from "react";
 
 const AuthContext = createContext(null);
 
@@ -12,7 +12,9 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-    } catch {}
+    } catch (err) {
+      console.error("Failed clearing auth:", err);
+    }
 
     setToken(null);
     setUser(null);
@@ -22,10 +24,14 @@ export const AuthProvider = ({ children }) => {
   const normalizeUser = (rawUser) => {
     if (!rawUser || typeof rawUser !== "object") return null;
 
+    const role = (rawUser.role || "").toLowerCase();
+
+    if (!role) return null;
+
     return {
       id: rawUser.id || rawUser._id || null,
       email: rawUser.email || "",
-      role: (rawUser.role || "").toLowerCase(),
+      role,
     };
   };
 
@@ -37,19 +43,30 @@ export const AuthProvider = ({ children }) => {
 
       if (!storedToken || !storedUser) {
         clearAuth();
+        setLoading(false);
         return;
       }
 
-      const parsedUser = normalizeUser(JSON.parse(storedUser));
+      let parsedUser;
 
-      if (!parsedUser || !parsedUser.role) {
+      try {
+        parsedUser = JSON.parse(storedUser);
+      } catch {
         clearAuth();
+        setLoading(false);
+        return;
+      }
+
+      const normalizedUser = normalizeUser(parsedUser);
+
+      if (!normalizedUser) {
+        clearAuth();
+        setLoading(false);
         return;
       }
 
       setToken(storedToken);
-      setUser(parsedUser);
-
+      setUser(normalizedUser);
     } catch (err) {
       console.error("Auth restore failed:", err);
       clearAuth();
@@ -60,20 +77,33 @@ export const AuthProvider = ({ children }) => {
 
   /* ================= LOGIN ================= */
   const login = (userData, authToken) => {
-    if (!userData || !authToken) {
-      throw new Error("Invalid login data");
+    if (!userData) {
+      throw new Error("Invalid login user data");
     }
 
     const normalizedUser = normalizeUser(userData);
 
-    if (!normalizedUser || !normalizedUser.role) {
-      throw new Error("User role missing");
+    if (!normalizedUser) {
+      throw new Error("Invalid user structure");
     }
 
-    localStorage.setItem("token", authToken);
-    localStorage.setItem("user", JSON.stringify(normalizedUser));
+    const finalToken =
+      typeof authToken === "string" && authToken.length > 0
+        ? authToken
+        : null;
 
-    setToken(authToken);
+    if (!finalToken) {
+      throw new Error("Token missing");
+    }
+
+    try {
+      localStorage.setItem("token", finalToken);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+    } catch (err) {
+      console.error("Storage failed:", err);
+    }
+
+    setToken(finalToken);
     setUser(normalizedUser);
   };
 
@@ -82,7 +112,7 @@ export const AuthProvider = ({ children }) => {
     clearAuth();
 
     if (!window.location.pathname.includes("/login")) {
-      window.location.replace("/login");
+      window.location.href = "/login";
     }
   };
 
@@ -108,20 +138,24 @@ export const AuthProvider = ({ children }) => {
 
   const isAuthenticated = Boolean(token && user);
 
+  /* ================= MEMOIZED VALUE ================= */
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      loading,
+      login,
+      logout,
+      isAuthenticated,
+      isAdmin,
+      isStudent,
+      isFaculty,
+    }),
+    [user, token, loading]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        loading,
-        login,
-        logout,
-        isAuthenticated,
-        isAdmin,
-        isStudent,
-        isFaculty,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {!loading && children}
     </AuthContext.Provider>
   );

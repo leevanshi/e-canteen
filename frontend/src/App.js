@@ -1,17 +1,16 @@
-
 // src/App.js
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
 
-// Public pages
+/* ================= PUBLIC PAGES ================= */
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import JoinPage from "./pages/JoinPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
-// Student pages
+/* ================= STUDENT PAGES ================= */
 import MenuPage from "./pages/MenuPage";
 import MonthlyMenu from "./pages/MonthlyMenu";
 import CartPage from "./pages/CartPage";
@@ -20,7 +19,7 @@ import OrdersPage from "./pages/OrdersPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import OrderDetails from "./pages/OrderDetails";
 
-// Admin pages
+/* ================= ADMIN PAGES ================= */
 import AdminMonthlyMenu from "./pages/AdminMonthlyMenu";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminOrderPage from "./pages/AdminOrderPage";
@@ -30,7 +29,7 @@ import AdminWalletPage from "./pages/AdminWalletPage";
 import AdminMenuPage from "./pages/AdminMenuPage";
 import AdminCounterMenu from "./pages/AdminCounterMenu";
 
-// Components
+/* ================= COMPONENTS ================= */
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
@@ -40,17 +39,23 @@ const BACKEND_URL = "https://e-canteen-7.onrender.com";
 const App = () => {
   const location = useLocation();
 
-  // Hide navbar on auth & admin routes
+  /* ================= NAVBAR VISIBILITY ================= */
   const hideNavbar =
     location.pathname.startsWith("/admin") ||
-    ["/login", "/join"].includes(location.pathname) ||
-    location.pathname.startsWith("/register");
+    location.pathname.startsWith("/login") ||
+    location.pathname.startsWith("/register") ||
+    location.pathname.startsWith("/join");
 
-  // Wake backend (Render sleeps after inactivity)
+  /* ================= SCROLL RESET ================= */
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  /* ================= WAKE BACKEND ================= */
   useEffect(() => {
     const wakeBackend = async () => {
       try {
-        await fetch(`${BACKEND_URL}/health`);
+        await fetch(`${BACKEND_URL}/`);
         console.log("Backend awake");
       } catch {
         console.log("Retrying backend wake...");
@@ -72,10 +77,11 @@ const App = () => {
       {!hideNavbar && <Navbar />}
 
       <Routes>
-        {/* Landing */}
+
+        {/* ================= LANDING ================= */}
         <Route path="/" element={<LandingPage />} />
 
-        {/* Public */}
+        {/* ================= AUTH ================= */}
         <Route
           path="/login"
           element={
@@ -105,7 +111,7 @@ const App = () => {
 
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* Student */}
+        {/* ================= STUDENT ================= */}
         <Route
           path="/menu"
           element={
@@ -143,19 +149,19 @@ const App = () => {
         />
 
         <Route
-          path="/orders/success/:orderId"
+          path="/orders"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
-              <OrderSuccessPage />
+              <OrdersPage />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/orders"
+          path="/orders/success/:orderId"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
-              <OrdersPage />
+              <OrderSuccessPage />
             </ProtectedRoute>
           }
         />
@@ -169,7 +175,7 @@ const App = () => {
           }
         />
 
-        {/* Admin */}
+        {/* ================= ADMIN ================= */}
         <Route
           path="/admin/dashboard"
           element={
@@ -242,8 +248,9 @@ const App = () => {
           }
         />
 
-        {/* Fallback */}
+        {/* ================= FALLBACK ================= */}
         <Route path="*" element={<Navigate to="/" replace />} />
+
       </Routes>
     </>
   );

@@ -24,86 +24,86 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (submitting) return;
+  if (submitting) return;
 
-    if (!email.trim() || !password.trim()) {
-      toast.error("Please fill all fields");
+  if (!email.trim() || !password.trim()) {
+    toast.error("Please fill all fields");
+    return;
+  }
+
+  setSubmitting(true);
+
+  const slowTimer = setTimeout(() => {
+    toast.info("⏳ Server is waking up, please wait...");
+  }, 4000);
+
+  try {
+    const response = await API.post("/auth/login", {
+      email: email.trim().toLowerCase(),
+      password: password,
+    });
+
+    clearTimeout(slowTimer);
+
+    console.log("LOGIN RESPONSE:", response.data);
+
+    const data = response.data;
+
+    if (!data) {
+      toast.error("Server returned empty response");
       return;
     }
 
-    setSubmitting(true);
+    const token = data.access_token;
+    const user = data.user;
 
-    const slowTimer = setTimeout(() => {
-      toast.info("⏳ Server is waking up, please wait...");
-    }, 4000);
-
-    try {
-      const response = await API.post("/auth/login", {
-        email: email.trim().toLowerCase(),
-        password: password,
-      });
-
-      clearTimeout(slowTimer);
-
-      console.log("LOGIN RESPONSE:", response);
-
-      const data = response.data;
-
-      if (!payload) {
-        toast.error("Server returned empty response");
-        return;
-      }
-
-      const token = payload.access_token;
-      const user = payload.user;
-
-      if (!token || !user) {
-        console.error("Invalid API response:", payload);
-        toast.error("Invalid login response");
-        return;
-      }
-
-      login(
-        {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-        },
-        token
-      );
-
-      toast.success("Login successful");
-
-      if (user.role === "admin") {
-        navigate("/admin/dashboard", { replace: true });
-      } else {
-        navigate("/menu", { replace: true });
-      }
-
-    } catch (err) {
-      clearTimeout(slowTimer);
-
-      console.error("LOGIN ERROR:", err);
-
-      if (!err.response) {
-        toast.error(
-          "🚀 Server is starting... please wait 30–60 seconds and try again"
-        );
-      } else {
-        const message =
-          err.response?.data?.detail ||
-          err.response?.data?.message ||
-          "Invalid email or password";
-
-        toast.error(message);
-      }
-    } finally {
-      setSubmitting(false);
+    if (!token || !user) {
+      console.error("Invalid API response:", data);
+      toast.error("Invalid login response");
+      return;
     }
-  };
+
+    login(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      token
+    );
+
+    toast.success("Login successful");
+
+    if (user.role === "admin") {
+      navigate("/admin/dashboard", { replace: true });
+    } else {
+      navigate("/menu", { replace: true });
+    }
+
+  } catch (err) {
+    clearTimeout(slowTimer);
+
+    console.error("LOGIN ERROR:", err);
+
+    if (!err.response) {
+      toast.error(
+        "🚀 Server is starting... please wait 30–60 seconds and try again"
+      );
+    } else {
+      const message =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        "Invalid email or password";
+
+      toast.error(message);
+    }
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-orange-50">
