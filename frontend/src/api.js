@@ -11,7 +11,7 @@ const API = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 45000, // better for Render cold start
+  timeout: 45000, // Render cold start safety
 });
 
 /* =========================
@@ -19,13 +19,23 @@ const API = axios.create({
 ========================= */
 const getToken = () => {
   try {
-    return localStorage.getItem("token");
+    return localStorage.getItem("token") || null;
   } catch {
     return null;
   }
 };
 
-const isAuthRoute = (url = "") => url.startsWith("/auth/");
+const clearAuth = () => {
+  try {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  } catch {}
+};
+
+const isAuthRoute = (url = "") => {
+  if (!url) return false;
+  return url.includes("/auth/");
+};
 
 /* =========================
    REQUEST INTERCEPTOR
@@ -37,10 +47,7 @@ API.interceptors.request.use(
         const token = getToken();
 
         if (token) {
-          config.headers = {
-            ...config.headers,
-            Authorization: `Bearer ${token}`,
-          };
+          config.headers.Authorization = `Bearer ${token}`;
         }
       }
     } catch (err) {
@@ -63,17 +70,12 @@ API.interceptors.response.use(
 
     /* ===== TOKEN EXPIRED ===== */
     if (status === 401 && !isAuthRoute(url)) {
-      try {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-      } catch {}
+      clearAuth();
 
       if (!window.location.pathname.includes("/login")) {
         console.warn("Session expired → redirecting to login");
-        window.location.replace("/login");
+        window.location.href = "/login";
       }
-
-      return Promise.reject(error);
     }
 
     /* ===== NETWORK ERROR ===== */
@@ -88,38 +90,30 @@ API.interceptors.response.use(
 /* =========================
    AUTH
 ========================= */
-export const loginUser = (data) =>
-  API.post("/auth/login", data);
+export const loginUser = (data) => API.post("/auth/login", data);
 
-export const registerUser = (data) =>
-  API.post("/auth/register", data);
+export const registerUser = (data) => API.post("/auth/register", data);
 
 /* =========================
    MENU
 ========================= */
-export const getMenu = () =>
-  API.get("/menu");
+export const getMenu = () => API.get("/menu");
 
-export const getAllMenu = () =>
-  API.get("/menu/all");
+export const getAllMenu = () => API.get("/menu/all");
 
 /* =========================
    ORDERS (USER)
 ========================= */
-export const createOrder = (data) =>
-  API.post("/orders", data);
+export const createOrder = (data) => API.post("/orders", data);
 
-export const getUserOrders = () =>
-  API.get("/orders");
+export const getUserOrders = () => API.get("/orders");
 
 /* =========================
    ADMIN
 ========================= */
-export const getAdminOrders = () =>
-  API.get("/admin/orders");
+export const getAdminOrders = () => API.get("/admin/orders");
 
-export const getOnlineOrders = () =>
-  API.get("/admin/orders/online");
+export const getOnlineOrders = () => API.get("/admin/orders/online");
 
 export const updateOrderStatus = (orderId, status) =>
   API.put(`/admin/orders/${orderId}/status`, { status });
@@ -133,8 +127,7 @@ export const placeCounterOrder = (data) =>
 /* =========================
    WALLET
 ========================= */
-export const getMyWallet = () =>
-  API.get("/wallet/me");
+export const getMyWallet = () => API.get("/wallet/me");
 
 export const adminAddMoney = (data) =>
   API.post("/wallet/admin/add-money", data);
@@ -142,23 +135,18 @@ export const adminAddMoney = (data) =>
 /* =========================
    FEEDBACK
 ========================= */
-export const submitFeedback = (data) =>
-  API.post("/feedback", data);
+export const submitFeedback = (data) => API.post("/feedback", data);
 
-export const getAllFeedback = () =>
-  API.get("/feedback/admin");
+export const getAllFeedback = () => API.get("/feedback/admin");
 
 /* =========================
    LOGOUT
 ========================= */
 export const logout = () => {
-  try {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-  } catch {}
+  clearAuth();
 
   if (!window.location.pathname.includes("/login")) {
-    window.location.replace("/login");
+    window.location.href = "/login";
   }
 };
 

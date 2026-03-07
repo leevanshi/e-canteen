@@ -1,16 +1,15 @@
-// src/App.js
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
 
-/* ================= PUBLIC PAGES ================= */
+/* PUBLIC */
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import JoinPage from "./pages/JoinPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
-/* ================= STUDENT PAGES ================= */
+/* STUDENT */
 import MenuPage from "./pages/MenuPage";
 import MonthlyMenu from "./pages/MonthlyMenu";
 import CartPage from "./pages/CartPage";
@@ -19,7 +18,7 @@ import OrdersPage from "./pages/OrdersPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import OrderDetails from "./pages/OrderDetails";
 
-/* ================= ADMIN PAGES ================= */
+/* ADMIN */
 import AdminMonthlyMenu from "./pages/AdminMonthlyMenu";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminOrderPage from "./pages/AdminOrderPage";
@@ -29,7 +28,7 @@ import AdminWalletPage from "./pages/AdminWalletPage";
 import AdminMenuPage from "./pages/AdminMenuPage";
 import AdminCounterMenu from "./pages/AdminCounterMenu";
 
-/* ================= COMPONENTS ================= */
+/* COMPONENTS */
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
@@ -37,51 +36,44 @@ import PublicRoute from "./components/PublicRoute";
 const BACKEND_URL = "https://e-canteen-7.onrender.com";
 
 const App = () => {
+
   const location = useLocation();
 
-  /* ================= NAVBAR VISIBILITY ================= */
   const hideNavbar =
     location.pathname.startsWith("/admin") ||
     location.pathname.startsWith("/login") ||
     location.pathname.startsWith("/register") ||
     location.pathname.startsWith("/join");
 
-  /* ================= SCROLL RESET ================= */
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  /* ================= WAKE BACKEND ================= */
   useEffect(() => {
+
     const wakeBackend = async () => {
       try {
         await fetch(`${BACKEND_URL}/`);
-        console.log("Backend awake");
       } catch {
-        console.log("Retrying backend wake...");
         setTimeout(wakeBackend, 5000);
       }
     };
 
     wakeBackend();
+
   }, []);
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        richColors
-        toastOptions={{ style: { zIndex: 9999 } }}
-      />
+      <Toaster position="top-right" richColors />
 
       {!hideNavbar && <Navbar />}
 
       <Routes>
 
-        {/* ================= LANDING ================= */}
+        {/* PUBLIC */}
         <Route path="/" element={<LandingPage />} />
 
-        {/* ================= AUTH ================= */}
         <Route
           path="/login"
           element={
@@ -111,7 +103,8 @@ const App = () => {
 
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* ================= STUDENT ================= */}
+        {/* STUDENT */}
+
         <Route
           path="/menu"
           element={
@@ -175,7 +168,8 @@ const App = () => {
           }
         />
 
-        {/* ================= ADMIN ================= */}
+        {/* ADMIN */}
+
         <Route
           path="/admin/dashboard"
           element={
@@ -248,7 +242,7 @@ const App = () => {
           }
         />
 
-        {/* ================= FALLBACK ================= */}
+        {/* FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>

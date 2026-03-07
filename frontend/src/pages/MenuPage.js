@@ -3,222 +3,264 @@ import API from "../api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-/* ================= FORMAT TIME ================= */
-const formatIST = (date) => {
-  if (!date) return "—";
-  return new Date(date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-};
+/* ================= PLACEHOLDER IMAGE ================= */
 
-/* ================= STATUS BADGE ================= */
-const statusBadge = (status = "") => {
-  switch (status.toLowerCase()) {
-    case "completed":
-      return "bg-green-100 text-green-700";
-    case "preparing":
-      return "bg-orange-100 text-orange-700";
-    case "pending":
-      return "bg-blue-100 text-blue-700";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-};
+const fallbackImage =
+  "https://images.unsplash.com/photo-1604908554165-3a7c22e0b9c6?q=80&w=600";
 
-/* ================= STATUS ORDER (IMPORTANT) ================= */
-const STATUS_PRIORITY = {
-  pending: 1,
-  preparing: 2,
-  completed: 3,
-};
+/* ================= COMPONENT ================= */
 
-const AdminOrdersPage = () => {
-  const [orders, setOrders] = useState([]);
+const MenuPage = () => {
+  const [menu, setMenu] = useState([]);
+  const [cart, setCart] = useState({});
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState(null);
+
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
 
   const navigate = useNavigate();
 
-  /* ================= FETCH ================= */
-  const fetchOrders = async () => {
+  /* ================= FETCH MENU ================= */
+
+  const fetchMenu = async () => {
     try {
-      const res = await API.get("/orders");
+      const res = await API.get("/menu");
       const data = Array.isArray(res.data) ? res.data : [];
-      setOrders(data);
+      setMenu(data);
     } catch {
-      toast.error("Failed to fetch orders");
+      toast.error("Failed to load menu");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-
-    const interval = setInterval(fetchOrders, 8000); // faster refresh
-    return () => clearInterval(interval);
+    fetchMenu();
   }, []);
 
-  /* ================= SORTED ORDERS ================= */
-  const sortedOrders = useMemo(() => {
-    return [...orders]
-      .filter((o) => o.order_type !== "walk-in")
-      .sort((a, b) => {
-        const statusDiff =
-          (STATUS_PRIORITY[a.status] || 99) -
-          (STATUS_PRIORITY[b.status] || 99);
+  /* ================= CATEGORIES ================= */
 
-        if (statusDiff !== 0) return statusDiff;
+  const categories = useMemo(() => {
+    const unique = [...new Set(menu.map((m) => m.category))];
+    return ["all", ...unique];
+  }, [menu]);
 
-        // newest first
-        return new Date(b.created_at) - new Date(a.created_at);
-      });
-  }, [orders]);
+  /* ================= FILTERED MENU ================= */
 
-  /* ================= UPDATE STATUS ================= */
-  const updateStatus = async (mongoId, status) => {
-    try {
-      setUpdatingId(mongoId);
+  const filteredMenu = useMemo(() => {
+    return menu.filter((item) => {
+      const matchSearch = item.name
+        ?.toLowerCase()
+        .includes(search.toLowerCase());
 
-      await API.put(`/admin/orders/${mongoId}/status`, { status });
+      const matchCategory =
+        category === "all" || item.category === category;
 
-      toast.success(`Order → ${status}`);
-      fetchOrders();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to update");
-    } finally {
-      setUpdatingId(null);
-    }
+      return matchSearch && matchCategory;
+    });
+  }, [menu, search, category]);
+
+  /* ================= CART ================= */
+
+  const addToCart = (item) => {
+    setCart((prev) => {
+      const updated = { ...prev };
+
+      if (!updated[item._id]) {
+        updated[item._id] = { ...item, quantity: 1 };
+      } else {
+        updated[item._id].quantity += 1;
+      }
+
+      return updated;
+    });
+
+    toast.success(`${item.name} added`);
   };
 
+  const removeFromCart = (id) => {
+    setCart((prev) => {
+      const updated = { ...prev };
+
+      if (updated[id].quantity === 1) {
+        delete updated[id];
+      } else {
+        updated[id].quantity -= 1;
+      }
+
+      return updated;
+    });
+  };
+
+  /* ================= TOTAL ================= */
+
+  const totalItems = Object.values(cart).reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+
+  const totalPrice = Object.values(cart).reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  );
+
+  /* ================= DAILY SPECIAL ================= */
+
+  const special = menu[0];
+
   /* ================= LOADING ================= */
+
   if (loading) {
     return (
       <p className="text-center mt-10 text-gray-500 animate-pulse">
-        Loading orders...
+        Loading menu...
       </p>
     );
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto p-6">
 
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="px-3 py-2 border rounded hover:bg-gray-100"
-          >
-            ← Back
-          </button>
+      <h1 className="text-2xl font-bold mb-6">
+        Today's Menu
+      </h1>
 
-          <h1 className="text-2xl font-bold">
-            Admin Dashboard – Orders
-          </h1>
+      {/* DAILY SPECIAL */}
+
+      {special && (
+        <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6">
+          ⭐ <strong>Today's Special:</strong> {special.name} – ₹{special.price}
         </div>
-
-        <button
-          onClick={fetchOrders}
-          className="px-4 py-2 rounded bg-black text-white hover:opacity-80"
-        >
-          🔄 Refresh
-        </button>
-      </div>
-
-      {/* EMPTY */}
-      {sortedOrders.length === 0 && (
-        <p className="text-center text-gray-500 mt-10">
-          No active orders
-        </p>
       )}
 
-      {/* ORDERS */}
-      {sortedOrders.map((order) => {
-        const mongoId = order._id;
-        const displayId = order.order_number || order.order_id || "—";
-        const currentStatus = order.status?.toLowerCase();
+      {/* SEARCH */}
 
-        const isUrgent = currentStatus === "pending";
+      <input
+        type="text"
+        placeholder="Search food..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full border rounded p-2 mb-4"
+      />
 
-        return (
-          <div
-            key={mongoId}
-            className={`bg-white rounded-xl shadow p-5 mb-6 border transition ${
-              isUrgent ? "border-blue-500 shadow-md" : ""
+      {/* CATEGORY FILTER */}
+
+      <div className="flex gap-2 flex-wrap mb-6">
+
+        {categories.map((c) => (
+          <button
+            key={c}
+            onClick={() => setCategory(c)}
+            className={`px-3 py-1 rounded border capitalize ${
+              category === c
+                ? "bg-black text-white"
+                : "hover:bg-gray-100"
             }`}
           >
-            {/* HEADER */}
-            <div className="flex justify-between items-center">
-              <h2 className="font-semibold text-lg">
-                Order #{displayId}
-              </h2>
+            {c}
+          </button>
+        ))}
 
-              <span
-                className={`px-3 py-1 rounded-full text-sm capitalize ${statusBadge(
-                  currentStatus
-                )}`}
-              >
-                {currentStatus}
-              </span>
+      </div>
+
+      {/* MENU GRID */}
+
+      <div className="grid md:grid-cols-3 gap-6">
+
+        {filteredMenu.map((item) => {
+
+          const quantity = cart[item._id]?.quantity || 0;
+
+          return (
+            <div
+              key={item._id}
+              className="bg-white rounded-xl shadow border overflow-hidden"
+            >
+
+              {/* IMAGE */}
+
+              <img
+                src={item.image || fallbackImage}
+                alt={item.name}
+                className="w-full h-40 object-cover"
+              />
+
+              <div className="p-4">
+
+                <h2 className="font-semibold text-lg">
+                  {item.name}
+                </h2>
+
+                <p className="text-gray-500 text-sm mt-1">
+                  {item.description}
+                </p>
+
+                <p className="font-bold mt-2">
+                  ₹{item.price}
+                </p>
+
+                {/* ACTIONS */}
+
+                {quantity === 0 ? (
+                  <button
+                    onClick={() => addToCart(item)}
+                    className="mt-3 w-full bg-black text-white py-2 rounded"
+                  >
+                    Add
+                  </button>
+                ) : (
+                  <div className="flex justify-between items-center mt-3">
+
+                    <button
+                      onClick={() => removeFromCart(item._id)}
+                      className="px-3 py-1 border rounded"
+                    >
+                      -
+                    </button>
+
+                    <span>{quantity}</span>
+
+                    <button
+                      onClick={() => addToCart(item)}
+                      className="px-3 py-1 border rounded"
+                    >
+                      +
+                    </button>
+
+                  </div>
+                )}
+
+              </div>
             </div>
+          );
+        })}
+      </div>
 
-            {/* DETAILS */}
-            <p className="mt-2">
-              Ordered by: <strong>{order.user_name || "User"}</strong>
-            </p>
+      {/* STICKY CART BAR */}
 
-            <p className="font-medium">
-              Total: ₹{order.total_amount}
-            </p>
+      {totalItems > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-black text-white p-4 flex justify-between items-center">
 
-            <p className="text-sm text-gray-500">
-              Payment: {order.payment_method} ({order.payment_status})
-            </p>
-
-            <p className="text-sm text-gray-500">
-              Placed at: {formatIST(order.created_at)}
-            </p>
-
-            {/* ITEMS */}
-            <ul className="mt-3 list-disc ml-5 text-sm">
-              {(order.items || []).map((item, idx) => (
-                <li key={idx}>
-                  {item.name} × {item.quantity}
-                </li>
-              ))}
-            </ul>
-
-            {/* ACTIONS */}
-            <div className="flex gap-2 mt-4 flex-wrap">
-              {["pending", "preparing", "completed"].map((status) => (
-                <button
-                  key={status}
-                  disabled={
-                    updatingId === mongoId ||
-                    currentStatus === status
-                  }
-                  onClick={() => updateStatus(mongoId, status)}
-                  className={`px-4 py-1 rounded border text-sm capitalize transition ${
-                    currentStatus === status
-                      ? "bg-black text-white"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {updatingId === mongoId
-                    ? "Updating..."
-                    : status}
-                </button>
-              ))}
-            </div>
+          <div>
+            {totalItems} items • ₹{totalPrice}
           </div>
-        );
-      })}
+
+          <button
+            onClick={() =>
+              navigate("/cart", { state: { cart } })
+            }
+            className="bg-white text-black px-4 py-2 rounded"
+          >
+            View Cart
+          </button>
+
+        </div>
+      )}
+
     </div>
   );
 };
 
-export default AdminOrdersPage;
+export default MenuPage;

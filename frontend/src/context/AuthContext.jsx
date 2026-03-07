@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, useMemo } from "react";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,16 +39,16 @@ export const AuthProvider = ({ children }) => {
   /* ================= RESTORE AUTH ================= */
   useEffect(() => {
     try {
+
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
       if (!storedToken || !storedUser) {
-        clearAuth();
         setLoading(false);
         return;
       }
 
-      let parsedUser;
+      let parsedUser = null;
 
       try {
         parsedUser = JSON.parse(storedUser);
@@ -67,19 +68,18 @@ export const AuthProvider = ({ children }) => {
 
       setToken(storedToken);
       setUser(normalizedUser);
+
     } catch (err) {
       console.error("Auth restore failed:", err);
       clearAuth();
     } finally {
       setLoading(false);
     }
+
   }, []);
 
   /* ================= LOGIN ================= */
   const login = (userData, authToken) => {
-    if (!userData) {
-      throw new Error("Invalid login user data");
-    }
 
     const normalizedUser = normalizeUser(userData);
 
@@ -87,23 +87,18 @@ export const AuthProvider = ({ children }) => {
       throw new Error("Invalid user structure");
     }
 
-    const finalToken =
-      typeof authToken === "string" && authToken.length > 0
-        ? authToken
-        : null;
-
-    if (!finalToken) {
+    if (!authToken || typeof authToken !== "string") {
       throw new Error("Token missing");
     }
 
     try {
-      localStorage.setItem("token", finalToken);
+      localStorage.setItem("token", authToken);
       localStorage.setItem("user", JSON.stringify(normalizedUser));
     } catch (err) {
       console.error("Storage failed:", err);
     }
 
-    setToken(finalToken);
+    setToken(authToken);
     setUser(normalizedUser);
   };
 
@@ -112,57 +107,64 @@ export const AuthProvider = ({ children }) => {
     clearAuth();
 
     if (!window.location.pathname.includes("/login")) {
-      window.location.href = "/login";
+      window.location.replace("/login");
     }
   };
 
   /* ================= SYNC TABS ================= */
   useEffect(() => {
+
     const handleStorageChange = () => {
+
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
       if (!storedToken || !storedUser) {
         clearAuth();
       }
+
     };
 
     window.addEventListener("storage", handleStorageChange);
+
     return () => window.removeEventListener("storage", handleStorageChange);
+
   }, []);
 
   /* ================= ROLE HELPERS ================= */
+
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
   const isFaculty = user?.role === "faculty";
 
   const isAuthenticated = Boolean(token && user);
 
-  /* ================= MEMOIZED VALUE ================= */
-  const value = useMemo(
-    () => ({
-      user,
-      token,
-      loading,
-      login,
-      logout,
-      isAuthenticated,
-      isAdmin,
-      isStudent,
-      isFaculty,
-    }),
-    [user, token, loading]
-  );
+  /* ================= CONTEXT VALUE ================= */
+
+  const value = useMemo(() => ({
+    user,
+    token,
+    loading,
+    login,
+    logout,
+    isAuthenticated,
+    isAdmin,
+    isStudent,
+    isFaculty
+  }), [user, token, loading]);
 
   return (
     <AuthContext.Provider value={value}>
       {!loading && children}
     </AuthContext.Provider>
   );
+
 };
 
 /* ================= HOOK ================= */
+
 export const useAuth = () => {
+
   const context = useContext(AuthContext);
 
   if (!context) {
@@ -170,4 +172,5 @@ export const useAuth = () => {
   }
 
   return context;
+
 };

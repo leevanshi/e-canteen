@@ -7,19 +7,29 @@ const AdminRoute = ({ children }) => {
 
   /* ================= WAIT FOR AUTH RESTORE ================= */
   if (loading) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   /* ================= NOT AUTHENTICATED ================= */
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
   /* ================= NOT ADMIN ================= */
   const role = user?.role?.toLowerCase();
 
   if (role !== "admin") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/menu" replace />;
   }
 
   /* ================= ADMIN ACCESS ================= */
