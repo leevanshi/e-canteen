@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
+/* CONTEXT */
+import { CartProvider } from "./context/CartContext";
 
 /* PUBLIC */
 import LandingPage from "./pages/LandingPage";
@@ -64,7 +66,7 @@ const App = () => {
   }, []);
 
 return (
-  <CartProvider>
+
     <>
       <Toaster position="top-right" richColors />
 
@@ -248,7 +250,7 @@ return (
 
       </Routes>
     </>
-  </CartProvider>
+
 );
        
 };
