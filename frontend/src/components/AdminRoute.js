@@ -2,10 +2,12 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const AdminRoute = ({ children }) => {
+
   const { user, loading, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  /* ================= WAIT FOR AUTH RESTORE ================= */
+  /* ================= LOADING ================= */
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -14,7 +16,8 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  /* ================= NOT AUTHENTICATED ================= */
+  /* ================= NOT LOGGED IN ================= */
+
   if (!isAuthenticated) {
     return (
       <Navigate
@@ -25,15 +28,27 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  /* ================= NOT ADMIN ================= */
-  const role = user?.role?.toLowerCase();
+  /* ================= ROLE CHECK ================= */
+
+  const role = (user?.role || "").toLowerCase();
 
   if (role !== "admin") {
-    return <Navigate to="/menu" replace />;
+
+    if (role === "student") {
+      return <Navigate to="/menu" replace />;
+    }
+
+    if (role === "faculty") {
+      return <Navigate to="/faculty/dashboard" replace />;
+    }
+
+    return <Navigate to="/" replace />;
   }
 
   /* ================= ADMIN ACCESS ================= */
+
   return children;
+
 };
 
 export default AdminRoute;

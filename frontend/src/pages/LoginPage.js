@@ -16,6 +16,7 @@ import {
 } from "../components/ui/card";
 
 const LoginPage = () => {
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -24,90 +25,119 @@ const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
 
-  if (submitting) return;
+    e.preventDefault();
 
-  if (!email.trim() || !password.trim()) {
-    toast.error("Please fill all fields");
-    return;
-  }
+    if (submitting) return;
 
-  setSubmitting(true);
-
-  const slowTimer = setTimeout(() => {
-    toast.info("⏳ Server is waking up, please wait...");
-  }, 4000);
-
-  try {
-    const response = await API.post("/auth/login", {
-      email: email.trim().toLowerCase(),
-      password: password,
-    });
-
-    clearTimeout(slowTimer);
-
-    const data = response.data;
-
-    if (!data) {
-      toast.error("Server returned empty response");
+    if (!email.trim() || !password.trim()) {
+      toast.error("Please fill all fields");
       return;
     }
 
-    const token = data.access_token;
-    const user = data.user;
+    setSubmitting(true);
 
-    if (!token || !user) {
-      toast.error("Invalid login response");
-      return;
-    }
+    const slowTimer = setTimeout(() => {
+      toast.info("⏳ Server is waking up, please wait...");
+    }, 4000);
 
-    login(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      token
-    );
+    try {
 
-    toast.success("Login successful");
+      const response = await API.post("/auth/login", {
+        email: email.trim().toLowerCase(),
+        password
+      });
 
-    if (user.role === "admin") {
-      navigate("/admin/dashboard", { replace: true });
-    } else {
-      navigate("/menu", { replace: true });
-    }
+      clearTimeout(slowTimer);
 
-  } catch (err) {
-    clearTimeout(slowTimer);
+      const data = response?.data;
 
-    if (!err.response) {
-      toast.error(
-        "🚀 Server is starting... please wait 30–60 seconds and try again"
+      if (!data) {
+        toast.error("Server returned empty response");
+        return;
+      }
+
+      const token = data.access_token;
+      const user = data.user;
+
+      if (!token || !user) {
+        toast.error("Invalid login response");
+        return;
+      }
+
+      const role = (user.role || "").toLowerCase();
+
+      login(
+        {
+          id: user.id || user._id,
+          email: user.email,
+          role
+        },
+        token
       );
-    } else {
-      const message =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        "Invalid email or password";
 
-      toast.error(message);
+      toast.success("Login successful");
+
+      /* ROLE BASED REDIRECT */
+
+      if (role === "admin") {
+
+        navigate("/admin/dashboard", { replace: true });
+
+      } else if (role === "faculty") {
+
+        navigate("/faculty/dashboard", { replace: true });
+
+      } else {
+
+        navigate("/menu", { replace: true });
+
+      }
+
+    } catch (err) {
+
+      clearTimeout(slowTimer);
+
+      if (!err.response) {
+
+        toast.error(
+          "🚀 Server is starting... please wait 30–60 seconds and try again"
+        );
+
+      } else {
+
+        const message =
+          err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Invalid email or password";
+
+        toast.error(message);
+
+      }
+
+    } finally {
+
+      setSubmitting(false);
+
     }
-  } finally {
-    setSubmitting(false);
-  }
-};
+
+  };
 
   return (
+
     <div className="min-h-screen flex items-center justify-center bg-orange-50">
+
       <Card className="w-full max-w-md rounded-2xl shadow-lg">
+
         <CardHeader>
-          <CardTitle className="text-center text-2xl">Login</CardTitle>
+          <CardTitle className="text-center text-2xl">
+            Login
+          </CardTitle>
         </CardHeader>
 
         <CardContent>
+
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div>
@@ -125,6 +155,7 @@ const handleSubmit = async (e) => {
               <Label>Password</Label>
 
               <div className="relative">
+
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
@@ -140,7 +171,9 @@ const handleSubmit = async (e) => {
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
+
               </div>
+
             </div>
 
             <Button
@@ -181,10 +214,15 @@ const handleSubmit = async (e) => {
             </Button>
 
           </form>
+
         </CardContent>
+
       </Card>
+
     </div>
+
   );
+
 };
 
 export default LoginPage;
