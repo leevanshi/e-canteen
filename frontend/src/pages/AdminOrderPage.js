@@ -19,7 +19,7 @@ const formatIST = (date) => {
 
 /* ================= STATUS BADGE ================= */
 const statusBadge = (status = "") => {
-  switch (status?.toLowerCase()) {
+  switch (status.toLowerCase()) {
     case "completed":
       return "bg-green-100 text-green-700";
     case "preparing":
@@ -31,21 +31,17 @@ const statusBadge = (status = "") => {
   }
 };
 
-/* ================= STATUS ORDER ================= */
+/* ================= STATUS PRIORITY ================= */
 const STATUS_PRIORITY = {
   pending: 1,
   preparing: 2,
   completed: 3,
 };
 
-/* ================= 🔊 SOUND ================= */
-const playSound = () => {
-  const audio = new Audio("/notification.mp3");
-  audio.play().catch(() => {});
-};
-
-/* ================= 🖨️ RECEIPT FORMAT ================= */
+/* ================= RECEIPT FORMAT ================= */
 const formatReceipt = (order) => {
+  const items = Array.isArray(order.items) ? order.items : [];
+
   return `
 COLLEGE CANTEEN
 --------------------------------
@@ -53,10 +49,12 @@ Order ID: ${order.order_number || order._id}
 Time: ${formatIST(order.created_at)}
 
 Items:
-${(order.items || [])
+${items
   .map(
     (i) =>
-      `${i.name} x${i.quantity} - ₹${i.quantity * (i.price || 0)}`
+      `${i.name || "Item"} x${i.quantity || 0} - ₹${
+        (i.quantity || 0) * (i.price || 0)
+      }`
   )
   .join("\n")}
 
@@ -67,27 +65,28 @@ Thank You!
 `;
 };
 
-/* ================= 🖨️ AUTO PRINT ================= */
+/* ================= PRINT FUNCTION ================= */
 const autoPrint = (content) => {
-  const printWindow = window.open("", "", "width=300,height=600");
+  const printWindow = window.open("", "_blank");
+
+  if (!printWindow) return;
 
   printWindow.document.write(`
-    <pre style="
-      font-family: monospace;
-      font-size: 12px;
-      white-space: pre-wrap;
-    ">
+    <html>
+      <body>
+        <pre style="font-family:monospace;font-size:12px;">
 ${content}
-    </pre>
+        </pre>
+      </body>
+    </html>
   `);
 
   printWindow.document.close();
-  printWindow.focus();
 
   setTimeout(() => {
     printWindow.print();
     printWindow.close();
-  }, 500);
+  }, 300);
 };
 
 const AdminOrdersPage = () => {
@@ -95,16 +94,29 @@ const AdminOrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
-  // ✅ FIX: use Set instead of array
   const printedOrdersRef = useRef(new Set());
-
-  // ✅ FIX: prevent first load printing
   const isFirstLoad = useRef(true);
+  const fetchingRef = useRef(false);
+  const audioRef = useRef(null);
 
   const navigate = useNavigate();
 
-  /* ================= FETCH ================= */
+  /* ================= SOUND ================= */
+  const playSound = () => {
+    try {
+      audioRef.current?.play();
+    } catch {}
+  };
+
+  useEffect(() => {
+    audioRef.current = new Audio("/notification.mp3");
+  }, []);
+
+  /* ================= FETCH ORDERS ================= */
   const fetchOrders = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
     try {
       const res = await API.get("/admin/orders");
 
@@ -112,7 +124,7 @@ const AdminOrdersPage = () => {
         ? res.data
         : res.data?.orders || [];
 
-      // ✅ FIRST LOAD: just store IDs, don't print
+      /* FIRST LOAD (no printing) */
       if (isFirstLoad.current) {
         printedOrdersRef.current = new Set(data.map((o) => o._id));
         isFirstLoad.current = false;
@@ -120,18 +132,17 @@ const AdminOrdersPage = () => {
         return;
       }
 
-      // ✅ FIND NEW ORDERS (FAST)
+      /* DETECT NEW ORDERS */
       const newOrders = data.filter(
-        (o) => !printedOrdersRef.current.has(o._id)
+        (o) =>
+          !printedOrdersRef.current.has(o._id) &&
+          o.status?.toLowerCase() === "pending"
       );
 
       if (newOrders.length > 0) {
         newOrders.forEach((order) => {
           playSound();
-          const receipt = formatReceipt(order);
-          autoPrint(receipt);
-
-          // mark as printed
+          autoPrint(formatReceipt(order));
           printedOrdersRef.current.add(order._id);
         });
 
@@ -140,13 +151,15 @@ const AdminOrdersPage = () => {
 
       setOrders(data);
     } catch (err) {
-      console.error("Fetch error ❌", err);
+      console.error("Fetch error:", err);
       toast.error("Failed to fetch orders");
     } finally {
+      fetchingRef.current = false;
       setLoading(false);
     }
   };
 
+  /* ================= POLLING ================= */
   useEffect(() => {
     fetchOrders();
 
@@ -172,7 +185,7 @@ const AdminOrdersPage = () => {
       });
   }, [orders]);
 
-  /* ================= UPDATE ================= */
+  /* ================= UPDATE STATUS ================= */
   const updateStatus = async (mongoId, status) => {
     if (!mongoId) return;
 
@@ -189,7 +202,7 @@ const AdminOrdersPage = () => {
         )
       );
     } catch (err) {
-      console.error("Update error ❌", err);
+      console.error("Update error:", err);
       toast.error(err.response?.data?.detail || "Failed to update");
     } finally {
       setUpdatingId(null);
@@ -247,7 +260,9 @@ const AdminOrdersPage = () => {
         const displayId =
           order.order_number || order.order_id || "—";
 
-        const currentStatus = order?.status?.toLowerCase() || "pending";
+        const currentStatus =
+          order?.status?.toLowerCase() || "pending";
+
         const isUrgent = currentStatus === "pending";
 
         return (
@@ -289,11 +304,12 @@ const AdminOrdersPage = () => {
             </p>
 
             <ul className="mt-3 list-disc ml-5 text-sm">
-              {(order.items || []).map((item, idx) => (
-                <li key={idx}>
-                  {item?.name || "Item"} × {item?.quantity || 0}
-                </li>
-              ))}
+              {Array.isArray(order.items) &&
+                order.items.map((item, idx) => (
+                  <li key={idx}>
+                    {item?.name || "Item"} × {item?.quantity || 0}
+                  </li>
+                ))}
             </ul>
 
             <div className="flex gap-2 mt-4 flex-wrap">

@@ -1,7 +1,6 @@
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
 from pymongo import ReturnDocument
@@ -9,7 +8,10 @@ from pymongo import ReturnDocument
 # ================= CONFIG =================
 IST = timezone(timedelta(hours=5, minutes=30))
 
-router = APIRouter(tags=["Admin"])
+router = APIRouter(
+    prefix="/admin",
+    tags=["Admin"]
+)
 
 # ================= DATABASE =================
 from database import (
@@ -32,7 +34,24 @@ def ensure_admin_or_staff(user: dict):
         )
 
 
-# ================= ORDER ID COUNTER =================
+def serialize_order(o):
+    created = o.get("created_at")
+
+    return {
+        "_id": str(o["_id"]),
+        "order_id": o.get("order_id"),
+        "user_name": o.get("user_name"),
+        "order_type": o.get("order_type"),
+        "payment_method": o.get("payment_method"),
+        "payment_status": o.get("payment_status"),
+        "items": o.get("items", []),
+        "total_amount": o.get("total_amount"),
+        "status": o.get("status"),
+        "created_at": created.isoformat() if isinstance(created, datetime) else None
+    }
+
+
+# ================= ORDER COUNTER =================
 def get_next_order_id() -> int:
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
@@ -47,12 +66,18 @@ def get_next_order_id() -> int:
 
 
 # ================= SCHEMAS =================
+class OrderItem(BaseModel):
+    name: str
+    quantity: int
+    price: float
+
+
 class OrderStatusUpdate(BaseModel):
     status: str
 
 
 class AdminPlaceOrder(BaseModel):
-    items: List[Dict[str, Any]]
+    items: List[OrderItem]
     total_amount: float
 
 
@@ -62,28 +87,25 @@ class AvailabilityUpdate(BaseModel):
 
 # ================= GET ALL ORDERS =================
 @router.get("/orders")
-def get_admin_orders(current_user=Depends(get_current_user)):
+def get_admin_orders(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, le=200),
+    current_user=Depends(get_current_user)
+):
 
     ensure_admin_or_staff(current_user)
 
-    orders = orders_collection.find().sort("created_at", -1)
+    skip = (page - 1) * limit
 
-    result = []
+    orders = (
+        orders_collection
+        .find()
+        .sort("created_at", -1)
+        .skip(skip)
+        .limit(limit)
+    )
 
-    for o in orders:
-        result.append({
-            "_id": str(o["_id"]),
-            "order_id": o.get("order_id"),
-            "user_name": o.get("user_name"),
-            "order_type": o.get("order_type"),
-            "payment_method": o.get("payment_method"),
-            "total_amount": o.get("total_amount"),
-            "status": o.get("status"),
-            "created_at": o.get("created_at").isoformat()
-            if o.get("created_at") else None
-        })
-
-    return result
+    return [serialize_order(o) for o in orders]
 
 
 # ================= GET ONLINE ORDERS =================
@@ -92,25 +114,14 @@ def get_online_orders(current_user=Depends(get_current_user)):
 
     ensure_admin_or_staff(current_user)
 
-    orders = orders_collection.find(
-        {"order_type": "online"}
-    ).sort("created_at", 1)
+    orders = (
+        orders_collection
+        .find({"order_type": "online"})
+        .sort("created_at", 1)
+        .limit(200)
+    )
 
-    result = []
-
-    for o in orders:
-        result.append({
-            "_id": str(o["_id"]),
-            "user_id": str(o["user_id"]) if o.get("user_id") else None,
-            "user_name": o.get("user_name"),
-            "items": o.get("items"),
-            "total_amount": o.get("total_amount"),
-            "status": o.get("status"),
-            "created_at": o.get("created_at").isoformat()
-            if o.get("created_at") else None
-        })
-
-    return result
+    return [serialize_order(o) for o in orders]
 
 
 # ================= UPDATE ORDER STATUS =================
@@ -123,8 +134,12 @@ def update_order_status(
 
     ensure_admin_or_staff(current_user)
 
-    if data.status not in ["pending", "preparing", "completed", "cancelled"]:
-        raise HTTPException(status_code=400, detail="Invalid order status")
+    status = data.status.lower()
+
+    allowed = ["pending", "preparing", "completed", "cancelled"]
+
+    if status not in allowed:
+        raise HTTPException(400, "Invalid order status")
 
     now = datetime.now(IST)
 
@@ -132,7 +147,7 @@ def update_order_status(
         query = {"order_id": int(order_id)}
     else:
         if not ObjectId.is_valid(order_id):
-            raise HTTPException(status_code=400, detail="Invalid order ID")
+            raise HTTPException(400, "Invalid order ID")
 
         query = {"_id": ObjectId(order_id)}
 
@@ -140,12 +155,12 @@ def update_order_status(
         query,
         {
             "$set": {
-                "status": data.status,
+                "status": status,
                 "updated_at": now
             },
             "$push": {
                 "status_history": {
-                    "status": data.status,
+                    "status": status,
                     "time": now
                 }
             }
@@ -153,16 +168,16 @@ def update_order_status(
     )
 
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(404, "Order not found")
 
     return {
         "success": True,
         "order_id": order_id,
-        "status": data.status
+        "status": status
     }
 
 
-# ================= TOGGLE MENU AVAILABILITY =================
+# ================= MENU AVAILABILITY =================
 @router.put("/menu/{menu_id}/availability")
 def toggle_menu_availability(
     menu_id: str,
@@ -173,16 +188,18 @@ def toggle_menu_availability(
     ensure_admin_or_staff(current_user)
 
     if not ObjectId.is_valid(menu_id):
-        raise HTTPException(status_code=400, detail="Invalid menu ID")
+        raise HTTPException(400, "Invalid menu ID")
+
+    now = datetime.now(IST)
 
     item = menu_collection.find_one_and_update(
         {"_id": ObjectId(menu_id)},
-        {"$set": {"available": data.available}},
+        {"$set": {"available": bool(data.available), "updated_at": now}},
         return_document=ReturnDocument.AFTER
     )
 
     if not item:
-        raise HTTPException(status_code=404, detail="Menu item not found")
+        raise HTTPException(404, "Menu item not found")
 
     return {
         "success": True,
@@ -199,6 +216,12 @@ def place_walkin_order(
 
     ensure_admin_or_staff(current_user)
 
+    if not data.items:
+        raise HTTPException(400, "Order must contain items")
+
+    if data.total_amount <= 0:
+        raise HTTPException(400, "Invalid total amount")
+
     now = datetime.now(IST)
     order_id = get_next_order_id()
 
@@ -207,14 +230,12 @@ def place_walkin_order(
         "order_type": "walk-in",
         "user_id": None,
         "user_name": "Walk-in Customer",
-        "items": data.items,
+        "items": [i.dict() for i in data.items],
         "total_amount": data.total_amount,
         "payment_method": "counter",
         "payment_status": "paid",
         "status": "pending",
-        "status_history": [
-            {"status": "pending", "time": now}
-        ],
+        "status_history": [{"status": "pending", "time": now}],
         "created_at": now,
         "updated_at": now
     }
@@ -230,14 +251,27 @@ def place_walkin_order(
 
 # ================= USERS LIST =================
 @router.get("/users")
-def get_users(current_user=Depends(get_current_user)):
+def get_users(
+    limit: int = Query(200, le=500),
+    current_user=Depends(get_current_user)
+):
 
     ensure_admin_or_staff(current_user)
 
     users = []
 
-    for u in users_collection.find({}, {"password": 0}):
-        u["_id"] = str(u["_id"])
-        users.append(u)
+    for u in users_collection.find(
+        {},
+        {"password": 0, "refresh_token": 0}
+    ).limit(limit):
+
+        users.append({
+            "_id": str(u["_id"]),
+            "name": u.get("name"),
+            "email": u.get("email"),
+            "role": u.get("role"),
+            "wallet_balance": u.get("wallet_balance", 0),
+            "wallet_first_time": u.get("wallet_first_time", False)
+        })
 
     return users

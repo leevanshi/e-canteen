@@ -35,10 +35,12 @@ client = MongoClient(
     socketTimeoutMS=10000,
     retryWrites=True,
     tls=True,
+    maxPoolSize=50,
+    minPoolSize=5,
     uuidRepresentation="standard"
 )
 
-# 🔥 Check connection at startup
+# 🔥 Check connection
 try:
     client.admin.command("ping")
     print("✅ MongoDB connected successfully")
@@ -59,7 +61,7 @@ wallet_txn_collection = db["wallet_transactions"]
 counters_collection = db["counters"]
 
 # =========================
-# INDEXES (VERY IMPORTANT)
+# INDEXES
 # =========================
 
 # USERS
@@ -70,9 +72,20 @@ orders_collection.create_index("order_id", unique=True)
 orders_collection.create_index("user_id")
 orders_collection.create_index("created_at")
 orders_collection.create_index("status")
+orders_collection.create_index("order_type")
+
+# compound index for dashboard queries
+orders_collection.create_index([
+    ("created_at", -1),
+    ("status", 1)
+])
 
 # MENU
 menu_collection.create_index("available")
+
+# FEEDBACK
+feedback_collection.create_index("created_at")
+feedback_collection.create_index("order_id")
 
 # WALLET
 wallet_collection.create_index("user_id", unique=True)

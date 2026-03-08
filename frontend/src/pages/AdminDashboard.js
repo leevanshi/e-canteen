@@ -12,12 +12,13 @@ import { Button } from "../components/ui/button";
 
 const formatIST = (date) => {
   if (!date) return "—";
+
   try {
     return new Date(date).toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       dateStyle: "medium",
       timeStyle: "short",
-      hour12: true,
+      hour12: true
     });
   } catch {
     return "—";
@@ -31,11 +32,14 @@ const statusColor = (status = "") => {
     case "pending":
     case "placed":
       return "text-red-600 font-semibold";
+
     case "paid":
     case "preparing":
       return "text-orange-600 font-semibold";
+
     case "completed":
       return "text-green-600 font-semibold";
+
     default:
       return "text-gray-500";
   }
@@ -46,6 +50,7 @@ const ACTIVE_STATUSES = ["placed", "pending", "paid", "preparing"];
 /* ================= COMPONENT ================= */
 
 const AdminDashboard = () => {
+
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
@@ -55,8 +60,12 @@ const AdminDashboard = () => {
 
   const errorToastShown = useRef(false);
 
+  const role = (user?.role || "").toLowerCase();
+
   /* ================= AUTH GUARD ================= */
+
   useEffect(() => {
+
     if (authLoading) return;
 
     if (!user) {
@@ -64,14 +73,17 @@ const AdminDashboard = () => {
       return;
     }
 
-    if (user.role !== "admin") {
-      navigate("/", { replace: true });
+    if (role !== "admin") {
+      navigate("/menu", { replace: true });
     }
-  }, [user, authLoading, navigate]);
 
-  /* ================= FETCH ================= */
+  }, [user, authLoading, role, navigate]);
+
+  /* ================= FETCH ORDERS ================= */
+
   const fetchOrders = async (manual = false) => {
-    if (!user || user.role !== "admin") return;
+
+    if (!user || role !== "admin") return;
 
     if (manual) {
       setRefreshing(true);
@@ -79,6 +91,7 @@ const AdminDashboard = () => {
     }
 
     try {
+
       const res = await getAdminOrders();
 
       const data = Array.isArray(res?.data)
@@ -87,36 +100,47 @@ const AdminDashboard = () => {
 
       const fixed = data.map((o, idx) => ({
         ...o,
-        _id: o._id || `${idx}-${Date.now()}`, // fallback safety
+        _id: o._id || `${idx}-${Date.now()}`,
         order_number: o.order_number || o.order_id || 100 + idx,
-        total_amount: Number(o.total_amount || 0),
+        total_amount: Number(o.total_amount || 0)
       }));
 
       setOrders(fixed);
+
     } catch (err) {
+
       console.error("Fetch error ❌", err);
 
       if (!errorToastShown.current) {
         toast.error("Failed to load orders");
         errorToastShown.current = true;
       }
+
     } finally {
+
       setLoading(false);
       if (manual) setRefreshing(false);
+
     }
+
   };
 
   /* ================= AUTO REFRESH ================= */
+
   useEffect(() => {
-    if (!user || authLoading || user.role !== "admin") return;
+
+    if (!user || authLoading || role !== "admin") return;
 
     fetchOrders();
 
     const interval = setInterval(fetchOrders, 10000);
+
     return () => clearInterval(interval);
-  }, [user, authLoading]);
+
+  }, [user, authLoading, role]);
 
   /* ================= LOADING ================= */
+
   if (authLoading || loading) {
     return (
       <div className="p-10 text-center text-gray-500 animate-pulse">
@@ -130,37 +154,39 @@ const AdminDashboard = () => {
   /* ================= DERIVED ================= */
 
   const sortedOrders = useMemo(() => {
+
     return [...orders].sort((a, b) => {
       const timeA = new Date(a?.created_at || 0).getTime();
       const timeB = new Date(b?.created_at || 0).getTime();
-      return timeA - timeB; // FIFO
+      return timeA - timeB;
     });
+
   }, [orders]);
 
-  const activeOrders = useMemo(
-    () =>
-      sortedOrders.filter((o) =>
-        ACTIVE_STATUSES.includes(String(o.status).toLowerCase())
-      ),
-    [sortedOrders]
-  );
+  const activeOrders = useMemo(() => {
 
-  const completedOrders = useMemo(
-    () =>
-      sortedOrders.filter(
-        (o) => String(o.status).toLowerCase() === "completed"
-      ),
-    [sortedOrders]
-  );
+    return sortedOrders.filter((o) =>
+      ACTIVE_STATUSES.includes(String(o.status).toLowerCase())
+    );
 
-  const totalRevenue = useMemo(
-    () =>
-      completedOrders.reduce(
-        (sum, o) => sum + Number(o.total_amount || 0),
-        0
-      ),
-    [completedOrders]
-  );
+  }, [sortedOrders]);
+
+  const completedOrders = useMemo(() => {
+
+    return sortedOrders.filter(
+      (o) => String(o.status).toLowerCase() === "completed"
+    );
+
+  }, [sortedOrders]);
+
+  const totalRevenue = useMemo(() => {
+
+    return completedOrders.reduce(
+      (sum, o) => sum + Number(o.total_amount || 0),
+      0
+    );
+
+  }, [completedOrders]);
 
   /* ================= UI ================= */
 
@@ -168,7 +194,9 @@ const AdminDashboard = () => {
     <div className="p-6 max-w-7xl mx-auto space-y-8 bg-orange-50 min-h-screen rounded-2xl">
 
       {/* HEADER */}
+
       <div className="flex justify-between items-center flex-wrap gap-3">
+
         <h1 className="text-3xl font-extrabold text-orange-600 tracking-wide">
           Admin Dashboard
         </h1>
@@ -181,10 +209,13 @@ const AdminDashboard = () => {
         >
           {refreshing ? "Refreshing..." : "Refresh Orders"}
         </Button>
+
       </div>
 
       {/* QUICK ACTIONS */}
+
       <div className="flex gap-3 flex-wrap">
+
         <Button
           className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl"
           onClick={() => navigate("/admin/orders")}
@@ -199,21 +230,33 @@ const AdminDashboard = () => {
           🧾 Counter Order
         </Button>
 
-        <Button variant="outline" onClick={() => navigate("/admin/history")}>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/admin/history")}
+        >
           Order History
         </Button>
 
-        <Button variant="outline" onClick={() => navigate("/admin/menu")}>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/admin/menu")}
+        >
           Menu Management
         </Button>
 
-        <Button variant="outline" onClick={() => navigate("/admin/wallet")}>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/admin/wallet")}
+        >
           Wallet Management
         </Button>
+
       </div>
 
       {/* STATS */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
         <Card className="p-5 rounded-2xl shadow bg-white">
           <p className="text-gray-500 text-sm">Total Orders</p>
           <p className="text-3xl font-bold text-orange-600">
@@ -241,18 +284,25 @@ const AdminDashboard = () => {
             ₹{totalRevenue}
           </p>
         </Card>
+
       </div>
 
       {/* ACTIVE ORDERS */}
+
       <Card className="p-6 rounded-2xl shadow bg-white">
+
         <h2 className="text-xl font-bold text-orange-600 mb-4">
           Active Orders (FIFO)
         </h2>
 
         {activeOrders.length === 0 ? (
-          <p className="text-gray-500">No active orders right now.</p>
+          <p className="text-gray-500">
+            No active orders right now.
+          </p>
         ) : (
+
           <table className="w-full text-sm">
+
             <thead>
               <tr className="border-b bg-orange-50 text-left">
                 <th>Order</th>
@@ -263,14 +313,24 @@ const AdminDashboard = () => {
                 <th>Time</th>
               </tr>
             </thead>
+
             <tbody>
+
               {activeOrders.map((o) => {
+
                 const isWalkIn = !o.user_name;
 
                 return (
                   <tr key={o._id} className="border-b hover:bg-orange-50">
-                    <td className="font-medium">#{o.order_number}</td>
-                    <td>{o.user_name || "Walk-in Customer"}</td>
+
+                    <td className="font-medium">
+                      #{o.order_number}
+                    </td>
+
+                    <td>
+                      {o.user_name || "Walk-in Customer"}
+                    </td>
+
                     <td>
                       {o.payment_method === "wallet"
                         ? "Wallet"
@@ -278,18 +338,32 @@ const AdminDashboard = () => {
                         ? "Counter"
                         : "Online"}
                     </td>
-                    <td>₹{o.total_amount}</td>
+
+                    <td>
+                      ₹{o.total_amount}
+                    </td>
+
                     <td className={!isWalkIn ? statusColor(o.status) : ""}>
                       {isWalkIn ? "-" : o.status}
                     </td>
-                    <td>{formatIST(o.created_at)}</td>
+
+                    <td>
+                      {formatIST(o.created_at)}
+                    </td>
+
                   </tr>
                 );
+
               })}
+
             </tbody>
+
           </table>
+
         )}
+
       </Card>
+
     </div>
   );
 };

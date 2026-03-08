@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
+from pymongo import ReturnDocument
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
-router = APIRouter(tags=["Wallet"])
+router = APIRouter(prefix="/wallet", tags=["Wallet"])
 
 from database import wallet_collection, wallet_txn_collection
 from routes.auth import get_current_user
@@ -59,12 +60,11 @@ def admin_add_money(
             "$set": {"updated_at": now},
             "$setOnInsert": {
                 "user_id": ObjectId(data.user_id),
-                "balance": 0,
                 "created_at": now
             }
         },
         upsert=True,
-        return_document=True
+        return_document=ReturnDocument.AFTER
     )
 
     new_balance = wallet.get("balance", 0)
@@ -75,6 +75,7 @@ def admin_add_money(
         "amount": data.amount,
         "type": "credit",
         "method": "admin",
+        "admin_id": ObjectId(current_user["_id"]),
         "balance_after": new_balance,
         "created_at": now
     })

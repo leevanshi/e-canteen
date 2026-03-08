@@ -1,9 +1,8 @@
-
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, field_validator
 from database import users_collection
 from passlib.context import CryptContext
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 from bson import ObjectId
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -11,11 +10,12 @@ from dotenv import load_dotenv
 import os
 import logging
 import re
+from pymongo.errors import DuplicateKeyError
+from collections import defaultdict
 
 # ================= LOAD ENV =================
 load_dotenv()
 
-# ================= ROUTER =================
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ================= LOGGING =================
@@ -24,26 +24,27 @@ logger = logging.getLogger(__name__)
 
 # ================= SECURITY =================
 SECRET_KEY = os.getenv("SECRET_KEY")
-
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY must be set in environment variables")
-
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
+
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY must be set")
 
 security = HTTPBearer()
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
+    bcrypt__rounds=12,
     deprecated="auto"
 )
 
-# ================= DB INDEX =================
-try:
-    users_collection.create_index([("email", 1)], unique=True)
-except Exception as e:
-    logger.warning(f"Index creation skipped: {str(e)}")
+# ================= LOGIN RATE LIMIT =================
+login_attempts = defaultdict(list)
+MAX_ATTEMPTS = 5
+ATTEMPT_WINDOW = 60  # seconds
 
+# ================= INDEX =================
+users_collection.create_index("email", unique=True)
 
 # ================= SCHEMAS =================
 class LoginSchema(BaseModel):
@@ -57,7 +58,7 @@ class RegisterSchema(BaseModel):
     password: str
     role: str
 
-    @validator("password")
+    @field_validator("password")
     def strong_password(cls, v):
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
@@ -69,8 +70,16 @@ class RegisterSchema(BaseModel):
             raise ValueError("Must include a number")
         return v
 
+    @field_validator("name")
+    def normalize_name(cls, v):
+        return v.strip().title()
+
 
 # ================= HELPERS =================
+def normalize_email(email: str) -> str:
+    return email.lower().strip()
+
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
@@ -80,13 +89,14 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_token(data: dict) -> str:
-    payload = data.copy()
+    now = datetime.now(timezone.utc)
 
-    payload.update({
+    payload = {
+        **data,
         "type": "access",
-        "exp": datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
-        "iat": datetime.utcnow()
-    })
+        "exp": now + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
+        "iat": now
+    }
 
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -96,38 +106,26 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
 
-    if credentials.scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication scheme"
-        )
-
     token = credentials.credentials
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
         if payload.get("type") != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type"
-            )
+            raise HTTPException(401, "Invalid token type")
 
         user_id = payload.get("sub")
 
         if not user_id or not ObjectId.is_valid(user_id):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
+            raise HTTPException(401, "Invalid token")
 
-        user = users_collection.find_one({"_id": ObjectId(user_id)})
+        user = users_collection.find_one(
+            {"_id": ObjectId(user_id)},
+            {"password": 0}
+        )
 
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
-            )
+            raise HTTPException(401, "User not found")
 
         return {
             "_id": str(user["_id"]),
@@ -136,34 +134,25 @@ def get_current_user(
             "role": user.get("role", "student")
         }
 
-    except JWTError as e:
-        logger.error(f"JWT Error: {str(e)}")
-
+    except JWTError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail="Invalid or expired token"
         )
 
 
 # ================= ROLE GUARD =================
 def require_admin(user=Depends(get_current_user)):
-
-    if user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-
+    if user["role"] != "admin":
+        raise HTTPException(403, "Admin access required")
     return user
 
 
-# ================= USER REGISTER =================
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+# ================= REGISTER =================
+@router.post("/register", status_code=201)
 def register_user(data: RegisterSchema):
 
-    email = data.email.lower().strip()
-
-    domain = email.split("@")[-1]
+    email = normalize_email(data.email)
 
     allowed_domains = [
         "nmims.in",
@@ -171,50 +160,55 @@ def register_user(data: RegisterSchema):
         "nmims.edu"
     ]
 
-    if domain not in allowed_domains:
-        raise HTTPException(
-            status_code=400,
-            detail="Only NMIMS email allowed"
-        )
-
-    if users_collection.find_one({"email": email}):
-        raise HTTPException(
-            status_code=409,
-            detail="User already exists"
-        )
+    if email.split("@")[-1] not in allowed_domains:
+        raise HTTPException(400, "Only NMIMS email allowed")
 
     if data.role not in ["student", "faculty"]:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid role"
-        )
+        raise HTTPException(400, "Invalid role")
 
-    users_collection.insert_one({
-        "name": data.name.strip(),
-        "email": email,
-        "password": hash_password(data.password),
-        "role": data.role,
-        "created_at": datetime.utcnow()
-    })
+    try:
+        users_collection.insert_one({
+            "name": data.name,
+            "email": email,
+            "password": hash_password(data.password),
+            "role": data.role,
+            "created_at": datetime.now(timezone.utc)
+        })
 
-    return {
-        "message": f"{data.role.capitalize()} registered successfully"
-    }
+    except DuplicateKeyError:
+        raise HTTPException(409, "User already exists")
+
+    return {"message": f"{data.role.capitalize()} registered successfully"}
 
 
 # ================= LOGIN =================
 @router.post("/login")
 def login(data: LoginSchema):
 
-    email = data.email.lower().strip()
+    email = normalize_email(data.email)
+
+    now = datetime.now().timestamp()
+
+    # remove old attempts
+    login_attempts[email] = [
+        t for t in login_attempts[email]
+        if now - t < ATTEMPT_WINDOW
+    ]
+
+    if len(login_attempts[email]) >= MAX_ATTEMPTS:
+        raise HTTPException(
+            429,
+            "Too many login attempts. Try again later."
+        )
 
     user = users_collection.find_one({"email": email})
 
     if not user or not verify_password(data.password, user["password"]):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid credentials"
-        )
+        login_attempts[email].append(now)
+        raise HTTPException(401, "Invalid credentials")
+
+    # reset attempts on success
+    login_attempts[email] = []
 
     role = user.get("role", "student")
 
@@ -236,10 +230,9 @@ def login(data: LoginSchema):
     }
 
 
-# ================= SAMPLE ADMIN ROUTE =================
+# ================= ADMIN TEST =================
 @router.get("/admin/me")
 def get_admin_profile(user=Depends(require_admin)):
-
     return {
         "message": "Welcome Admin",
         "user": user
