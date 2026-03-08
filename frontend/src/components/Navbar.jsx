@@ -6,24 +6,27 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
 const Navbar = () => {
+
   const navigate = useNavigate();
   const location = useLocation();
 
   const { user, logout, loading, isAuthenticated } = useAuth();
-  const { cartCount = 0 } = useCart();
 
-  // ⏳ Wait for auth restore
+  const { cart } = useCart();
+
+  const cartCount = cart.reduce(
+    (sum, item) => sum + (item.quantity || 1),
+    0
+  );
+
   if (loading) return null;
 
-  // 🎭 Role flags
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
   const isFaculty = user?.role === "faculty";
 
-  // 🔒 ADMIN NEVER SEES NAVBAR
   if (isAdmin) return null;
 
-  // ❌ Hide auth buttons on auth pages
   const hideAuthButtons =
     location.pathname === "/login" ||
     location.pathname === "/join" ||
@@ -41,8 +44,9 @@ const Navbar = () => {
   };
 
   return (
+
     <nav className="w-full bg-white shadow-md px-6 py-4 flex items-center justify-between">
-      {/* LOGO */}
+
       <button
         onClick={handleLogoClick}
         className="text-2xl font-bold text-orange-600"
@@ -50,9 +54,9 @@ const Navbar = () => {
         ☕ E-Canteen
       </button>
 
-      {/* STUDENT NAV */}
       {isStudent && (
         <div className="flex items-center gap-6 text-sm font-medium">
+
           <Link to="/menu" className="hover:text-orange-500">
             Menu
           </Link>
@@ -64,12 +68,13 @@ const Navbar = () => {
           <Link to="/orders" className="hover:text-orange-500">
             My Orders
           </Link>
+
         </div>
       )}
 
-      {/* FACULTY NAV */}
       {isFaculty && (
         <div className="flex items-center gap-6 text-sm font-medium">
+
           <Link
             to="/faculty/dashboard"
             className="hover:text-orange-500"
@@ -83,24 +88,26 @@ const Navbar = () => {
           >
             Orders
           </Link>
+
         </div>
       )}
 
-      {/* RIGHT ACTIONS */}
       <div className="flex items-center gap-4">
-        {/* CART (STUDENT ONLY) */}
+
         {isStudent && (
           <Link to="/cart" className="relative">
+
             <ShoppingCart className="w-6 h-6 text-gray-700" />
+
             {cartCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
                 {cartCount}
               </span>
             )}
+
           </Link>
         )}
 
-        {/* LOGIN / REGISTER */}
         {!isAuthenticated && !hideAuthButtons && (
           <>
             <Button
@@ -109,6 +116,7 @@ const Navbar = () => {
             >
               Login
             </Button>
+
             <Button
               className="bg-orange-500 hover:bg-orange-600 text-white"
               onClick={() => navigate("/join")}
@@ -118,7 +126,6 @@ const Navbar = () => {
           </>
         )}
 
-        {/* LOGOUT */}
         {isAuthenticated && (
           <Button
             variant="outline"
@@ -130,9 +137,13 @@ const Navbar = () => {
             Logout
           </Button>
         )}
+
       </div>
+
     </nav>
+
   );
+
 };
 
 export default Navbar;

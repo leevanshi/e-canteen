@@ -9,20 +9,32 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   /* ================= CLEAR AUTH ================= */
+
   const clearAuth = () => {
+
     try {
+
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+
+      /* clear cart too */
+      localStorage.removeItem("cart");
+
     } catch (err) {
+
       console.error("Failed clearing auth:", err);
+
     }
 
     setToken(null);
     setUser(null);
+
   };
 
   /* ================= NORMALIZE USER ================= */
+
   const normalizeUser = (rawUser) => {
+
     if (!rawUser || typeof rawUser !== "object") return null;
 
     const role = (rawUser.role || "").toLowerCase();
@@ -31,13 +43,17 @@ export const AuthProvider = ({ children }) => {
 
     return {
       id: rawUser.id || rawUser._id || null,
+      name: rawUser.name || rawUser.username || "",
       email: rawUser.email || "",
-      role,
+      role
     };
+
   };
 
   /* ================= RESTORE AUTH ================= */
+
   useEffect(() => {
+
     try {
 
       const storedToken = localStorage.getItem("token");
@@ -70,15 +86,20 @@ export const AuthProvider = ({ children }) => {
       setUser(normalizedUser);
 
     } catch (err) {
+
       console.error("Auth restore failed:", err);
       clearAuth();
+
     } finally {
+
       setLoading(false);
+
     }
 
   }, []);
 
   /* ================= LOGIN ================= */
+
   const login = (userData, authToken) => {
 
     const normalizedUser = normalizeUser(userData);
@@ -92,26 +113,35 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
+
       localStorage.setItem("token", authToken);
       localStorage.setItem("user", JSON.stringify(normalizedUser));
+
     } catch (err) {
+
       console.error("Storage failed:", err);
+
     }
 
     setToken(authToken);
     setUser(normalizedUser);
+
   };
 
   /* ================= LOGOUT ================= */
+
   const logout = () => {
+
     clearAuth();
 
     if (!window.location.pathname.includes("/login")) {
       window.location.replace("/login");
     }
+
   };
 
-  /* ================= SYNC TABS ================= */
+  /* ================= SYNC BETWEEN TABS ================= */
+
   useEffect(() => {
 
     const handleStorageChange = () => {
@@ -120,14 +150,33 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem("user");
 
       if (!storedToken || !storedUser) {
+
         clearAuth();
+
+      } else {
+
+        try {
+
+          const parsedUser = JSON.parse(storedUser);
+          const normalizedUser = normalizeUser(parsedUser);
+
+          if (normalizedUser) {
+            setUser(normalizedUser);
+            setToken(storedToken);
+          }
+
+        } catch {
+          clearAuth();
+        }
+
       }
 
     };
 
     window.addEventListener("storage", handleStorageChange);
 
-    return () => window.removeEventListener("storage", handleStorageChange);
+    return () =>
+      window.removeEventListener("storage", handleStorageChange);
 
   }, []);
 
