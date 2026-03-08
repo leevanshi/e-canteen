@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
@@ -9,7 +8,7 @@ from pymongo import ReturnDocument
 # ================= CONFIG =================
 IST = timezone(timedelta(hours=5, minutes=30))
 
-router = APIRouter(tags=["Orders"])
+router = APIRouter(prefix="/api/orders", tags=["Orders"])
 
 # ================= DATABASE =================
 from database import (
@@ -27,10 +26,7 @@ from routes.auth import get_current_user
 def get_next_order_id() -> int:
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
-        {
-            "$inc": {"seq": 1},
-            "$setOnInsert": {"seq": 99}
-        },
+        {"$inc": {"seq": 1}, "$setOnInsert": {"seq": 99}},
         upsert=True,
         return_document=ReturnDocument.AFTER
     )
@@ -52,7 +48,7 @@ class CreateOrder(BaseModel):
 
 
 # ================= PLACE ORDER =================
-@router.post("")
+@router.post("/")
 def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
     now = datetime.now(IST)
@@ -64,6 +60,7 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Order items required")
 
     total = 0
+    clean_items = []
 
     for item in data.items:
 
@@ -84,27 +81,38 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
                 detail=f"{item.name} is not available"
             )
 
-        total += menu_item["price"] * item.quantity
+        item_total = menu_item["price"] * item.quantity
+        total += item_total
+
+        # store trusted data only
+        clean_items.append({
+            "item_id": str(menu_item["_id"]),
+            "name": menu_item["name"],
+            "price": menu_item["price"],
+            "quantity": item.quantity
+        })
 
     payment_status = "paid" if data.payment_method == "wallet" else "pending"
 
-    # ================= WALLET PAYMENT =================
+    # ================= WALLET PAYMENT (ATOMIC) =================
     if data.payment_method == "wallet":
 
-        wallet = wallet_collection.find_one({
-            "user_id": ObjectId(current_user["_id"])
-        })
+        wallet = wallet_collection.find_one_and_update(
+            {
+                "user_id": ObjectId(current_user["_id"]),
+                "balance": {"$gte": total}
+            },
+            {
+                "$inc": {"balance": -total}
+            },
+            return_document=ReturnDocument.AFTER
+        )
 
-        if not wallet or wallet.get("balance", 0) < total:
+        if not wallet:
             raise HTTPException(
                 status_code=400,
                 detail="Insufficient wallet balance"
             )
-
-        wallet_collection.update_one(
-            {"user_id": ObjectId(current_user["_id"])},
-            {"$inc": {"balance": -total}}
-        )
 
     # ================= CREATE ORDER =================
     order_id = get_next_order_id()
@@ -114,7 +122,7 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
         "order_type": "online",
         "user_id": ObjectId(current_user["_id"]),
         "user_name": current_user["name"],
-        "items": [i.model_dump() for i in data.items],
+        "items": clean_items,
         "total_amount": total,
         "pickup_time": data.pickup_time,
         "payment_method": data.payment_method,
@@ -134,7 +142,7 @@ def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
 
 # ================= GET MY ORDERS =================
-@router.get("")
+@router.get("/")
 def get_my_orders(current_user=Depends(get_current_user)):
 
     orders = orders_collection.find({
@@ -169,6 +177,7 @@ def get_order(order_id: str, current_user=Depends(get_current_user)):
             "user_id": ObjectId(current_user["_id"])
         })
     else:
+
         if not ObjectId.is_valid(order_id):
             raise HTTPException(status_code=400, detail="Invalid order ID")
 

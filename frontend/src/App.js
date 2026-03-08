@@ -63,7 +63,8 @@ const App = () => {
 
   }, []);
 
-  return (
+return (
+  <CartProvider>
     <>
       <Toaster position="top-right" richColors />
 
@@ -247,7 +248,9 @@ const App = () => {
 
       </Routes>
     </>
-  );
+  </CartProvider>
+);
+       
 };
 
 export default App;

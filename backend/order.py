@@ -27,9 +27,11 @@ class OrderStatus(str, Enum):
 class OrderStatusUpdate(BaseModel):
     status: OrderStatus
 
+
 # ================= GET ALL ONLINE ORDERS =================
 @router.get("/")
 def get_all_orders(current_user=Depends(get_current_user)):
+
     if current_user.get("role") not in ["admin", "staff"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
@@ -39,11 +41,15 @@ def get_all_orders(current_user=Depends(get_current_user)):
         ).sort("created_at", -1)
     )
 
+    formatted_orders = []
+
     for order in orders:
         order["_id"] = str(order["_id"])
         order["user_id"] = str(order["user_id"]) if order.get("user_id") else None
+        formatted_orders.append(order)
 
-    return orders
+    return formatted_orders
+
 
 # ================= UPDATE ORDER STATUS =================
 @router.put("/{order_id}/status")
@@ -52,26 +58,33 @@ def update_order_status(
     data: OrderStatusUpdate,
     current_user=Depends(get_current_user)
 ):
+
     if current_user.get("role") not in ["admin", "staff"]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     # ================= FIND ORDER =================
+    query = None
+    order = None
+
     if order_id.isdigit():
-        order = orders_collection.find_one({
+        query = {
             "order_id": int(order_id),
             "order_type": "online"
-        })
-        query = {"order_id": int(order_id)}
+        }
+        order = orders_collection.find_one(query)
+
     else:
         if not ObjectId.is_valid(order_id):
             raise HTTPException(status_code=400, detail="Invalid order id")
 
         oid = ObjectId(order_id)
-        order = orders_collection.find_one({
+
+        query = {
             "_id": oid,
             "order_type": "online"
-        })
-        query = {"_id": oid}
+        }
+
+        order = orders_collection.find_one(query)
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -85,13 +98,16 @@ def update_order_status(
 
     current_status = order.get("status")
 
-    if data.status.value not in valid_transitions.get(current_status, []):
+    if current_status not in valid_transitions:
+        raise HTTPException(status_code=400, detail="Invalid order state")
+
+    if data.status.value not in valid_transitions[current_status]:
         raise HTTPException(status_code=400, detail="Invalid status transition")
 
     now = datetime.now(IST)
 
-    # ================= UPDATE =================
-    orders_collection.update_one(
+    # ================= UPDATE ORDER =================
+    result = orders_collection.update_one(
         query,
         {
             "$set": {
@@ -107,7 +123,12 @@ def update_order_status(
         }
     )
 
+    if result.modified_count == 0:
+        raise HTTPException(status_code=500, detail="Failed to update order")
+
     return {
-        "order_id": order.get("order_id"),
-        "status": data.status.value
+        "success": True,
+        "order_id": order.get("order_id") or str(order.get("_id")),
+        "new_status": data.status.value,
+        "updated_at": now
     }

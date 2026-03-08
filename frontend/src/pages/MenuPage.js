@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import API from "../api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext"; // ✅ added
 
 /* ================= PLACEHOLDER IMAGE ================= */
 
@@ -12,13 +13,15 @@ const fallbackImage =
 
 const MenuPage = () => {
   const [menu, setMenu] = useState([]);
-  const [cart, setCart] = useState({});
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
 
   const navigate = useNavigate();
+
+  /* ✅ USE GLOBAL CART */
+  const { cart, addToCart, decreaseQty } = useCart();
 
   /* ================= FETCH MENU ================= */
 
@@ -60,46 +63,14 @@ const MenuPage = () => {
     });
   }, [menu, search, category]);
 
-  /* ================= CART ================= */
-
-  const addToCart = (item) => {
-    setCart((prev) => {
-      const updated = { ...prev };
-
-      if (!updated[item._id]) {
-        updated[item._id] = { ...item, quantity: 1 };
-      } else {
-        updated[item._id].quantity += 1;
-      }
-
-      return updated;
-    });
-
-    toast.success(`${item.name} added`);
-  };
-
-  const removeFromCart = (id) => {
-    setCart((prev) => {
-      const updated = { ...prev };
-
-      if (updated[id].quantity === 1) {
-        delete updated[id];
-      } else {
-        updated[id].quantity -= 1;
-      }
-
-      return updated;
-    });
-  };
-
   /* ================= TOTAL ================= */
 
-  const totalItems = Object.values(cart).reduce(
+  const totalItems = cart.reduce(
     (sum, item) => sum + item.quantity,
     0
   );
 
-  const totalPrice = Object.values(cart).reduce(
+  const totalPrice = cart.reduce(
     (sum, item) => sum + item.quantity * item.price,
     0
   );
@@ -171,7 +142,9 @@ const MenuPage = () => {
 
         {filteredMenu.map((item) => {
 
-          const quantity = cart[item._id]?.quantity || 0;
+          /* ✅ CHECK CART FROM CONTEXT */
+          const cartItem = cart.find((c) => c._id === item._id);
+          const quantity = cartItem?.quantity || 0;
 
           return (
             <div
@@ -205,7 +178,10 @@ const MenuPage = () => {
 
                 {quantity === 0 ? (
                   <button
-                    onClick={() => addToCart(item)}
+                    onClick={() => {
+                      addToCart(item);
+                      toast.success(`${item.name} added`);
+                    }}
                     className="mt-3 w-full bg-black text-white py-2 rounded"
                   >
                     Add
@@ -214,7 +190,7 @@ const MenuPage = () => {
                   <div className="flex justify-between items-center mt-3">
 
                     <button
-                      onClick={() => removeFromCart(item._id)}
+                      onClick={() => decreaseQty(item._id)}
                       className="px-3 py-1 border rounded"
                     >
                       -
@@ -223,7 +199,10 @@ const MenuPage = () => {
                     <span>{quantity}</span>
 
                     <button
-                      onClick={() => addToCart(item)}
+                      onClick={() => {
+                        addToCart(item);
+                        toast.success(`${item.name} added`);
+                      }}
                       className="px-3 py-1 border rounded"
                     >
                       +
@@ -248,9 +227,7 @@ const MenuPage = () => {
           </div>
 
           <button
-            onClick={() =>
-              navigate("/cart", { state: { cart } })
-            }
+            onClick={() => navigate("/cart")}
             className="bg-white text-black px-4 py-2 rounded"
           >
             View Cart

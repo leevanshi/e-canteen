@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
@@ -8,7 +7,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 router = APIRouter(tags=["Wallet"])
 
-from database import wallet_collection
+from database import wallet_collection, wallet_txn_collection
 from routes.auth import get_current_user
 
 
@@ -27,9 +26,7 @@ def get_my_wallet(current_user=Depends(get_current_user)):
     )
 
     if not wallet:
-        return {
-            "balance": 0
-        }
+        return {"balance": 0}
 
     return {
         "balance": wallet.get("balance", 0)
@@ -52,18 +49,38 @@ def admin_add_money(
     if data.amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid amount")
 
+    now = datetime.now(IST)
+
+    # ================= UPDATE WALLET =================
     wallet = wallet_collection.find_one_and_update(
         {"user_id": ObjectId(data.user_id)},
         {
             "$inc": {"balance": data.amount},
-            "$set": {"updated_at": datetime.now(IST)}
+            "$set": {"updated_at": now},
+            "$setOnInsert": {
+                "user_id": ObjectId(data.user_id),
+                "balance": 0,
+                "created_at": now
+            }
         },
         upsert=True,
         return_document=True
     )
 
+    new_balance = wallet.get("balance", 0)
+
+    # ================= LOG TRANSACTION =================
+    wallet_txn_collection.insert_one({
+        "user_id": ObjectId(data.user_id),
+        "amount": data.amount,
+        "type": "credit",
+        "method": "admin",
+        "balance_after": new_balance,
+        "created_at": now
+    })
+
     return {
         "message": "Wallet updated successfully",
         "user_id": data.user_id,
-        "balance": wallet.get("balance", data.amount)
+        "balance": new_balance
     }

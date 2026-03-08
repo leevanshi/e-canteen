@@ -1,22 +1,21 @@
 import { useNavigate } from "react-router-dom";
-
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { useCart } from "../context/CartContext";
 
 const CartPage = () => {
   const navigate = useNavigate();
-  const { cart = [], increaseQty, decreaseQty } = useCart();
+  const { cart, increaseQty, decreaseQty } = useCart();
 
-  /* ✅ SAFE TOTAL */
-  const totalAmount = cart.reduce(
-    (sum, item) =>
-      sum + (item?.price || 0) * (item?.quantity || 1),
-    0
-  );
+  const safeCart = cart || [];
 
-  /* ✅ EMPTY CART */
-  if (!cart.length) {
+  const totalAmount = safeCart.reduce((sum, item) => {
+    const price = item?.price || 0;
+    const quantity = item?.quantity || 1;
+    return sum + price * quantity;
+  }, 0);
+
+  if (safeCart.length === 0) {
     return (
       <div className="p-10 text-center">
         <Button
@@ -40,7 +39,6 @@ const CartPage = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      {/* BACK BUTTON */}
       <Button
         variant="outline"
         onClick={() => navigate("/menu")}
@@ -52,15 +50,15 @@ const CartPage = () => {
       <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
 
       <div className="space-y-4">
-        {cart.map((item, index) => {
-          const itemId = item?._id || item?.id || index;
+        {safeCart.map((item, index) => {
+          const id = item?._id || item?.id || index;
           const price = item?.price || 0;
           const quantity = item?.quantity || 1;
 
           return (
-            <Card key={itemId}>
+            <Card key={id}>
               <CardContent className="flex items-center justify-between gap-4 p-4">
-                {/* IMAGE + NAME */}
+
                 <div className="flex items-center gap-4">
                   <img
                     src={item?.image || "/placeholder.png"}
@@ -78,12 +76,11 @@ const CartPage = () => {
                   </div>
                 </div>
 
-                {/* QUANTITY CONTROLS */}
                 <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => decreaseQty(itemId)}
+                    onClick={() => decreaseQty(id)}
                     disabled={quantity <= 1}
                   >
                     −
@@ -96,13 +93,12 @@ const CartPage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => increaseQty(itemId)}
+                    onClick={() => increaseQty(id)}
                   >
                     +
                   </Button>
                 </div>
 
-                {/* ITEM TOTAL */}
                 <div className="font-semibold">
                   ₹{price * quantity}
                 </div>
@@ -112,7 +108,6 @@ const CartPage = () => {
         })}
       </div>
 
-      {/* CART TOTAL */}
       <div className="flex justify-between items-center mt-8">
         <h2 className="text-2xl font-bold">
           Total: ₹{totalAmount}

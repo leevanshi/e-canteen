@@ -1,68 +1,145 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Wallet, RefreshCw } from "lucide-react";
 
-import API from "../api"; // ✅ central axios instance
-import { Card, CardContent } from "../components/ui/card";
+import API from "../api";
 import { Button } from "../components/ui/button";
 
-const MonthlyMenu = () => {
+const WalletPage = () => {
+
   const navigate = useNavigate();
 
-  const [menu, setMenu] = useState(null);
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // 🔗 backend base URL (for PDF / uploads)
-  const BASE_URL = API.defaults.baseURL;
+  const [amount, setAmount] = useState("");
+  const [userId, setUserId] = useState("");
+
+  const [adding, setAdding] = useState(false);
+
+  /* ================= FETCH WALLET ================= */
+
+  const fetchWallet = async () => {
+
+    try {
+
+      setError("");
+
+      const res = await API.get("/wallet/me");
+
+      setBalance(res?.data?.balance || 0);
+
+    } catch (err) {
+
+      console.error("Wallet fetch failed", err);
+      setError("Failed to load wallet");
+
+    }
+
+  };
+
+  /* ================= FETCH TRANSACTIONS ================= */
+
+  const fetchTransactions = async () => {
+
+    try {
+
+      const res = await API.get("/wallet/transactions");
+
+      setTransactions(
+        Array.isArray(res?.data) ? res.data : []
+      );
+
+    } catch (err) {
+
+      console.error("Txn fetch failed", err);
+
+    }
+
+  };
+
+  /* ================= INITIAL LOAD ================= */
+
+  const loadData = async () => {
+
+    setLoading(true);
+
+    await Promise.all([
+      fetchWallet(),
+      fetchTransactions()
+    ]);
+
+    setLoading(false);
+
+  };
 
   useEffect(() => {
-    const fetchMonthlyMenu = async () => {
-      try {
-        const res = await API.get("/monthly-menu");
+    loadData();
+  }, []);
 
-        const pdfUrl = res.data?.pdf_url
-          ? res.data.pdf_url.startsWith("http")
-            ? res.data.pdf_url
-            : `${BASE_URL}${res.data.pdf_url}`
-          : null;
+  /* ================= ADD MONEY ================= */
 
-        setMenu({
-          ...res.data,
-          pdf_url: pdfUrl,
-        });
-      } catch (err) {
-        console.error(err);
-        setError("Monthly menu not available");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const addMoney = async () => {
 
-    fetchMonthlyMenu();
-  }, [BASE_URL]);
+    if (!userId || !amount) return;
+
+    const amt = Number(amount);
+
+    if (amt <= 0) return;
+
+    try {
+
+      setAdding(true);
+
+      await API.post("/wallet/admin/add-money", {
+        user_id: userId,
+        amount: amt
+      });
+
+      setAmount("");
+      setUserId("");
+
+      await loadData();
+
+    } catch (err) {
+
+      console.error("Add money failed", err);
+
+    } finally {
+
+      setAdding(false);
+
+    }
+
+  };
+
+  /* ================= LOADING ================= */
 
   if (loading) {
+
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading monthly menu...
+        Loading wallet...
       </div>
     );
+
   }
 
-  if (error || !menu?.pdf_url) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-gray-500">
-        <p>Monthly menu not uploaded yet</p>
-        <Button variant="outline" onClick={() => navigate(-1)}>
-          ← Back
-        </Button>
-      </div>
-    );
-  }
+  /* ================= UI ================= */
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      {/* BACK BUTTON */}
+
+    <div className="max-w-4xl mx-auto p-6">
+
+      <h1 className="text-2xl font-bold mb-4">
+        Wallet
+      </h1>
+
+      {/* BACK */}
+
       <Button
         variant="outline"
         onClick={() => navigate(-1)}
@@ -71,35 +148,140 @@ const MonthlyMenu = () => {
         ← Back
       </Button>
 
-      <h1 className="text-2xl font-semibold mb-6 text-center">
-        Monthly Menu {menu.month ? `– ${menu.month}` : ""}
-      </h1>
+      {/* BALANCE */}
 
-      <Card className="shadow-sm">
-        <CardContent className="p-4 space-y-4">
-          {/* PDF PREVIEW */}
-          <iframe
-            src={`${menu.pdf_url}#toolbar=0`}
-            title="Monthly Menu PDF"
-            className="w-full h-[600px] border rounded"
+      <div className="bg-white shadow rounded-xl p-6 flex items-center justify-between mb-6">
+
+        <div className="flex items-center gap-3">
+
+          <Wallet size={28} />
+
+          <div>
+
+            <p className="text-gray-500 text-sm">
+              Current Balance
+            </p>
+
+            <p className="text-2xl font-bold">
+              ₹{balance}
+            </p>
+
+          </div>
+
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={loadData}
+        >
+          <RefreshCw size={16} />
+        </Button>
+
+      </div>
+
+      {/* ADMIN ADD MONEY */}
+
+      <div className="bg-white shadow rounded-xl p-6 mb-6">
+
+        <h2 className="font-semibold mb-4">
+          Admin Add Money
+        </h2>
+
+        <div className="flex gap-3">
+
+          <input
+            type="text"
+            placeholder="User ID"
+            value={userId}
+            onChange={(e) =>
+              setUserId(e.target.value)
+            }
+            className="border p-2 rounded flex-1"
           />
 
-          {/* DOWNLOAD */}
-          <div className="text-center">
-            <a
-              href={menu.pdf_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-              className="inline-block bg-orange-500 text-white px-6 py-2 rounded hover:bg-orange-600 transition"
-            >
-              Download Monthly Menu (PDF)
-            </a>
+          <input
+            type="number"
+            placeholder="Amount"
+            value={amount}
+            onChange={(e) =>
+              setAmount(e.target.value)
+            }
+            className="border p-2 rounded w-32"
+          />
+
+          <Button
+            disabled={adding}
+            onClick={addMoney}
+            className="bg-orange-500 hover:bg-orange-600"
+          >
+            Add
+          </Button>
+
+        </div>
+
+      </div>
+
+      {/* TRANSACTIONS */}
+
+      <div className="bg-white shadow rounded-xl p-6">
+
+        <h2 className="font-semibold mb-4">
+          Transaction History
+        </h2>
+
+        {transactions.length === 0 ? (
+
+          <p className="text-gray-500">
+            No transactions yet.
+          </p>
+
+        ) : (
+
+          <div className="space-y-3">
+
+            {transactions.map((t) => (
+
+              <div
+                key={t._id}
+                className="flex justify-between border-b pb-2 text-sm"
+              >
+
+                <span className="capitalize">
+                  {t.type}
+                </span>
+
+                <span
+                  className={
+                    t.type === "credit"
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }
+                >
+                  {t.type === "credit"
+                    ? `+₹${t.amount}`
+                    : `-₹${t.amount}`}
+                </span>
+
+              </div>
+
+            ))}
+
           </div>
-        </CardContent>
-      </Card>
+
+        )}
+
+      </div>
+
+      {error && (
+        <p className="text-red-500 mt-4">
+          {error}
+        </p>
+      )}
+
     </div>
+
   );
+
 };
 
-export default MonthlyMenu;
+export default WalletPage;

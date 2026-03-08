@@ -23,7 +23,6 @@ const generateTimeSlots = () => {
   while (start < end) {
     const next = new Date(start.getTime() + 15 * 60000);
 
-    // ✅ only future slots
     if (start > now) {
       slots.push(
         `${start.toTimeString().slice(0, 5)}-${next
@@ -51,6 +50,7 @@ const CheckoutPage = () => {
 
   const timeSlots = useMemo(generateTimeSlots, []);
 
+  /* SAFE TOTAL (UI ONLY) */
   const totalAmount = useMemo(() => {
     return cart.reduce(
       (sum, item) =>
@@ -61,7 +61,7 @@ const CheckoutPage = () => {
 
   /* EMPTY CART GUARD */
   useEffect(() => {
-    if (cart.length === 0 && !orderPlaced) {
+    if (!orderPlaced && cart.length === 0) {
       navigate("/menu");
     }
   }, [cart, orderPlaced, navigate]);
@@ -99,6 +99,7 @@ const CheckoutPage = () => {
 
   /* PLACE ORDER */
   const handlePlaceOrder = async () => {
+
     if (loading) return;
 
     if (!token) {
@@ -112,18 +113,21 @@ const CheckoutPage = () => {
       return;
     }
 
+    if (cart.length === 0) {
+      toast.error("Cart is empty");
+      return;
+    }
+
     if (walletBalance < totalAmount) {
       toast.error("Insufficient wallet balance");
       return;
     }
 
-    // ✅ clean items (IMPORTANT)
+    /* SEND ONLY SAFE DATA */
     const cleanItems = cart
       .filter((item) => item?._id && item?.quantity > 0)
       .map((item) => ({
         item_id: item._id,
-        name: item.name,
-        price: item.price,
         quantity: item.quantity,
       }));
 
@@ -133,6 +137,7 @@ const CheckoutPage = () => {
     }
 
     try {
+
       setLoading(true);
 
       const res = await createOrder({
@@ -149,12 +154,15 @@ const CheckoutPage = () => {
 
       setOrderId(id);
       setOrderPlaced(true);
+
       clearCart();
 
       await fetchWallet();
 
       toast.success("Order placed successfully 🎉");
+
     } catch (err) {
+
       console.error("Order error", err);
 
       const msg =
@@ -163,8 +171,11 @@ const CheckoutPage = () => {
         "Order failed";
 
       toast.error(msg);
+
     } finally {
+
       setLoading(false);
+
     }
   };
 
@@ -174,6 +185,7 @@ const CheckoutPage = () => {
       <div className="min-h-[70vh] flex items-center justify-center p-6">
         <Card className="max-w-md w-full text-center shadow-lg rounded-2xl">
           <CardContent className="p-6 space-y-4">
+
             <h1 className="text-3xl font-bold text-green-600">
               ✅ Order Placed!
             </h1>
@@ -196,6 +208,7 @@ const CheckoutPage = () => {
             >
               View My Orders
             </Button>
+
           </CardContent>
         </Card>
       </div>
@@ -217,8 +230,11 @@ const CheckoutPage = () => {
       <h1 className="text-3xl font-bold mb-6">Checkout</h1>
 
       {cart.map((item, index) => (
+
         <Card key={item?._id || index} className="mb-3">
+
           <CardContent className="flex items-center gap-4 p-4">
+
             <img
               src={item?.image || "/placeholder.png"}
               alt={item?.name || "item"}
@@ -226,17 +242,25 @@ const CheckoutPage = () => {
             />
 
             <div className="flex-1">
-              <h3 className="font-semibold">{item?.name || "Item"}</h3>
+
+              <h3 className="font-semibold">
+                {item?.name || "Item"}
+              </h3>
+
               <p className="text-sm text-gray-500">
                 Qty: {item?.quantity ?? 1}
               </p>
+
             </div>
 
             <div className="font-medium">
               ₹{(item?.price || 0) * (item?.quantity || 1)}
             </div>
+
           </CardContent>
+
         </Card>
+
       ))}
 
       <select
@@ -244,19 +268,27 @@ const CheckoutPage = () => {
         value={pickupTimeSlot}
         onChange={(e) => setPickupTimeSlot(e.target.value)}
       >
+
         <option value="">Select pickup time</option>
+
         {timeSlots.map((slot) => (
           <option key={slot} value={slot}>
             {slot}
           </option>
         ))}
+
       </select>
 
       <div className="mt-6 p-4 border rounded bg-gray-50 space-y-2">
-        <h3 className="font-semibold">Payment Method</h3>
+
+        <h3 className="font-semibold">
+          Payment Method
+        </h3>
+
         <p className="text-green-700 font-medium">
           ✅ Wallet (Balance: ₹{walletBalance})
         </p>
+
       </div>
 
       <div className="mt-4 font-semibold text-lg">
@@ -270,6 +302,7 @@ const CheckoutPage = () => {
       >
         {loading ? "Placing Order..." : "Place Order"}
       </Button>
+
     </div>
   );
 };

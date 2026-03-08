@@ -61,14 +61,34 @@ counters_collection = db["counters"]
 # =========================
 # INDEXES (VERY IMPORTANT)
 # =========================
+
+# USERS
 users_collection.create_index("email", unique=True)
+
+# ORDERS
 orders_collection.create_index("order_id", unique=True)
-wallet_collection.create_index("user_id")
+orders_collection.create_index("user_id")
+orders_collection.create_index("created_at")
+orders_collection.create_index("status")
+
+# MENU
+menu_collection.create_index("available")
+
+# WALLET
+wallet_collection.create_index("user_id", unique=True)
+
+# WALLET TRANSACTIONS
+wallet_txn_collection.create_index("user_id")
+wallet_txn_collection.create_index("created_at")
+
+# COUNTERS
+counters_collection.create_index("_id", unique=True)
 
 # =========================
 # ORDER ID COUNTER
 # =========================
 def get_next_order_id() -> int:
+
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
         {
