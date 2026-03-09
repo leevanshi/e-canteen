@@ -12,7 +12,7 @@ const API = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 45000
+  timeout: 45000,
 });
 
 /* =========================
@@ -42,7 +42,6 @@ const isAuthRoute = (url = "") => url.includes("/auth/");
 
 API.interceptors.request.use(
   (config) => {
-
     if (!isAuthRoute(config.url)) {
       const token = getToken();
 
@@ -63,12 +62,10 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-
     const status = error?.response?.status;
     const url = error?.config?.url || "";
 
     if (status === 401 && !isAuthRoute(url)) {
-
       clearAuth();
 
       if (!window.location.pathname.includes("/login")) {
@@ -127,7 +124,7 @@ export const updateOrderStatus = (orderId, status) =>
 
 export const toggleMenuAvailability = (menuId, available) =>
   API.put(`/api/admin/menu/${menuId}/availability`, {
-    available,
+    available: Boolean(available),
   });
 
 export const placeCounterOrder = (data) =>
@@ -161,13 +158,11 @@ export const getAllFeedback = () =>
 ========================= */
 
 export const logout = () => {
-
   clearAuth();
 
   if (!window.location.pathname.includes("/login")) {
     window.location.href = "/login";
   }
-
 };
 
 export default API;

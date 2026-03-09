@@ -53,10 +53,13 @@ const AdminWalletPage = () => {
           : res?.data?.users || [];
 
       const safeUsers = data.map((u, idx) => ({
-        ...u,
+
         _id: u._id || u.id || `user-${idx}`,
         name: u.name || "User",
-        wallet_balance: Number(u.wallet_balance || 0)
+        email: u.email || "—",
+        wallet_balance: Number(u.wallet_balance) || 0,
+        wallet_first_time: Boolean(u.wallet_first_time)
+
       }));
 
       setUsers(safeUsers);
@@ -89,7 +92,8 @@ const AdminWalletPage = () => {
     const term = search.toLowerCase();
 
     return users.filter((u) =>
-      (u.name || "").toLowerCase().includes(term)
+      u.name.toLowerCase().includes(term) ||
+      u.email.toLowerCase().includes(term)
     );
 
   }, [users, search]);
@@ -99,10 +103,15 @@ const AdminWalletPage = () => {
   const addMoney = async (userId) => {
 
     const raw = amounts[userId];
-    const amount = Number(raw);
+    const amount = parseInt(raw, 10);
 
-    if (!amount || amount <= 0) {
+    if (!raw || isNaN(amount) || amount <= 0) {
       toast.error("Enter valid amount");
+      return;
+    }
+
+    if (amount > 10000) {
+      toast.error("Amount too large");
       return;
     }
 
@@ -110,22 +119,23 @@ const AdminWalletPage = () => {
 
       setUpdatingUser(userId);
 
-      await adminAddMoney({
+      const res = await adminAddMoney({
         user_id: userId,
         amount
       });
 
-      toast.success("Money credited 💸");
+      const newBalance =
+        res?.data?.new_balance ??
+        res?.data?.balance;
 
-      /* optimistic update */
+      toast.success(`₹${amount} added`);
 
       setUsers((prev) =>
         prev.map((u) =>
           u._id === userId
             ? {
                 ...u,
-                wallet_balance:
-                  Number(u.wallet_balance || 0) + amount
+                wallet_balance: newBalance ?? u.wallet_balance
               }
             : u
         )
@@ -156,13 +166,19 @@ const AdminWalletPage = () => {
   /* ================= LOADING ================= */
 
   if (authLoading || loading) {
+
     return (
+
       <div className="max-w-6xl mx-auto p-6">
+
         <p className="text-gray-500 animate-pulse">
           Loading users...
         </p>
+
       </div>
+
     );
+
   }
 
   return (
@@ -171,18 +187,29 @@ const AdminWalletPage = () => {
 
       {/* HEADER */}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between">
+
+        <div className="flex items-center gap-3">
+
+          <Button
+            variant="outline"
+            onClick={() => navigate(-1)}
+          >
+            ← Back
+          </Button>
+
+          <h1 className="text-3xl font-bold">
+            Wallet Management
+          </h1>
+
+        </div>
 
         <Button
           variant="outline"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/admin/wallet-history")}
         >
-          ← Back
+          Wallet History
         </Button>
-
-        <h1 className="text-3xl font-bold">
-          Wallet Management
-        </h1>
 
       </div>
 
@@ -190,7 +217,7 @@ const AdminWalletPage = () => {
 
       <input
         type="text"
-        placeholder="Search by name..."
+        placeholder="Search name or email..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full sm:w-1/3 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -225,9 +252,11 @@ const AdminWalletPage = () => {
               </p>
 
               {u.wallet_first_time && (
+
                 <p className="text-xs text-orange-600">
                   ⚠ First-time wallet user
                 </p>
+
               )}
 
             </div>
@@ -236,7 +265,9 @@ const AdminWalletPage = () => {
 
               <input
                 type="number"
+                step="1"
                 min="1"
+                max="10000"
                 placeholder="Amount"
                 className="border p-2 rounded w-32"
                 value={amounts[u._id] || ""}

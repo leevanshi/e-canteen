@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
 from dotenv import load_dotenv
 from datetime import timedelta, timezone
 from pathlib import Path
+from typing import List
+import os
 
 load_dotenv()
 
@@ -36,6 +37,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ================= WEBSOCKET MANAGER =================
+
+class ConnectionManager:
+
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, data: dict):
+        disconnected = []
+
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(data)
+            except:
+                disconnected.append(connection)
+
+        for d in disconnected:
+            self.disconnect(d)
+
+
+manager = ConnectionManager()
+
+# ================= ORDER WEBSOCKET =================
+
+@app.websocket("/ws/orders")
+async def orders_ws(websocket: WebSocket):
+
+    await manager.connect(websocket)
+
+    try:
+        while True:
+            # keep connection alive
+            await websocket.receive_text()
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
 # ================= ROUTERS =================
 
 from routes.auth import router as auth_router
@@ -44,10 +90,6 @@ from routes.menu import router as menu_router
 from routes.orders import router as orders_router
 from routes.admin import router as admin_router
 from routes.feedback import router as feedback_router
-
-# IMPORTANT:
-# Routers should define their own prefixes like:
-# router = APIRouter(prefix="/auth")
 
 app.include_router(auth_router, tags=["Auth"])
 app.include_router(menu_router, tags=["Menu"])

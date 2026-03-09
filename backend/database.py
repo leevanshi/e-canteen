@@ -34,7 +34,6 @@ client = MongoClient(
     connectTimeoutMS=10000,
     socketTimeoutMS=10000,
     retryWrites=True,
-    tls=True,
     maxPoolSize=50,
     minPoolSize=5,
     uuidRepresentation="standard"
@@ -61,8 +60,10 @@ users_collection = db["users"]
 orders_collection = db["orders"]
 menu_collection = db["menu"]
 feedback_collection = db["feedback"]
+
 wallet_collection = db["wallets"]
 wallet_txn_collection = db["wallet_transactions"]
+
 counters_collection = db["counters"]
 
 # =========================
@@ -80,9 +81,10 @@ def init_indexes():
     orders_collection.create_index("status")
     orders_collection.create_index("order_type")
 
+    # compound index for admin dashboard
     orders_collection.create_index([
-        ("created_at", -1),
-        ("status", 1)
+        ("status", 1),
+        ("created_at", -1)
     ])
 
     # MENU
@@ -92,17 +94,21 @@ def init_indexes():
     feedback_collection.create_index("created_at")
     feedback_collection.create_index("order_id")
 
-    # WALLET
+    # WALLET BALANCE
     wallet_collection.create_index("user_id", unique=True)
 
-    # WALLET TXN
+    # WALLET TRANSACTIONS (ledger)
     wallet_txn_collection.create_index("user_id")
     wallet_txn_collection.create_index("created_at")
+    wallet_txn_collection.create_index("type")
+    wallet_txn_collection.create_index("source")
+    wallet_txn_collection.create_index("admin_id")
 
     # COUNTERS
     counters_collection.create_index("_id", unique=True)
 
     print("✅ MongoDB indexes initialized")
+
 
 # run once on startup
 init_indexes()
@@ -123,6 +129,7 @@ def get_next_order_id() -> int:
     )
 
     return counter["seq"]
+
 
 # =========================
 # CLEAN SHUTDOWN

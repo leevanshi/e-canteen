@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pymongo import ReturnDocument
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -13,53 +13,61 @@ from routes.auth import get_current_user
 
 
 # ================= SCHEMA =================
+
 class AdminAddMoney(BaseModel):
     user_id: str
-    amount: float
+    amount: int = Field(..., gt=0, le=10000)  
+    # integer avoids float precision issues
 
 
 # ================= GET MY WALLET =================
+
 @router.get("/me")
 def get_my_wallet(current_user=Depends(get_current_user)):
 
-    wallet = wallet_collection.find_one(
-        {"user_id": ObjectId(current_user["_id"])}
-    )
+    wallet = wallet_collection.find_one({
+        "user_id": ObjectId(current_user["_id"])
+    })
 
     if not wallet:
-        return {"balance": 0}
+        return {
+            "balance": 0
+        }
 
     return {
-        "balance": wallet.get("balance", 0)
+        "balance": int(wallet.get("balance", 0))
     }
 
 
 # ================= ADMIN ADD MONEY =================
+
 @router.post("/admin/add-money")
 def admin_add_money(
     data: AdminAddMoney,
     current_user=Depends(get_current_user)
 ):
 
+    # ---- role guard ----
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
+        raise HTTPException(403, "Admin only")
 
+    # ---- validate user id ----
     if not ObjectId.is_valid(data.user_id):
-        raise HTTPException(status_code=400, detail="Invalid user ID")
+        raise HTTPException(400, "Invalid user ID")
 
-    if data.amount <= 0:
-        raise HTTPException(status_code=400, detail="Invalid amount")
+    user_obj_id = ObjectId(data.user_id)
 
     now = datetime.now(IST)
 
-    # ================= UPDATE WALLET =================
+    # ================= ATOMIC WALLET UPDATE =================
+
     wallet = wallet_collection.find_one_and_update(
-        {"user_id": ObjectId(data.user_id)},
+        {"user_id": user_obj_id},
         {
             "$inc": {"balance": data.amount},
             "$set": {"updated_at": now},
             "$setOnInsert": {
-                "user_id": ObjectId(data.user_id),
+                "user_id": user_obj_id,
                 "created_at": now
             }
         },
@@ -67,21 +75,24 @@ def admin_add_money(
         return_document=ReturnDocument.AFTER
     )
 
-    new_balance = wallet.get("balance", 0)
+    new_balance = int(wallet.get("balance", 0))
 
-    # ================= LOG TRANSACTION =================
+    # ================= TRANSACTION LOG =================
+
     wallet_txn_collection.insert_one({
-        "user_id": ObjectId(data.user_id),
+        "user_id": user_obj_id,
         "amount": data.amount,
         "type": "credit",
-        "method": "admin",
+        "source": "admin",
         "admin_id": ObjectId(current_user["_id"]),
+        "reference": "manual_admin_credit",
         "balance_after": new_balance,
         "created_at": now
     })
 
     return {
-        "message": "Wallet updated successfully",
+        "message": "Wallet credited successfully",
         "user_id": data.user_id,
-        "balance": new_balance
+        "amount_added": data.amount,
+        "new_balance": new_balance
     }

@@ -308,7 +308,69 @@ const AdminCounterMenu = () => {
                     </button>
 
                   </div>
+{showBill && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-[350px] shadow-lg">
 
+      <h2 className="text-xl font-bold text-center mb-2">
+        Canteen Receipt
+      </h2>
+
+      <p className="text-sm text-center mb-4">
+        Order #{orderNumber}
+      </p>
+
+      <div className="border-t border-b py-2 mb-3">
+
+        {cart.map((item) => (
+
+          <div
+            key={item._id}
+            className="flex justify-between text-sm mb-1"
+          >
+            <span>
+              {item.name} x{item.qty}
+            </span>
+
+            <span>
+              ₹{item.price * item.qty}
+            </span>
+
+          </div>
+
+        ))}
+
+      </div>
+
+      <div className="flex justify-between font-bold mb-4">
+        <span>Total</span>
+        <span>₹{totalAmount}</span>
+      </div>
+
+      <div className="flex gap-2">
+
+        <button
+          onClick={() => window.print()}
+          className="flex-1 bg-green-600 text-white py-2 rounded"
+        >
+          Print
+        </button>
+
+        <button
+          onClick={() => {
+            setShowBill(false);
+            setCart([]);
+          }}
+          className="flex-1 bg-gray-200 py-2 rounded"
+        >
+          Close
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+)}
                 </div>
 
               ))}

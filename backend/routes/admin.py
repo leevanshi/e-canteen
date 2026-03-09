@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pymongo import ReturnDocument
 
 # ================= CONFIG =================
+
 IST = timezone(timedelta(hours=5, minutes=30))
 
 router = APIRouter(
@@ -14,27 +15,31 @@ router = APIRouter(
 )
 
 # ================= DATABASE =================
+
 from database import (
     orders_collection,
     users_collection,
+    wallet_collection,
+    wallet_txn_collection,
     counters_collection,
-    menu_collection
+    menu_collection,
+    client
 )
 
 # ================= AUTH =================
+
 from routes.auth import get_current_user
 
 
 # ================= HELPERS =================
+
 def ensure_admin_or_staff(user: dict):
     if not user or user.get("role") not in ["admin", "staff"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Admin or Staff access required"
-        )
+        raise HTTPException(403, "Admin or Staff access required")
 
 
 def serialize_order(o):
+
     created = o.get("created_at")
 
     return {
@@ -47,25 +52,26 @@ def serialize_order(o):
         "items": o.get("items", []),
         "total_amount": o.get("total_amount"),
         "status": o.get("status"),
-        "created_at": created.isoformat() if isinstance(created, datetime) else None
+        "created_at": created.isoformat() if created else None
     }
 
 
 # ================= ORDER COUNTER =================
+
 def get_next_order_id() -> int:
+
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
-        {
-            "$inc": {"seq": 1},
-            "$setOnInsert": {"seq": 99}
-        },
+        {"$inc": {"seq": 1}, "$setOnInsert": {"seq": 99}},
         upsert=True,
         return_document=ReturnDocument.AFTER
     )
+
     return counter["seq"]
 
 
 # ================= SCHEMAS =================
+
 class OrderItem(BaseModel):
     name: str
     quantity: int
@@ -86,6 +92,7 @@ class AvailabilityUpdate(BaseModel):
 
 
 # ================= GET ALL ORDERS =================
+
 @router.get("/orders")
 def get_admin_orders(
     page: int = Query(1, ge=1),
@@ -108,23 +115,8 @@ def get_admin_orders(
     return [serialize_order(o) for o in orders]
 
 
-# ================= GET ONLINE ORDERS =================
-@router.get("/orders/online")
-def get_online_orders(current_user=Depends(get_current_user)):
-
-    ensure_admin_or_staff(current_user)
-
-    orders = (
-        orders_collection
-        .find({"order_type": "online"})
-        .sort("created_at", 1)
-        .limit(200)
-    )
-
-    return [serialize_order(o) for o in orders]
-
-
 # ================= UPDATE ORDER STATUS =================
+
 @router.put("/orders/{order_id}/status")
 def update_order_status(
     order_id: str,
@@ -134,9 +126,9 @@ def update_order_status(
 
     ensure_admin_or_staff(current_user)
 
-    status = data.status.lower()
-
     allowed = ["pending", "preparing", "completed", "cancelled"]
+
+    status = data.status.lower()
 
     if status not in allowed:
         raise HTTPException(400, "Invalid order status")
@@ -146,6 +138,7 @@ def update_order_status(
     if order_id.isdigit():
         query = {"order_id": int(order_id)}
     else:
+
         if not ObjectId.is_valid(order_id):
             raise HTTPException(400, "Invalid order ID")
 
@@ -154,10 +147,7 @@ def update_order_status(
     result = orders_collection.update_one(
         query,
         {
-            "$set": {
-                "status": status,
-                "updated_at": now
-            },
+            "$set": {"status": status, "updated_at": now},
             "$push": {
                 "status_history": {
                     "status": status,
@@ -170,44 +160,11 @@ def update_order_status(
     if result.matched_count == 0:
         raise HTTPException(404, "Order not found")
 
-    return {
-        "success": True,
-        "order_id": order_id,
-        "status": status
-    }
+    return {"success": True, "status": status}
 
 
-# ================= MENU AVAILABILITY =================
-@router.put("/menu/{menu_id}/availability")
-def toggle_menu_availability(
-    menu_id: str,
-    data: AvailabilityUpdate,
-    current_user=Depends(get_current_user)
-):
+# ================= WALK-IN ORDER (WITH TRANSACTION) =================
 
-    ensure_admin_or_staff(current_user)
-
-    if not ObjectId.is_valid(menu_id):
-        raise HTTPException(400, "Invalid menu ID")
-
-    now = datetime.now(IST)
-
-    item = menu_collection.find_one_and_update(
-        {"_id": ObjectId(menu_id)},
-        {"$set": {"available": bool(data.available), "updated_at": now}},
-        return_document=ReturnDocument.AFTER
-    )
-
-    if not item:
-        raise HTTPException(404, "Menu item not found")
-
-    return {
-        "success": True,
-        "available": item["available"]
-    }
-
-
-# ================= WALK-IN ORDER =================
 @router.post("/place-order")
 def place_walkin_order(
     data: AdminPlaceOrder,
@@ -223,6 +180,7 @@ def place_walkin_order(
         raise HTTPException(400, "Invalid total amount")
 
     now = datetime.now(IST)
+
     order_id = get_next_order_id()
 
     order = {
@@ -244,12 +202,12 @@ def place_walkin_order(
 
     return {
         "success": True,
-        "message": "Walk-in order placed",
         "order_id": order_id
     }
 
 
 # ================= USERS LIST =================
+
 @router.get("/users")
 def get_users(
     limit: int = Query(200, le=500),
@@ -265,13 +223,48 @@ def get_users(
         {"password": 0, "refresh_token": 0}
     ).limit(limit):
 
+        wallet = wallet_collection.find_one(
+            {"user_id": ObjectId(u["_id"])}
+        )
+
+        balance = wallet.get("balance", 0) if wallet else 0
+
         users.append({
             "_id": str(u["_id"]),
             "name": u.get("name"),
             "email": u.get("email"),
             "role": u.get("role"),
-            "wallet_balance": u.get("wallet_balance", 0),
-            "wallet_first_time": u.get("wallet_first_time", False)
+            "wallet_balance": balance
         })
 
     return users
+
+
+# ================= WALLET HISTORY =================
+
+@router.get("/wallet-history")
+def wallet_history(
+    limit: int = Query(200, le=500),
+    current_user=Depends(get_current_user)
+):
+
+    ensure_admin_or_staff(current_user)
+
+    txns = wallet_txn_collection.find().sort("created_at", -1).limit(limit)
+
+    result = []
+
+    for t in txns:
+
+        result.append({
+            "_id": str(t["_id"]),
+            "user_id": str(t["user_id"]),
+            "amount": t["amount"],
+            "type": t["type"],
+            "source": t.get("source"),
+            "admin_id": str(t.get("admin_id")) if t.get("admin_id") else None,
+            "order_id": t.get("order_id"),
+            "created_at": t["created_at"].isoformat()
+        })
+
+    return result
