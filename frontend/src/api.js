@@ -135,6 +135,26 @@ export const getUsers = () =>
   API.get("/api/admin/users");
 
 /* =========================
+   WALLET
+========================= */
+
+export const getMyWallet = () =>
+  API.get("/wallet/me");
+
+export const adminAddMoney = (data) =>
+  API.post("/wallet/admin/add-money", data);
+
+/* =========================
+   FEEDBACK
+========================= */
+
+export const submitFeedback = (data) =>
+  API.post("/feedback", data);
+
+export const getAllFeedback = () =>
+  API.get("/feedback/admin");
+
+/* =========================
    LOGOUT
 ========================= */
 
