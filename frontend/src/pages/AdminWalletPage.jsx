@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-import API from "../api";
+import { getUsers, adminAddMoney } from "../api";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
 
 const AdminWalletPage = () => {
-  const { token } = useAuth();
+
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  const role = (user?.role || "").toLowerCase();
 
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState([]);
@@ -17,38 +20,80 @@ const AdminWalletPage = () => {
   const [loading, setLoading] = useState(true);
   const [updatingUser, setUpdatingUser] = useState(null);
 
+  /* ================= AUTH GUARD ================= */
+
+  useEffect(() => {
+
+    if (authLoading) return;
+
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (role !== "admin") {
+      navigate("/menu", { replace: true });
+    }
+
+  }, [authLoading, user, role, navigate]);
+
   /* ================= FETCH USERS ================= */
+
   const fetchUsers = async () => {
-    if (!token) return;
 
     try {
+
       setLoading(true);
 
-      const res = await API.get("/admin/users");
+      const res = await getUsers();
 
-      const data = Array.isArray(res.data) ? res.data : [];
-      setUsers(data);
+      const data = Array.isArray(res?.data)
+        ? res.data
+        : res?.data?.users || [];
+
+      const safeUsers = data.map((u, idx) => ({
+        ...u,
+        _id: u._id || u.id || `user-${idx}`,
+        wallet_balance: Number(u.wallet_balance || 0)
+      }));
+
+      setUsers(safeUsers);
+
     } catch (err) {
+
       console.error("User fetch error:", err);
       toast.error("Failed to load users");
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, [token]);
+
+    if (!authLoading && role === "admin") {
+      fetchUsers();
+    }
+
+  }, [authLoading, role]);
 
   /* ================= FILTER USERS ================= */
+
   const filteredUsers = useMemo(() => {
+
     return users.filter((u) =>
       u.name?.toLowerCase().includes(search.toLowerCase())
     );
+
   }, [users, search]);
 
   /* ================= ADD MONEY ================= */
+
   const addMoney = async (userId) => {
+
     const raw = amounts[userId];
     const amount = Number(raw);
 
@@ -58,23 +103,25 @@ const AdminWalletPage = () => {
     }
 
     try {
+
       setUpdatingUser(userId);
 
-      await API.post("/wallet/admin/add-money", {
+      await adminAddMoney({
         user_id: userId,
-        amount,
+        amount
       });
 
       toast.success("Money credited 💸");
 
-      /* Optimistic UI update */
+      /* optimistic UI update */
+
       setUsers((prev) =>
         prev.map((u) =>
           u._id === userId
             ? {
                 ...u,
                 wallet_balance:
-                  Number(u.wallet_balance || 0) + amount,
+                  Number(u.wallet_balance || 0) + amount
               }
             : u
         )
@@ -82,20 +129,29 @@ const AdminWalletPage = () => {
 
       setAmounts((prev) => ({
         ...prev,
-        [userId]: "",
+        [userId]: ""
       }));
+
     } catch (err) {
+
       console.error("Add money error:", err);
+
       toast.error(
-        err.response?.data?.detail || "Failed to add money"
+        err?.response?.data?.detail ||
+        "Failed to add money"
       );
+
     } finally {
+
       setUpdatingUser(null);
+
     }
+
   };
 
   /* ================= LOADING ================= */
-  if (loading) {
+
+  if (authLoading || loading) {
     return (
       <div className="max-w-6xl mx-auto p-6">
         <p className="text-gray-500 animate-pulse">
@@ -106,20 +162,28 @@ const AdminWalletPage = () => {
   }
 
   return (
+
     <div className="max-w-6xl mx-auto p-6 space-y-6">
 
       {/* HEADER */}
+
       <div className="flex items-center gap-3">
-        <Button variant="outline" onClick={() => navigate(-1)}>
+
+        <Button
+          variant="outline"
+          onClick={() => navigate(-1)}
+        >
           ← Back
         </Button>
 
         <h1 className="text-3xl font-bold">
           Wallet Management
         </h1>
+
       </div>
 
       {/* SEARCH */}
+
       <input
         type="text"
         placeholder="Search by name..."
@@ -128,26 +192,32 @@ const AdminWalletPage = () => {
         className="w-full sm:w-1/3 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
       />
 
-      {/* EMPTY */}
       {filteredUsers.length === 0 && (
-        <p className="text-gray-500">No users found</p>
+        <p className="text-gray-500">
+          No users found
+        </p>
       )}
 
       {/* USERS */}
+
       {filteredUsers.map((u) => (
+
         <Card key={u._id}>
+
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
-            {/* USER INFO */}
             <div>
-              <p className="font-semibold">{u.name}</p>
+
+              <p className="font-semibold">
+                {u.name}
+              </p>
 
               <p className="text-sm text-gray-500">
                 {u.email}
               </p>
 
               <p className="text-green-600 font-bold">
-                Balance: ₹{Number(u.wallet_balance || 0)}
+                Balance: ₹{u.wallet_balance}
               </p>
 
               {u.wallet_first_time && (
@@ -155,10 +225,11 @@ const AdminWalletPage = () => {
                   ⚠ First-time wallet user
                 </p>
               )}
+
             </div>
 
-            {/* ADD MONEY */}
             <div className="flex gap-2">
+
               <input
                 type="number"
                 min="1"
@@ -168,7 +239,7 @@ const AdminWalletPage = () => {
                 onChange={(e) =>
                   setAmounts((prev) => ({
                     ...prev,
-                    [u._id]: e.target.value,
+                    [u._id]: e.target.value
                   }))
                 }
               />
@@ -182,12 +253,19 @@ const AdminWalletPage = () => {
                   ? "Adding..."
                   : "Add"}
               </Button>
+
             </div>
+
           </CardContent>
+
         </Card>
+
       ))}
+
     </div>
+
   );
+
 };
 
 export default AdminWalletPage;

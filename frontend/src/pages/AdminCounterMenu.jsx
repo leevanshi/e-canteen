@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
+import { placeCounterOrder } from "../api";
 import API from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -153,7 +154,7 @@ const AdminCounterMenu = () => {
 
     try {
 
-      const res = await API.post("/admin/place-order", {
+      const res = await placeCounterOrder({
         items: cart.map((i) => ({
           item_id: i._id,
           name: i.name,
@@ -335,72 +336,6 @@ const AdminCounterMenu = () => {
         </div>
 
       </div>
-
-      {/* BILL MODAL */}
-
-      {showBill && (
-
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
-          <div className="relative bg-white w-[340px] rounded shadow-lg p-4 text-xs font-mono">
-
-            <button
-              onClick={() => {
-                setShowBill(false);
-                setCart([]);
-              }}
-              className="absolute top-2 right-2 text-lg font-bold"
-            >
-              ×
-            </button>
-
-            <h2 className="text-center font-bold">
-              E-CANTEEN
-            </h2>
-
-            <p className="text-center">
-              NMIMS Chandigarh
-            </p>
-
-            <p className="text-center text-[10px]">
-              Order ID: <strong>{orderNumber}</strong>
-            </p>
-
-            <hr className="my-2" />
-
-            {cart.map((item) => (
-              <div
-                key={item._id}
-                className="flex justify-between text-[11px]"
-              >
-                <span>{item.name}</span>
-                <span>{item.qty}</span>
-                <span>{formatCurrency(item.price)}</span>
-                <span>
-                  {formatCurrency(item.price * item.qty)}
-                </span>
-              </div>
-            ))}
-
-            <hr className="my-2" />
-
-            <div className="flex justify-between font-bold text-sm">
-              <span>Total</span>
-              <span>{formatCurrency(totalAmount)}</span>
-            </div>
-
-            <button
-              onClick={() => window.print()}
-              className="w-full bg-green-600 text-white py-2 rounded mt-3"
-            >
-              Print
-            </button>
-
-          </div>
-
-        </div>
-
-      )}
 
     </div>
 

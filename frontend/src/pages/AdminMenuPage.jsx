@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api";
 import { toast } from "sonner";
+import API, { toggleMenuAvailability } from "../api";
 import { useAuth } from "../context/AuthContext";
 
 const AdminMenuPage = () => {
@@ -46,7 +46,14 @@ const AdminMenuPage = () => {
         ? res.data
         : res?.data?.menu || [];
 
-      setMenu(data);
+      const safeMenu = data.map((item, idx) => ({
+        ...item,
+        _id: item._id || item.id || `item-${idx}`,
+        price: Number(item.price || 0),
+        available: item.available !== false
+      }));
+
+      setMenu(safeMenu);
 
     } catch (err) {
 
@@ -79,14 +86,12 @@ const AdminMenuPage = () => {
 
     try {
 
-      await API.put(`/admin/menu/${item._id}/availability`, {
-        available: !item.available
-      });
+      await toggleMenuAvailability(item._id);
 
       setMenu((prev) =>
         prev.map((i) =>
           i._id === item._id
-            ? { ...i, available: !item.available }
+            ? { ...i, available: !i.available }
             : i
         )
       );
@@ -162,9 +167,7 @@ const AdminMenuPage = () => {
             <div
               key={item._id}
               className={`bg-white rounded-xl shadow transition ${
-                unavailable
-                  ? "border-2 border-red-500"
-                  : ""
+                unavailable ? "border-2 border-red-500" : ""
               }`}
             >
 
@@ -219,9 +222,7 @@ const AdminMenuPage = () => {
                       : "text-green-600"
                   }`}
                 >
-                  {unavailable
-                    ? "Unavailable"
-                    : "Available"}
+                  {unavailable ? "Unavailable" : "Available"}
                 </p>
 
                 <button
