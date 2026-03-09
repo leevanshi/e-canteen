@@ -54,11 +54,11 @@ const AdminWalletPage = () => {
 
       const safeUsers = data.map((u, idx) => ({
 
-        _id: u._id || u.id || `user-${idx}`,
-        name: u.name || "User",
-        email: u.email || "—",
-        wallet_balance: Number(u.wallet_balance) || 0,
-        wallet_first_time: Boolean(u.wallet_first_time)
+        _id: u?._id || u?.id || `user-${idx}`,
+        name: u?.name || "User",
+        email: u?.email || "—",
+        wallet_balance: Number(u?.wallet_balance || 0),
+        wallet_first_time: Boolean(u?.wallet_first_time)
 
       }));
 
@@ -89,11 +89,11 @@ const AdminWalletPage = () => {
 
   const filteredUsers = useMemo(() => {
 
-    const term = search.toLowerCase();
+    const term = (search || "").toLowerCase();
 
     return users.filter((u) =>
-      u.name.toLowerCase().includes(term) ||
-      u.email.toLowerCase().includes(term)
+      (u.name || "").toLowerCase().includes(term) ||
+      (u.email || "").toLowerCase().includes(term)
     );
 
   }, [users, search]);
@@ -111,7 +111,7 @@ const AdminWalletPage = () => {
     }
 
     if (amount > 10000) {
-      toast.error("Amount too large");
+      toast.error("Maximum ₹10000 allowed");
       return;
     }
 
@@ -126,7 +126,8 @@ const AdminWalletPage = () => {
 
       const newBalance =
         res?.data?.new_balance ??
-        res?.data?.balance;
+        res?.data?.balance ??
+        null;
 
       toast.success(`₹${amount} added`);
 
@@ -135,7 +136,10 @@ const AdminWalletPage = () => {
           u._id === userId
             ? {
                 ...u,
-                wallet_balance: newBalance ?? u.wallet_balance
+                wallet_balance:
+                  newBalance !== null
+                    ? newBalance
+                    : u.wallet_balance + amount
               }
             : u
         )
@@ -170,11 +174,9 @@ const AdminWalletPage = () => {
     return (
 
       <div className="max-w-6xl mx-auto p-6">
-
         <p className="text-gray-500 animate-pulse">
           Loading users...
         </p>
-
       </div>
 
     );
@@ -184,8 +186,6 @@ const AdminWalletPage = () => {
   return (
 
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-
-      {/* HEADER */}
 
       <div className="flex items-center justify-between">
 
@@ -213,8 +213,6 @@ const AdminWalletPage = () => {
 
       </div>
 
-      {/* SEARCH */}
-
       <input
         type="text"
         placeholder="Search name or email..."
@@ -228,8 +226,6 @@ const AdminWalletPage = () => {
           No users found
         </p>
       )}
-
-      {/* USERS */}
 
       {filteredUsers.map((u) => (
 
@@ -252,11 +248,9 @@ const AdminWalletPage = () => {
               </p>
 
               {u.wallet_first_time && (
-
                 <p className="text-xs text-orange-600">
                   ⚠ First-time wallet user
                 </p>
-
               )}
 
             </div>
@@ -265,7 +259,6 @@ const AdminWalletPage = () => {
 
               <input
                 type="number"
-                step="1"
                 min="1"
                 max="10000"
                 placeholder="Amount"

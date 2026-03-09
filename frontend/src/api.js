@@ -42,6 +42,7 @@ const isAuthRoute = (url = "") => url.includes("/auth/");
 
 API.interceptors.request.use(
   (config) => {
+
     if (!isAuthRoute(config.url)) {
       const token = getToken();
 
@@ -51,6 +52,7 @@ API.interceptors.request.use(
     }
 
     return config;
+
   },
   (error) => Promise.reject(error)
 );
@@ -62,10 +64,12 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
+
     const status = error?.response?.status;
     const url = error?.config?.url || "";
 
     if (status === 401 && !isAuthRoute(url)) {
+
       clearAuth();
 
       if (!window.location.pathname.includes("/login")) {
@@ -104,34 +108,34 @@ export const getMenu = () =>
 ========================= */
 
 export const createOrder = (data) =>
-  API.post("/orders", data);
+  API.post("/api/orders", data);
 
 export const getUserOrders = () =>
-  API.get("/orders");
+  API.get("/api/orders");
 
 /* =========================
    ADMIN
 ========================= */
 
 export const getAdminOrders = () =>
-  API.get("/api/admin/orders");
+  API.get("/admin/orders");
 
 export const getOnlineOrders = () =>
-  API.get("/api/admin/orders/online");
+  API.get("/admin/orders/online");
 
 export const updateOrderStatus = (orderId, status) =>
-  API.put(`/api/admin/orders/${orderId}/status`, { status });
+  API.put(`/admin/orders/${orderId}/status`, { status });
 
 export const toggleMenuAvailability = (menuId, available) =>
-  API.put(`/api/admin/menu/${menuId}/availability`, {
+  API.put(`/admin/menu/${menuId}/availability`, {
     available: Boolean(available),
   });
 
 export const placeCounterOrder = (data) =>
-  API.post("/api/admin/place-order", data);
+  API.post("/admin/place-order", data);
 
 export const getUsers = () =>
-  API.get("/api/admin/users");
+  API.get("/admin/users");
 
 /* =========================
    WALLET
@@ -141,7 +145,7 @@ export const getMyWallet = () =>
   API.get("/wallet/me");
 
 export const adminAddMoney = (data) =>
-  API.post("/api/admin/add-money", data);
+  API.post("/wallet/admin/add-money", data);
 
 /* =========================
    FEEDBACK
@@ -158,6 +162,7 @@ export const getAllFeedback = () =>
 ========================= */
 
 export const logout = () => {
+
   clearAuth();
 
   if (!window.location.pathname.includes("/login")) {

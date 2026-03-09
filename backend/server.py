@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import List
 import os
 
+# ================= ENV =================
+
 load_dotenv()
 
 # ================= TIMEZONE =================
@@ -53,6 +55,7 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, data: dict):
+
         disconnected = []
 
         for connection in self.active_connections:
@@ -67,7 +70,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# ================= ORDER WEBSOCKET =================
+# ================= WEBSOCKET =================
 
 @app.websocket("/ws/orders")
 async def orders_ws(websocket: WebSocket):
@@ -76,11 +79,26 @@ async def orders_ws(websocket: WebSocket):
 
     try:
         while True:
-            # keep connection alive
             await websocket.receive_text()
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+# ================= EVENT SYSTEM =================
+
+from services.event_bus import subscribe
+from services.order_events import (
+    handle_wallet_deduction,
+    handle_kitchen_log
+)
+
+@app.on_event("startup")
+def init_event_system():
+
+    subscribe("ORDER_CREATED", handle_wallet_deduction)
+    subscribe("ORDER_CREATED", handle_kitchen_log)
+
+    print("Event system initialized")
 
 # ================= ROUTERS =================
 
@@ -91,12 +109,12 @@ from routes.orders import router as orders_router
 from routes.admin import router as admin_router
 from routes.feedback import router as feedback_router
 
-app.include_router(auth_router, tags=["Auth"])
-app.include_router(menu_router, tags=["Menu"])
-app.include_router(orders_router, tags=["Orders"])
-app.include_router(admin_router, tags=["Admin"])
-app.include_router(wallet_router, tags=["Wallet"])
-app.include_router(feedback_router, tags=["Feedback"])
+app.include_router(auth_router)
+app.include_router(menu_router)
+app.include_router(orders_router)
+app.include_router(admin_router)
+app.include_router(wallet_router)
+app.include_router(feedback_router)
 
 # ================= STATIC FILES =================
 
@@ -109,12 +127,12 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 # ================= HEALTH =================
 
-@app.get("/health", tags=["Health"])
+@app.get("/health")
 def health():
     return {"status": "ok"}
 
 # ================= ROOT =================
 
-@app.get("/", tags=["Root"])
+@app.get("/")
 def root():
     return {"status": "E-Canteen Backend Running 🚀"}

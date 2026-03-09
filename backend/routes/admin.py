@@ -5,16 +5,9 @@ from bson import ObjectId
 from datetime import datetime, timedelta, timezone
 from pymongo import ReturnDocument
 
-# ================= CONFIG =================
-
 IST = timezone(timedelta(hours=5, minutes=30))
 
-router = APIRouter(
-    prefix="/admin",
-    tags=["Admin"]
-)
-
-# ================= DATABASE =================
+router = APIRouter(prefix="/admin", tags=["Admin"])
 
 from database import (
     orders_collection,
@@ -22,13 +15,11 @@ from database import (
     wallet_collection,
     wallet_txn_collection,
     counters_collection,
-    menu_collection,
-    client
+    menu_collection
 )
 
-# ================= AUTH =================
-
 from routes.auth import get_current_user
+from main import manager
 
 
 # ================= HELPERS =================
@@ -52,13 +43,15 @@ def serialize_order(o):
         "items": o.get("items", []),
         "total_amount": o.get("total_amount"),
         "status": o.get("status"),
-        "created_at": created.isoformat() if created else None
+        "created_at": created.isoformat()
+        if isinstance(created, datetime)
+        else None
     }
 
 
 # ================= ORDER COUNTER =================
 
-def get_next_order_id() -> int:
+def get_next_order_id():
 
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
@@ -163,10 +156,10 @@ def update_order_status(
     return {"success": True, "status": status}
 
 
-# ================= WALK-IN ORDER (WITH TRANSACTION) =================
+# ================= WALK-IN ORDER =================
 
 @router.post("/place-order")
-def place_walkin_order(
+async def place_walkin_order(
     data: AdminPlaceOrder,
     current_user=Depends(get_current_user)
 ):
@@ -198,7 +191,15 @@ def place_walkin_order(
         "updated_at": now
     }
 
-    orders_collection.insert_one(order)
+    result = orders_collection.insert_one(order)
+
+    order["_id"] = str(result.inserted_id)
+
+    # REALTIME PUSH
+    await manager.broadcast({
+        "type": "new_order",
+        "order": serialize_order(order)
+    })
 
     return {
         "success": True,
@@ -216,25 +217,25 @@ def get_users(
 
     ensure_admin_or_staff(current_user)
 
+    users_cursor = list(
+        users_collection.find({}, {"password": 0, "refresh_token": 0}).limit(limit)
+    )
+
+    wallets = {
+        str(w["user_id"]): w.get("balance", 0)
+        for w in wallet_collection.find({})
+    }
+
     users = []
 
-    for u in users_collection.find(
-        {},
-        {"password": 0, "refresh_token": 0}
-    ).limit(limit):
-
-        wallet = wallet_collection.find_one(
-            {"user_id": ObjectId(u["_id"])}
-        )
-
-        balance = wallet.get("balance", 0) if wallet else 0
+    for u in users_cursor:
 
         users.append({
             "_id": str(u["_id"]),
             "name": u.get("name"),
             "email": u.get("email"),
             "role": u.get("role"),
-            "wallet_balance": balance
+            "wallet_balance": wallets.get(str(u["_id"]), 0)
         })
 
     return users

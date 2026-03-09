@@ -1,3 +1,4 @@
+from services.wallet_service import credit_wallet
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
@@ -8,7 +9,13 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 router = APIRouter(prefix="/wallet", tags=["Wallet"])
 
-from database import wallet_collection, wallet_txn_collection
+from database import (
+    wallet_collection,
+    wallet_txn_collection,
+    users_collection,
+    client
+)
+
 from routes.auth import get_current_user
 
 
@@ -16,8 +23,7 @@ from routes.auth import get_current_user
 
 class AdminAddMoney(BaseModel):
     user_id: str
-    amount: int = Field(..., gt=0, le=10000)  
-    # integer avoids float precision issues
+    amount: int = Field(..., gt=0, le=10000)
 
 
 # ================= GET MY WALLET =================
@@ -30,13 +36,9 @@ def get_my_wallet(current_user=Depends(get_current_user)):
     })
 
     if not wallet:
-        return {
-            "balance": 0
-        }
+        return {"balance": 0}
 
-    return {
-        "balance": int(wallet.get("balance", 0))
-    }
+    return {"balance": int(wallet.get("balance", 0))}
 
 
 # ================= ADMIN ADD MONEY =================
@@ -47,52 +49,83 @@ def admin_add_money(
     current_user=Depends(get_current_user)
 ):
 
-    # ---- role guard ----
+    # ROLE CHECK
     if current_user.get("role") != "admin":
         raise HTTPException(403, "Admin only")
 
-    # ---- validate user id ----
+    # USER ID VALIDATION
     if not ObjectId.is_valid(data.user_id):
         raise HTTPException(400, "Invalid user ID")
 
     user_obj_id = ObjectId(data.user_id)
 
+    # CHECK USER EXISTS
+    user = users_collection.find_one({"_id": user_obj_id})
+    if not user:
+        raise HTTPException(404, "User not found")
+
     now = datetime.now(IST)
 
-    # ================= ATOMIC WALLET UPDATE =================
+    # ================= MONGODB TRANSACTION =================
 
-    wallet = wallet_collection.find_one_and_update(
-        {"user_id": user_obj_id},
-        {
-            "$inc": {"balance": data.amount},
-            "$set": {"updated_at": now},
-            "$setOnInsert": {
-                "user_id": user_obj_id,
-                "created_at": now
-            }
-        },
-        upsert=True,
-        return_document=ReturnDocument.AFTER
-    )
+    with client.start_session() as session:
 
-    new_balance = int(wallet.get("balance", 0))
+        with session.start_transaction():
 
-    # ================= TRANSACTION LOG =================
+            wallet = wallet_collection.find_one_and_update(
+                {"user_id": user_obj_id},
+                {
+                    "$inc": {"balance": data.amount},
+                    "$set": {"updated_at": now},
+                    "$setOnInsert": {
+                        "user_id": user_obj_id,
+                        "balance": 0,
+                        "created_at": now
+                    }
+                },
+                upsert=True,
+                return_document=ReturnDocument.AFTER,
+                session=session
+            )
 
-    wallet_txn_collection.insert_one({
-        "user_id": user_obj_id,
-        "amount": data.amount,
-        "type": "credit",
-        "source": "admin",
-        "admin_id": ObjectId(current_user["_id"]),
-        "reference": "manual_admin_credit",
-        "balance_after": new_balance,
-        "created_at": now
-    })
+            new_balance = int(wallet.get("balance", 0))
+
+            wallet_txn_collection.insert_one(
+                {
+                    "user_id": user_obj_id,
+                    "amount": data.amount,
+                    "type": "credit",
+                    "source": "admin",
+                    "admin_id": ObjectId(current_user["_id"]),
+                    "reference": "manual_admin_credit",
+                    "balance_after": new_balance,
+                    "created_at": now
+                },
+                session=session
+            )
 
     return {
         "message": "Wallet credited successfully",
         "user_id": data.user_id,
         "amount_added": data.amount,
         "new_balance": new_balance
+    }
+@router.post("/admin/add-money")
+def admin_add_money(data: AdminAddMoney, current_user=Depends(get_current_user)):
+
+    if current_user["role"] != "admin":
+        raise HTTPException(403, "Admin only")
+
+    now = datetime.now(IST)
+
+    balance = credit_wallet(
+        data.user_id,
+        data.amount,
+        current_user["_id"],
+        now
+    )
+
+    return {
+        "message": "Wallet credited",
+        "new_balance": balance
     }
