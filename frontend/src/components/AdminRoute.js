@@ -3,22 +3,22 @@ import { useAuth } from "../context/AuthContext";
 
 const AdminRoute = ({ children }) => {
 
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
-  /* ================= LOADING ================= */
+  /* ================= WAIT FOR AUTH ================= */
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+      <div className="flex items-center justify-center min-h-screen text-gray-500">
+        Loading...
       </div>
     );
   }
 
   /* ================= NOT LOGGED IN ================= */
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <Navigate
         to="/login"
@@ -30,16 +30,15 @@ const AdminRoute = ({ children }) => {
 
   /* ================= ROLE CHECK ================= */
 
-  const role = (user?.role || "").toLowerCase();
+  const role = String(user.role || "").toLowerCase();
 
   if (role !== "admin") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/menu" replace />;
   }
 
   /* ================= ADMIN ACCESS ================= */
 
   return children;
-
 };
 
 export default AdminRoute;

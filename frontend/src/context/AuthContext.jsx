@@ -1,6 +1,23 @@
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 
 const AuthContext = createContext(null);
+
+/* ================= USER NORMALIZER ================= */
+
+const normalizeUser = (rawUser) => {
+
+  if (!rawUser || typeof rawUser !== "object") return null;
+
+  const role = String(rawUser.role || "").toLowerCase();
+
+  return {
+    id: rawUser.id || rawUser._id || null,
+    name: rawUser.name || rawUser.username || "",
+    email: rawUser.email || "",
+    role
+  };
+
+};
 
 export const AuthProvider = ({ children }) => {
 
@@ -10,7 +27,7 @@ export const AuthProvider = ({ children }) => {
 
   /* ================= CLEAR AUTH ================= */
 
-  const clearAuth = () => {
+  const clearAuth = useCallback(() => {
 
     try {
       localStorage.removeItem("token");
@@ -23,24 +40,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
 
-  };
-
-  /* ================= NORMALIZE USER ================= */
-
-  const normalizeUser = (rawUser) => {
-
-    if (!rawUser || typeof rawUser !== "object") return null;
-
-    const role = (rawUser.role || "").toLowerCase();
-
-    return {
-      id: rawUser.id || rawUser._id || null,
-      name: rawUser.name || rawUser.username || "",
-      email: rawUser.email || "",
-      role
-    };
-
-  };
+  }, []);
 
   /* ================= RESTORE AUTH ================= */
 
@@ -76,11 +76,11 @@ export const AuthProvider = ({ children }) => {
 
     }
 
-  }, []);
+  }, [clearAuth]);
 
   /* ================= LOGIN ================= */
 
-  const login = (userData, authToken) => {
+  const login = useCallback((userData, authToken) => {
 
     const normalizedUser = normalizeUser(userData);
 
@@ -102,15 +102,13 @@ export const AuthProvider = ({ children }) => {
     setToken(authToken);
     setUser(normalizedUser);
 
-  };
+  }, []);
 
   /* ================= LOGOUT ================= */
 
-  const logout = () => {
-
+  const logout = useCallback(() => {
     clearAuth();
-
-  };
+  }, [clearAuth]);
 
   /* ================= TAB SYNC ================= */
 
@@ -122,7 +120,8 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem("user");
 
       if (!storedToken || !storedUser) {
-        clearAuth();
+        setToken(null);
+        setUser(null);
         return;
       }
 
@@ -132,8 +131,8 @@ export const AuthProvider = ({ children }) => {
         const normalizedUser = normalizeUser(parsedUser);
 
         if (normalizedUser) {
-          setUser(normalizedUser);
           setToken(storedToken);
+          setUser(normalizedUser);
         }
 
       } catch {
@@ -148,11 +147,11 @@ export const AuthProvider = ({ children }) => {
 
     return () => window.removeEventListener("storage", handleStorage);
 
-  }, []);
+  }, [clearAuth]);
 
   /* ================= ROLE HELPERS ================= */
 
-  const isAuthenticated = Boolean(token && user);
+  const isAuthenticated = Boolean(user);
 
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
@@ -170,7 +169,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     isStudent,
     isFaculty
-  }), [user, token, loading]);
+  }), [user, token, loading, login, logout]);
 
   return (
     <AuthContext.Provider value={value}>

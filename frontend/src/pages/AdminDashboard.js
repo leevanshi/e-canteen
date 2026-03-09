@@ -13,16 +13,15 @@ import { Button } from "../components/ui/button";
 const formatIST = (date) => {
   if (!date) return "—";
 
-  try {
-    return new Date(date).toLocaleString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      dateStyle: "medium",
-      timeStyle: "short",
-      hour12: true
-    });
-  } catch {
-    return "—";
-  }
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "—";
+
+  return d.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "medium",
+    timeStyle: "short",
+    hour12: true
+  });
 };
 
 const statusColor = (status = "") => {
@@ -60,7 +59,7 @@ const AdminDashboard = () => {
 
   const errorToastShown = useRef(false);
 
-  const role = (user?.role || "").toLowerCase();
+  const role = useMemo(() => (user?.role || "").toLowerCase(), [user]);
 
   /* ================= AUTH GUARD ================= */
 
@@ -94,21 +93,20 @@ const AdminDashboard = () => {
 
       const res = await getAdminOrders();
 
-      console.log("Admin orders API:", res);
-
       const data =
         Array.isArray(res?.data) ? res.data :
         Array.isArray(res?.data?.orders) ? res.data.orders :
         [];
 
-      const fixed = data.map((o, idx) => ({
+      const normalized = data.map((o, idx) => ({
         ...o,
         _id: o._id || `${idx}-${Date.now()}`,
         order_number: o.order_number || o.order_id || 100 + idx,
-        total_amount: Number(o.total_amount || 0)
+        total_amount: Number(o.total_amount || 0),
+        created_at: o.created_at || new Date().toISOString()
       }));
 
-      setOrders(fixed);
+      setOrders(normalized);
 
     } catch (err) {
 
@@ -138,7 +136,13 @@ const AdminDashboard = () => {
 
     fetchOrders();
 
-    const interval = setInterval(fetchOrders, 10000);
+    const interval = setInterval(() => {
+
+      if (!document.hidden) {
+        fetchOrders();
+      }
+
+    }, 10000);
 
     return () => clearInterval(interval);
 
@@ -159,38 +163,44 @@ const AdminDashboard = () => {
   /* ================= DERIVED ================= */
 
   const sortedOrders = useMemo(() => {
+
     return [...orders].sort((a, b) => {
       const timeA = new Date(a?.created_at || 0).getTime();
       const timeB = new Date(b?.created_at || 0).getTime();
       return timeA - timeB;
     });
+
   }, [orders]);
 
   const activeOrders = useMemo(() => {
+
     return sortedOrders.filter((o) =>
       ACTIVE_STATUSES.includes(String(o.status).toLowerCase())
     );
+
   }, [sortedOrders]);
 
   const completedOrders = useMemo(() => {
+
     return sortedOrders.filter(
       (o) => String(o.status).toLowerCase() === "completed"
     );
+
   }, [sortedOrders]);
 
   const totalRevenue = useMemo(() => {
+
     return completedOrders.reduce(
       (sum, o) => sum + Number(o.total_amount || 0),
       0
     );
+
   }, [completedOrders]);
 
   /* ================= UI ================= */
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 bg-orange-50 min-h-screen rounded-2xl">
-
-      {/* HEADER */}
 
       <div className="flex justify-between items-center flex-wrap gap-3">
 
@@ -209,8 +219,6 @@ const AdminDashboard = () => {
 
       </div>
 
-      {/* QUICK ACTIONS */}
-
       <div className="flex gap-3 flex-wrap">
 
         <Button
@@ -227,30 +235,19 @@ const AdminDashboard = () => {
           🧾 Counter Order
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/history")}
-        >
+        <Button variant="outline" onClick={() => navigate("/admin/history")}>
           Order History
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/menu")}
-        >
+        <Button variant="outline" onClick={() => navigate("/admin/menu")}>
           Menu Management
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/wallet")}
-        >
+        <Button variant="outline" onClick={() => navigate("/admin/wallet")}>
           Wallet Management
         </Button>
 
       </div>
-
-      {/* STATS */}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 

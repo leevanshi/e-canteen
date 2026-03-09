@@ -67,8 +67,6 @@ API.interceptors.response.use(
     const status = error?.response?.status;
     const url = error?.config?.url || "";
 
-    /* ===== TOKEN EXPIRED ===== */
-
     if (status === 401 && !isAuthRoute(url)) {
 
       clearAuth();
@@ -77,7 +75,6 @@ API.interceptors.response.use(
         console.warn("Session expired → redirecting to login");
         window.location.href = "/login";
       }
-
     }
 
     if (!error.response) {
@@ -105,9 +102,6 @@ export const registerUser = (data) =>
 export const getMenu = () =>
   API.get("/menu");
 
-export const getAllMenu = () =>
-  API.get("/menu/all");
-
 /* =========================
    ORDERS (USER)
 ========================= */
@@ -116,49 +110,29 @@ export const createOrder = (data) =>
   API.post("/orders", data);
 
 export const getUserOrders = () =>
-  API.get("/orders/me");
+  API.get("/orders");
 
 /* =========================
    ADMIN
 ========================= */
 
-/* FIXED: admin orders route */
-
-export const getAdminOrders = () => API.get("/api/orders/admin/all");
-
-/* optional filtered routes if backend supports */
+export const getAdminOrders = () =>
+  API.get("/api/admin/orders");
 
 export const getOnlineOrders = () =>
-  API.get("/orders?type=online");
+  API.get("/api/admin/orders/online");
 
 export const updateOrderStatus = (orderId, status) =>
-  API.put(`/orders/${orderId}/status`, { status });
+  API.put(`/api/admin/orders/${orderId}/status`, { status });
 
-export const toggleMenuAvailability = (itemId) =>
-  API.put(`/menu/${itemId}/availability`);
+export const toggleMenuAvailability = (menuId) =>
+  API.put(`/api/admin/menu/${menuId}/availability`);
 
 export const placeCounterOrder = (data) =>
-  API.post("/orders/counter", data);
+  API.post("/api/admin/place-order", data);
 
-/* =========================
-   WALLET
-========================= */
-
-export const getMyWallet = () =>
-  API.get("/wallet/me");
-
-export const adminAddMoney = (data) =>
-  API.post("/wallet/admin/add-money", data);
-
-/* =========================
-   FEEDBACK
-========================= */
-
-export const submitFeedback = (data) =>
-  API.post("/feedback", data);
-
-export const getAllFeedback = () =>
-  API.get("/feedback/admin");
+export const getUsers = () =>
+  API.get("/api/admin/users");
 
 /* =========================
    LOGOUT

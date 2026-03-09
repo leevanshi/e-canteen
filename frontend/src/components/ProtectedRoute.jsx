@@ -3,22 +3,22 @@ import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
 
-  /* ================= LOADING ================= */
+  /* ================= WAIT FOR AUTH ================= */
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+      <div className="flex items-center justify-center min-h-screen text-gray-500">
+        Loading...
       </div>
     );
   }
 
   /* ================= NOT LOGGED IN ================= */
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <Navigate
         to="/login"
@@ -32,18 +32,14 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   if (allowedRoles.length > 0) {
 
-    const userRole = (user?.role || "").toLowerCase();
+    const userRole = String(user.role || "").toLowerCase();
 
     const normalizedRoles = allowedRoles.map(
-      (role) => role.toLowerCase()
+      (role) => String(role).toLowerCase()
     );
 
     if (!normalizedRoles.includes(userRole)) {
-
-      /* deny access */
-
-      return <Navigate to="/" replace />;
-
+      return <Navigate to="/menu" replace />;
     }
 
   }
