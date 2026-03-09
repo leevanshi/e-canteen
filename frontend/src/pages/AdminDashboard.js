@@ -61,23 +61,6 @@ const AdminDashboard = () => {
 
   const role = useMemo(() => (user?.role || "").toLowerCase(), [user]);
 
-  /* ================= AUTH GUARD ================= */
-
-  useEffect(() => {
-
-    if (authLoading) return;
-
-    if (!user) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    if (role !== "admin") {
-      navigate("/menu", { replace: true });
-    }
-
-  }, [user, authLoading, role, navigate]);
-
   /* ================= FETCH ORDERS ================= */
 
   const fetchOrders = async (manual = false) => {
@@ -100,13 +83,14 @@ const AdminDashboard = () => {
 
       const normalized = data.map((o, idx) => ({
         ...o,
-        _id: o._id || `${idx}-${Date.now()}`,
-        order_number: o.order_number || o.order_id || 100 + idx,
-        total_amount: Number(o.total_amount || 0),
-        created_at: o.created_at || new Date().toISOString()
+        _id: o?._id || `${idx}-${Date.now()}`,
+        order_number: o?.order_number || o?.order_id || 100 + idx,
+        total_amount: Number(o?.total_amount || 0),
+        created_at: o?.created_at || new Date().toISOString(),
+        status: o?.status || "pending"
       }));
 
-      setOrders(normalized);
+      setOrders(Array.isArray(normalized) ? normalized : []);
 
     } catch (err) {
 
@@ -128,6 +112,23 @@ const AdminDashboard = () => {
 
   };
 
+  /* ================= AUTH GUARD ================= */
+
+  useEffect(() => {
+
+    if (authLoading) return;
+
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (role !== "admin") {
+      navigate("/menu", { replace: true });
+    }
+
+  }, [user, authLoading, role, navigate]);
+
   /* ================= AUTO REFRESH ================= */
 
   useEffect(() => {
@@ -148,21 +149,11 @@ const AdminDashboard = () => {
 
   }, [user, authLoading, role]);
 
-  /* ================= LOADING ================= */
-
-  if (authLoading || loading) {
-    return (
-      <div className="p-10 text-center text-gray-500 animate-pulse">
-        Loading dashboard...
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  /* ================= DERIVED ================= */
+  /* ================= DERIVED DATA ================= */
 
   const sortedOrders = useMemo(() => {
+
+    if (!Array.isArray(orders)) return [];
 
     return [...orders].sort((a, b) => {
       const timeA = new Date(a?.created_at || 0).getTime();
@@ -175,7 +166,7 @@ const AdminDashboard = () => {
   const activeOrders = useMemo(() => {
 
     return sortedOrders.filter((o) =>
-      ACTIVE_STATUSES.includes(String(o.status).toLowerCase())
+      ACTIVE_STATUSES.includes(String(o?.status).toLowerCase())
     );
 
   }, [sortedOrders]);
@@ -183,7 +174,7 @@ const AdminDashboard = () => {
   const completedOrders = useMemo(() => {
 
     return sortedOrders.filter(
-      (o) => String(o.status).toLowerCase() === "completed"
+      (o) => String(o?.status).toLowerCase() === "completed"
     );
 
   }, [sortedOrders]);
@@ -191,11 +182,23 @@ const AdminDashboard = () => {
   const totalRevenue = useMemo(() => {
 
     return completedOrders.reduce(
-      (sum, o) => sum + Number(o.total_amount || 0),
+      (sum, o) => sum + Number(o?.total_amount || 0),
       0
     );
 
   }, [completedOrders]);
+
+  /* ================= LOADING ================= */
+
+  if (authLoading || loading) {
+    return (
+      <div className="p-10 text-center text-gray-500 animate-pulse">
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   /* ================= UI ================= */
 
