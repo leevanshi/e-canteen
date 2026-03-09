@@ -201,3 +201,28 @@ def get_order(order_id: str, current_user=Depends(get_current_user)):
         "created_at": order["created_at"].isoformat()
         if order.get("created_at") else None
     }
+# ================= ADMIN: GET ALL ORDERS =================
+from routes.auth import require_admin
+
+@router.get("/admin/all")
+def get_all_orders(admin=Depends(require_admin)):
+
+    orders = orders_collection.find().sort("created_at", -1)
+
+    result = []
+
+    for o in orders:
+        result.append({
+            "_id": str(o["_id"]),
+            "order_id": o.get("order_id"),
+            "user_name": o.get("user_name"),
+            "order_type": o.get("order_type"),
+            "payment_method": o.get("payment_method"),
+            "payment_status": o.get("payment_status"),
+            "total_amount": o.get("total_amount"),
+            "status": o.get("status"),
+            "created_at": o.get("created_at").isoformat()
+            if o.get("created_at") else None
+        })
+
+    return result

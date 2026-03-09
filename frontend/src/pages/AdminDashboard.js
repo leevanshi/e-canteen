@@ -94,9 +94,12 @@ const AdminDashboard = () => {
 
       const res = await getAdminOrders();
 
-      const data = Array.isArray(res?.data)
-        ? res.data
-        : res?.data?.orders || [];
+      console.log("Admin orders API:", res);
+
+      const data =
+        Array.isArray(res?.data) ? res.data :
+        Array.isArray(res?.data?.orders) ? res.data.orders :
+        [];
 
       const fixed = data.map((o, idx) => ({
         ...o,
@@ -109,12 +112,14 @@ const AdminDashboard = () => {
 
     } catch (err) {
 
-      console.error("Fetch error ❌", err);
+      console.error("Admin orders fetch error:", err);
 
       if (!errorToastShown.current) {
-        toast.error("Failed to load orders");
+        toast.error("Failed to load admin orders");
         errorToastShown.current = true;
       }
+
+      setOrders([]);
 
     } finally {
 
@@ -154,38 +159,30 @@ const AdminDashboard = () => {
   /* ================= DERIVED ================= */
 
   const sortedOrders = useMemo(() => {
-
     return [...orders].sort((a, b) => {
       const timeA = new Date(a?.created_at || 0).getTime();
       const timeB = new Date(b?.created_at || 0).getTime();
       return timeA - timeB;
     });
-
   }, [orders]);
 
   const activeOrders = useMemo(() => {
-
     return sortedOrders.filter((o) =>
       ACTIVE_STATUSES.includes(String(o.status).toLowerCase())
     );
-
   }, [sortedOrders]);
 
   const completedOrders = useMemo(() => {
-
     return sortedOrders.filter(
       (o) => String(o.status).toLowerCase() === "completed"
     );
-
   }, [sortedOrders]);
 
   const totalRevenue = useMemo(() => {
-
     return completedOrders.reduce(
       (sum, o) => sum + Number(o.total_amount || 0),
       0
     );
-
   }, [completedOrders]);
 
   /* ================= UI ================= */
@@ -286,83 +283,6 @@ const AdminDashboard = () => {
         </Card>
 
       </div>
-
-      {/* ACTIVE ORDERS */}
-
-      <Card className="p-6 rounded-2xl shadow bg-white">
-
-        <h2 className="text-xl font-bold text-orange-600 mb-4">
-          Active Orders (FIFO)
-        </h2>
-
-        {activeOrders.length === 0 ? (
-          <p className="text-gray-500">
-            No active orders right now.
-          </p>
-        ) : (
-
-          <table className="w-full text-sm">
-
-            <thead>
-              <tr className="border-b bg-orange-50 text-left">
-                <th>Order</th>
-                <th>User</th>
-                <th>Payment</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {activeOrders.map((o) => {
-
-                const isWalkIn = !o.user_name;
-
-                return (
-                  <tr key={o._id} className="border-b hover:bg-orange-50">
-
-                    <td className="font-medium">
-                      #{o.order_number}
-                    </td>
-
-                    <td>
-                      {o.user_name || "Walk-in Customer"}
-                    </td>
-
-                    <td>
-                      {o.payment_method === "wallet"
-                        ? "Wallet"
-                        : o.payment_method === "counter"
-                        ? "Counter"
-                        : "Online"}
-                    </td>
-
-                    <td>
-                      ₹{o.total_amount}
-                    </td>
-
-                    <td className={!isWalkIn ? statusColor(o.status) : ""}>
-                      {isWalkIn ? "-" : o.status}
-                    </td>
-
-                    <td>
-                      {formatIST(o.created_at)}
-                    </td>
-
-                  </tr>
-                );
-
-              })}
-
-            </tbody>
-
-          </table>
-
-        )}
-
-      </Card>
 
     </div>
   );
