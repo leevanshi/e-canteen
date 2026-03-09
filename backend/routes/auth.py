@@ -47,6 +47,7 @@ ATTEMPT_WINDOW = 60  # seconds
 users_collection.create_index("email", unique=True)
 
 # ================= SCHEMAS =================
+
 class LoginSchema(BaseModel):
     email: EmailStr
     password: str
@@ -76,8 +77,13 @@ class RegisterSchema(BaseModel):
 
 
 # ================= HELPERS =================
+
 def normalize_email(email: str) -> str:
     return email.lower().strip()
+
+
+def normalize_role(role: str) -> str:
+    return (role or "student").lower().strip()
 
 
 def hash_password(password: str) -> str:
@@ -89,6 +95,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_token(data: dict) -> str:
+
     now = datetime.now(timezone.utc)
 
     payload = {
@@ -102,6 +109,7 @@ def create_token(data: dict) -> str:
 
 
 # ================= CURRENT USER =================
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
@@ -109,6 +117,7 @@ def get_current_user(
     token = credentials.credentials
 
     try:
+
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
         if payload.get("type") != "access":
@@ -127,11 +136,13 @@ def get_current_user(
         if not user:
             raise HTTPException(401, "User not found")
 
+        role = normalize_role(user.get("role"))
+
         return {
             "_id": str(user["_id"]),
             "name": user.get("name"),
             "email": user.get("email"),
-            "role": user.get("role", "student")
+            "role": role
         }
 
     except JWTError:
@@ -142,17 +153,22 @@ def get_current_user(
 
 
 # ================= ROLE GUARD =================
+
 def require_admin(user=Depends(get_current_user)):
-    if user["role"] != "admin":
+
+    if normalize_role(user.get("role")) != "admin":
         raise HTTPException(403, "Admin access required")
+
     return user
 
 
 # ================= REGISTER =================
+
 @router.post("/register", status_code=201)
 def register_user(data: RegisterSchema):
 
     email = normalize_email(data.email)
+    role = normalize_role(data.role)
 
     allowed_domains = [
         "nmims.in",
@@ -163,33 +179,34 @@ def register_user(data: RegisterSchema):
     if email.split("@")[-1] not in allowed_domains:
         raise HTTPException(400, "Only NMIMS email allowed")
 
-    if data.role not in ["student", "faculty"]:
+    if role not in ["student", "faculty"]:
         raise HTTPException(400, "Invalid role")
 
     try:
+
         users_collection.insert_one({
             "name": data.name,
             "email": email,
             "password": hash_password(data.password),
-            "role": data.role,
+            "role": role,
             "created_at": datetime.now(timezone.utc)
         })
 
     except DuplicateKeyError:
         raise HTTPException(409, "User already exists")
 
-    return {"message": f"{data.role.capitalize()} registered successfully"}
+    return {"message": f"{role.capitalize()} registered successfully"}
 
 
 # ================= LOGIN =================
+
 @router.post("/login")
 def login(data: LoginSchema):
 
     email = normalize_email(data.email)
-
     now = datetime.now().timestamp()
 
-    # remove old attempts
+    # remove expired attempts
     login_attempts[email] = [
         t for t in login_attempts[email]
         if now - t < ATTEMPT_WINDOW
@@ -203,14 +220,18 @@ def login(data: LoginSchema):
 
     user = users_collection.find_one({"email": email})
 
-    if not user or not verify_password(data.password, user["password"]):
+    if not user or "password" not in user:
         login_attempts[email].append(now)
         raise HTTPException(401, "Invalid credentials")
 
-    # reset attempts on success
+    if not verify_password(data.password, user["password"]):
+        login_attempts[email].append(now)
+        raise HTTPException(401, "Invalid credentials")
+
+    # success -> reset attempts
     login_attempts[email] = []
 
-    role = user.get("role", "student")
+    role = normalize_role(user.get("role"))
 
     token = create_token({
         "sub": str(user["_id"]),
@@ -231,8 +252,10 @@ def login(data: LoginSchema):
 
 
 # ================= ADMIN TEST =================
+
 @router.get("/admin/me")
 def get_admin_profile(user=Depends(require_admin)):
+
     return {
         "message": "Welcome Admin",
         "user": user

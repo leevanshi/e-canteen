@@ -11,21 +11,23 @@ const Navbar = () => {
   const location = useLocation();
 
   const { user, logout, loading, isAuthenticated } = useAuth();
-
   const { cart } = useCart();
-
-  const cartCount = cart.reduce(
-    (sum, item) => sum + (item.quantity || 1),
-    0
-  );
 
   if (loading) return null;
 
-  const isAdmin = user?.role === "admin";
-  const isStudent = user?.role === "student";
-  const isFaculty = user?.role === "faculty";
+  const role = (user?.role || "").toLowerCase();
 
+  const isAdmin = role === "admin";
+  const isStudent = role === "student";
+  const isFaculty = role === "faculty";
+
+  /* admins use their own layout */
   if (isAdmin) return null;
+
+  const cartCount = (cart || []).reduce(
+    (sum, item) => sum + (item.quantity || 1),
+    0
+  );
 
   const hideAuthButtons =
     location.pathname === "/login" ||
@@ -38,9 +40,18 @@ const Navbar = () => {
   };
 
   const handleLogoClick = () => {
-    if (isStudent) navigate("/menu");
-    else if (isFaculty) navigate("/faculty/dashboard");
-    else navigate("/");
+
+    if (isStudent) {
+      navigate("/menu");
+      return;
+    }
+
+    if (isFaculty) {
+      navigate("/faculty/dashboard");
+      return;
+    }
+
+    navigate("/");
   };
 
   return (
@@ -53,6 +64,8 @@ const Navbar = () => {
       >
         ☕ E-Canteen
       </button>
+
+      {/* STUDENT LINKS */}
 
       {isStudent && (
         <div className="flex items-center gap-6 text-sm font-medium">
@@ -71,6 +84,8 @@ const Navbar = () => {
 
         </div>
       )}
+
+      {/* FACULTY LINKS */}
 
       {isFaculty && (
         <div className="flex items-center gap-6 text-sm font-medium">
@@ -91,6 +106,8 @@ const Navbar = () => {
 
         </div>
       )}
+
+      {/* RIGHT SIDE */}
 
       <div className="flex items-center gap-4">
 

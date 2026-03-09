@@ -9,7 +9,6 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1604908554165-3a7c22e0b9c6?q=80&w=600";
 
 const MenuPage = () => {
-
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,31 +22,22 @@ const MenuPage = () => {
   /* ================= FETCH MENU ================= */
 
   const fetchMenu = async () => {
-
     try {
-
       const res = await API.get("/menu");
 
       const data = Array.isArray(res.data) ? res.data : [];
 
-      /* normalize id for safety */
       const normalized = data.map((item) => ({
         ...item,
         _id: item._id || item.id
       }));
 
       setMenu(normalized);
-
     } catch {
-
       toast.error("Failed to load menu");
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
   useEffect(() => {
@@ -57,17 +47,12 @@ const MenuPage = () => {
   /* ================= FILTER ================= */
 
   const categories = useMemo(() => {
-
     const unique = [...new Set(menu.map((m) => m.category))];
-
     return ["all", ...unique];
-
   }, [menu]);
 
   const filteredMenu = useMemo(() => {
-
     return menu.filter((item) => {
-
       const matchSearch = item.name
         ?.toLowerCase()
         .includes(search.toLowerCase());
@@ -76,9 +61,7 @@ const MenuPage = () => {
         category === "all" || item.category === category;
 
       return matchSearch && matchCategory;
-
     });
-
   }, [menu, search, category]);
 
   /* ================= TOTAL ================= */
@@ -89,8 +72,7 @@ const MenuPage = () => {
   );
 
   const totalPrice = cart.reduce(
-    (sum, i) =>
-      sum + (i.quantity || 1) * (i.price || 0),
+    (sum, i) => sum + (i.quantity || 1) * (i.price || 0),
     0
   );
 
@@ -103,10 +85,9 @@ const MenuPage = () => {
   }
 
   return (
+    <div className="max-w-6xl mx-auto px-4 py-5 pb-24">
 
-    <div className="max-w-6xl mx-auto p-6">
-
-      <h1 className="text-2xl font-bold mb-6">
+      <h1 className="text-xl md:text-2xl font-bold mb-5">
         Today's Menu
       </h1>
 
@@ -117,42 +98,38 @@ const MenuPage = () => {
         placeholder="Search food..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full border rounded p-2 mb-4"
+        className="w-full border rounded-lg p-3 mb-4 text-sm"
       />
 
       {/* CATEGORY */}
 
-      <div className="flex gap-2 flex-wrap mb-6">
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
 
         {categories.map((c) => (
-
           <button
             key={c}
             onClick={() => setCategory(c)}
-            className={`px-3 py-1 rounded border capitalize ${
+            className={`px-4 py-2 rounded-full border whitespace-nowrap capitalize text-sm ${
               category === c
                 ? "bg-black text-white"
-                : "hover:bg-gray-100"
+                : "bg-white hover:bg-gray-100"
             }`}
           >
             {c}
           </button>
-
         ))}
 
       </div>
 
-      {/* MENU */}
+      {/* MENU GRID */}
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
         {filteredMenu.map((item) => {
 
           const id = item._id;
 
-          const cartItem = cart.find(
-            (c) => c._id === id
-          );
+          const cartItem = cart.find((c) => c._id === id);
 
           const quantity = cartItem?.quantity || 0;
 
@@ -166,12 +143,12 @@ const MenuPage = () => {
               <img
                 src={item.image || fallbackImage}
                 alt={item.name}
-                className="w-full h-40 object-cover"
+                className="w-full h-44 object-cover"
               />
 
               <div className="p-4">
 
-                <h2 className="font-semibold text-lg">
+                <h2 className="font-semibold text-base md:text-lg">
                   {item.name}
                 </h2>
 
@@ -179,7 +156,7 @@ const MenuPage = () => {
                   {item.description}
                 </p>
 
-                <p className="font-bold mt-2">
+                <p className="font-bold mt-2 text-lg">
                   ₹{item.price}
                 </p>
 
@@ -187,15 +164,12 @@ const MenuPage = () => {
 
                   <button
                     onClick={() => {
-
                       addToCart(item);
-
                       toast.success(`${item.name} added`);
-
                     }}
-                    className="mt-3 w-full bg-black text-white py-2 rounded"
+                    className="mt-3 w-full bg-black text-white py-2.5 rounded-lg text-sm"
                   >
-                    Add
+                    Add to Cart
                   </button>
 
                 ) : (
@@ -204,16 +178,18 @@ const MenuPage = () => {
 
                     <button
                       onClick={() => decreaseQty(id)}
-                      className="px-3 py-1 border rounded"
+                      className="px-4 py-2 border rounded-lg text-lg"
                     >
                       -
                     </button>
 
-                    <span>{quantity}</span>
+                    <span className="font-medium">
+                      {quantity}
+                    </span>
 
                     <button
                       onClick={() => addToCart(item)}
-                      className="px-3 py-1 border rounded"
+                      className="px-4 py-2 border rounded-lg text-lg"
                     >
                       +
                     </button>
@@ -236,15 +212,15 @@ const MenuPage = () => {
 
       {totalItems > 0 && (
 
-        <div className="fixed bottom-0 left-0 right-0 bg-black text-white p-4 flex justify-between">
+        <div className="fixed bottom-0 left-0 right-0 bg-black text-white px-5 py-4 flex items-center justify-between shadow-lg">
 
-          <div>
+          <div className="text-sm md:text-base">
             {totalItems} items • ₹{totalPrice}
           </div>
 
           <button
             onClick={() => navigate("/cart")}
-            className="bg-white text-black px-4 py-2 rounded"
+            className="bg-white text-black px-5 py-2 rounded-lg font-medium"
           >
             View Cart
           </button>
@@ -254,9 +230,7 @@ const MenuPage = () => {
       )}
 
     </div>
-
   );
-
 };
 
 export default MenuPage;

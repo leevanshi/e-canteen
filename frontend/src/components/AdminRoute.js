@@ -33,15 +33,6 @@ const AdminRoute = ({ children }) => {
   const role = (user?.role || "").toLowerCase();
 
   if (role !== "admin") {
-
-    if (role === "student") {
-      return <Navigate to="/menu" replace />;
-    }
-
-    if (role === "faculty") {
-      return <Navigate to="/faculty/dashboard" replace />;
-    }
-
     return <Navigate to="/" replace />;
   }
 

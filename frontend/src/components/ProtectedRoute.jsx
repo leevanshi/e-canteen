@@ -40,17 +40,10 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
     if (!normalizedRoles.includes(userRole)) {
 
-      /* redirect user to correct area */
+      /* deny access */
 
-      if (userRole === "admin") {
-        return <Navigate to="/admin/dashboard" replace />;
-      }
+      return <Navigate to="/" replace />;
 
-      if (userRole === "faculty") {
-        return <Navigate to="/faculty/dashboard" replace />;
-      }
-
-      return <Navigate to="/menu" replace />;
     }
 
   }

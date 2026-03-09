@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
+
 /* CONTEXT */
 import { CartProvider } from "./context/CartContext";
 
@@ -51,6 +52,8 @@ const App = () => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  /* WAKE RENDER BACKEND */
+
   useEffect(() => {
 
     const wakeBackend = async () => {
@@ -65,9 +68,10 @@ const App = () => {
 
   }, []);
 
-return (
+  return (
 
-    <>
+    <CartProvider>
+
       <Toaster position="top-right" richColors />
 
       {!hideNavbar && <Navbar />}
@@ -75,6 +79,7 @@ return (
       <Routes>
 
         {/* PUBLIC */}
+
         <Route path="/" element={<LandingPage />} />
 
         <Route
@@ -104,7 +109,10 @@ return (
           }
         />
 
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route
+          path="/forgot-password"
+          element={<ForgotPasswordPage />}
+        />
 
         {/* STUDENT */}
 
@@ -246,13 +254,14 @@ return (
         />
 
         {/* FALLBACK */}
+
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
-    </>
 
-);
-       
+    </CartProvider>
+
+  );
 };
 
 export default App;

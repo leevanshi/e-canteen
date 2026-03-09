@@ -13,17 +13,11 @@ export const AuthProvider = ({ children }) => {
   const clearAuth = () => {
 
     try {
-
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
-      /* clear cart too */
       localStorage.removeItem("cart");
-
     } catch (err) {
-
-      console.error("Failed clearing auth:", err);
-
+      console.error("Auth clear failed:", err);
     }
 
     setToken(null);
@@ -38,8 +32,6 @@ export const AuthProvider = ({ children }) => {
     if (!rawUser || typeof rawUser !== "object") return null;
 
     const role = (rawUser.role || "").toLowerCase();
-
-    if (!role) return null;
 
     return {
       id: rawUser.id || rawUser._id || null,
@@ -59,31 +51,19 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
-      if (!storedToken || !storedUser) {
-        setLoading(false);
-        return;
+      if (storedToken && storedUser) {
+
+        const parsedUser = JSON.parse(storedUser);
+        const normalizedUser = normalizeUser(parsedUser);
+
+        if (normalizedUser) {
+          setToken(storedToken);
+          setUser(normalizedUser);
+        } else {
+          clearAuth();
+        }
+
       }
-
-      let parsedUser = null;
-
-      try {
-        parsedUser = JSON.parse(storedUser);
-      } catch {
-        clearAuth();
-        setLoading(false);
-        return;
-      }
-
-      const normalizedUser = normalizeUser(parsedUser);
-
-      if (!normalizedUser) {
-        clearAuth();
-        setLoading(false);
-        return;
-      }
-
-      setToken(storedToken);
-      setUser(normalizedUser);
 
     } catch (err) {
 
@@ -104,12 +84,8 @@ export const AuthProvider = ({ children }) => {
 
     const normalizedUser = normalizeUser(userData);
 
-    if (!normalizedUser) {
-      throw new Error("Invalid user structure");
-    }
-
-    if (!authToken || typeof authToken !== "string") {
-      throw new Error("Token missing");
+    if (!normalizedUser || !authToken) {
+      throw new Error("Invalid login response");
     }
 
     try {
@@ -119,7 +95,7 @@ export const AuthProvider = ({ children }) => {
 
     } catch (err) {
 
-      console.error("Storage failed:", err);
+      console.error("Storage write failed:", err);
 
     }
 
@@ -134,59 +110,53 @@ export const AuthProvider = ({ children }) => {
 
     clearAuth();
 
-    if (!window.location.pathname.includes("/login")) {
-      window.location.replace("/login");
-    }
-
   };
 
-  /* ================= SYNC BETWEEN TABS ================= */
+  /* ================= TAB SYNC ================= */
 
   useEffect(() => {
 
-    const handleStorageChange = () => {
+    const handleStorage = () => {
 
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
       if (!storedToken || !storedUser) {
+        clearAuth();
+        return;
+      }
+
+      try {
+
+        const parsedUser = JSON.parse(storedUser);
+        const normalizedUser = normalizeUser(parsedUser);
+
+        if (normalizedUser) {
+          setUser(normalizedUser);
+          setToken(storedToken);
+        }
+
+      } catch {
 
         clearAuth();
-
-      } else {
-
-        try {
-
-          const parsedUser = JSON.parse(storedUser);
-          const normalizedUser = normalizeUser(parsedUser);
-
-          if (normalizedUser) {
-            setUser(normalizedUser);
-            setToken(storedToken);
-          }
-
-        } catch {
-          clearAuth();
-        }
 
       }
 
     };
 
-    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("storage", handleStorage);
 
-    return () =>
-      window.removeEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorage);
 
   }, []);
 
   /* ================= ROLE HELPERS ================= */
 
+  const isAuthenticated = Boolean(token && user);
+
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
   const isFaculty = user?.role === "faculty";
-
-  const isAuthenticated = Boolean(token && user);
 
   /* ================= CONTEXT VALUE ================= */
 
@@ -204,7 +174,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 
