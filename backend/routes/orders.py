@@ -216,9 +216,7 @@ def get_all_orders(admin=Depends(require_admin)):
             "_id": str(o["_id"]),
             "order_id": o.get("order_id"),
             "user_name": o.get("user_name"),
-            "order_type": o.get("order_type"),
             "payment_method": o.get("payment_method"),
-            "payment_status": o.get("payment_status"),
             "total_amount": o.get("total_amount"),
             "status": o.get("status"),
             "created_at": o.get("created_at").isoformat()
