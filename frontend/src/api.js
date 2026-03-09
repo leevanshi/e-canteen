@@ -125,8 +125,10 @@ export const getOnlineOrders = () =>
 export const updateOrderStatus = (orderId, status) =>
   API.put(`/api/admin/orders/${orderId}/status`, { status });
 
-export const toggleMenuAvailability = (menuId) =>
-  API.put(`/api/admin/menu/${menuId}/availability`);
+export const toggleMenuAvailability = (menuId, available) =>
+  API.put(`/api/admin/menu/${menuId}/availability`, {
+    available,
+  });
 
 export const placeCounterOrder = (data) =>
   API.post("/api/admin/place-order", data);
@@ -142,7 +144,7 @@ export const getMyWallet = () =>
   API.get("/wallet/me");
 
 export const adminAddMoney = (data) =>
-  API.post("/wallet/admin/add-money", data);
+  API.post("/api/admin/add-money", data);
 
 /* =========================
    FEEDBACK

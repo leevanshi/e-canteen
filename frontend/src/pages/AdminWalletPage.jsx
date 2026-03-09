@@ -47,13 +47,15 @@ const AdminWalletPage = () => {
 
       const res = await getUsers();
 
-      const data = Array.isArray(res?.data)
-        ? res.data
-        : res?.data?.users || [];
+      const data =
+        Array.isArray(res?.data)
+          ? res.data
+          : res?.data?.users || [];
 
       const safeUsers = data.map((u, idx) => ({
         ...u,
         _id: u._id || u.id || `user-${idx}`,
+        name: u.name || "User",
         wallet_balance: Number(u.wallet_balance || 0)
       }));
 
@@ -84,8 +86,10 @@ const AdminWalletPage = () => {
 
   const filteredUsers = useMemo(() => {
 
+    const term = search.toLowerCase();
+
     return users.filter((u) =>
-      u.name?.toLowerCase().includes(search.toLowerCase())
+      (u.name || "").toLowerCase().includes(term)
     );
 
   }, [users, search]);
@@ -113,7 +117,7 @@ const AdminWalletPage = () => {
 
       toast.success("Money credited 💸");
 
-      /* optimistic UI update */
+      /* optimistic update */
 
       setUsers((prev) =>
         prev.map((u) =>

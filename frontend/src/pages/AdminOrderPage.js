@@ -118,13 +118,15 @@ const AdminOrdersPage = () => {
     fetchingRef.current = true;
 
     try {
-      const res = await API.get("/admin/orders");
+
+      /* FIXED ENDPOINT */
+      const res = await API.get("/api/admin/orders");
 
       const data = Array.isArray(res.data)
         ? res.data
         : res.data?.orders || [];
 
-      /* FIRST LOAD (no printing) */
+      /* FIRST LOAD */
       if (isFirstLoad.current) {
         printedOrdersRef.current = new Set(data.map((o) => o._id));
         isFirstLoad.current = false;
@@ -162,7 +164,6 @@ const AdminOrdersPage = () => {
   /* ================= POLLING ================= */
   useEffect(() => {
     fetchOrders();
-
     const interval = setInterval(fetchOrders, 8000);
     return () => clearInterval(interval);
   }, []);
@@ -192,7 +193,8 @@ const AdminOrdersPage = () => {
     try {
       setUpdatingId(mongoId);
 
-      await API.put(`/admin/orders/${mongoId}/status`, { status });
+      /* FIXED ENDPOINT */
+      await API.put(`/api/admin/orders/${mongoId}/status`, { status });
 
       toast.success(`Order updated → ${status}`);
 
@@ -209,7 +211,6 @@ const AdminOrdersPage = () => {
     }
   };
 
-  /* ================= LOADING ================= */
   if (loading) {
     return (
       <p className="text-center mt-10 text-gray-500 animate-pulse">
@@ -245,14 +246,12 @@ const AdminOrdersPage = () => {
         </button>
       </div>
 
-      {/* EMPTY */}
       {sortedOrders.length === 0 && (
         <p className="text-center text-gray-500 mt-10">
           No active orders
         </p>
       )}
 
-      {/* ORDERS */}
       {sortedOrders.map((order) => {
         const mongoId = order?._id;
         if (!mongoId) return null;
