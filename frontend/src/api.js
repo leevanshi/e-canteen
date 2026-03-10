@@ -103,7 +103,8 @@ export const loginUser = (data) =>
 
 export const getMenu = () =>
   API.get("/menu");
-
+export const toggleMenuAvailability = (itemId) =>
+  API.patch(`/menu/${itemId}/toggle`);
 /* =========================
    USER ORDERS
 ========================= */
