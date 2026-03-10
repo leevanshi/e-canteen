@@ -124,6 +124,14 @@ export const updateOrderStatus = (orderId, status) =>
 
 export const placeCounterOrder = (data) =>
   API.post("/api/orders/admin/place-order", data);
+/* =========================
+   MENU ADMIN
+========================= */
+
+export const toggleMenuAvailability = (menuId, available) =>
+  API.put(`/admin/menu/${menuId}/availability`, {
+    available: Boolean(available),
+  });
 
 /* =========================
    USERS
