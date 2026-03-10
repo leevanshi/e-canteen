@@ -34,7 +34,8 @@ const clearAuth = () => {
   } catch {}
 };
 
-const isAuthRoute = (url = "") => url.includes("/auth/");
+const isAuthRoute = (url = "") =>
+  typeof url === "string" && url.includes("/auth/");
 
 /* =========================
    REQUEST INTERCEPTOR
@@ -42,17 +43,14 @@ const isAuthRoute = (url = "") => url.includes("/auth/");
 
 API.interceptors.request.use(
   (config) => {
+    const token = getToken();
 
-    if (!isAuthRoute(config.url)) {
-      const token = getToken();
-
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    if (!isAuthRoute(config?.url) && token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     return config;
-
   },
   (error) => Promise.reject(error)
 );
@@ -64,12 +62,10 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-
     const status = error?.response?.status;
     const url = error?.config?.url || "";
 
     if (status === 401 && !isAuthRoute(url)) {
-
       clearAuth();
 
       if (!window.location.pathname.includes("/login")) {
@@ -89,11 +85,17 @@ API.interceptors.response.use(
    AUTH
 ========================= */
 
-export const loginUser = (data) =>
-  API.post("/auth/login", data);
+export const sendOTP = (email) =>
+  API.post("/auth/send-otp", { email });
+
+export const verifyOTP = (data) =>
+  API.post("/auth/verify-otp", data);
 
 export const registerUser = (data) =>
   API.post("/auth/register", data);
+
+export const loginUser = (data) =>
+  API.post("/auth/login", data);
 
 /* =========================
    MENU
@@ -103,7 +105,7 @@ export const getMenu = () =>
   API.get("/menu");
 
 /* =========================
-   ORDERS (USER)
+   USER ORDERS
 ========================= */
 
 export const createOrder = (data) =>
@@ -113,25 +115,24 @@ export const getUserOrders = () =>
   API.get("/api/orders");
 
 /* =========================
+   ADMIN DASHBOARD
+========================= */
+
+export const getAdminDashboard = () =>
+  API.get("/api/orders/admin/dashboard");
+
+/* =========================
    ADMIN ORDERS
 ========================= */
 
 export const getAdminOrders = () =>
-  API.get("/api/orders/admin/all");
+  API.get("/admin/orders");
 
 export const updateOrderStatus = (orderId, status) =>
-  API.put(`/api/orders/admin/${orderId}/status`, { status });
+  API.put(`/admin/orders/${orderId}/status`, { status });
 
 export const placeCounterOrder = (data) =>
-  API.post("/api/orders/admin/place-order", data);
-/* =========================
-   MENU ADMIN
-========================= */
-
-export const toggleMenuAvailability = (menuId, available) =>
-  API.put(`/admin/menu/${menuId}/availability`, {
-    available: Boolean(available),
-  });
+  API.post("/admin/place-order", data);
 
 /* =========================
    USERS
@@ -148,7 +149,7 @@ export const getMyWallet = () =>
   API.get("/wallet/me");
 
 export const adminAddMoney = (data) =>
-  API.post("/api/orders/admin/add-money", data);
+  API.post("/wallet/admin/add-money", data);
 
 /* =========================
    FEEDBACK
@@ -165,7 +166,6 @@ export const getAllFeedback = () =>
 ========================= */
 
 export const logout = () => {
-
   clearAuth();
 
   if (!window.location.pathname.includes("/login")) {

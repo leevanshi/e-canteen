@@ -15,11 +15,12 @@ const OrderSuccessPage = () => {
 
   const [showConfetti, setShowConfetti] = useState(true);
   const [order, setOrder] = useState(null);
+
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const submittingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   /* ================= FETCH ORDER ================= */
 
@@ -30,23 +31,31 @@ const OrderSuccessPage = () => {
       return;
     }
 
-    let mounted = true;
-
     const fetchOrder = async () => {
 
       try {
 
-        const res = await API.get(`/orders/${orderId}`);
+        const res = await API.get("/api/orders");
 
-        if (mounted) {
-          setOrder(res?.data ?? null);
+        const orders = Array.isArray(res?.data)
+          ? res.data
+          : [];
+
+        const found = orders.find(
+          (o) =>
+            String(o._id) === String(orderId) ||
+            String(o.order_id) === String(orderId)
+        );
+
+        if (mountedRef.current) {
+          setOrder(found || null);
         }
 
       } catch (err) {
 
         console.error("Order fetch failed", err);
 
-        if (mounted) {
+        if (mountedRef.current) {
           navigate("/orders");
         }
 
@@ -56,10 +65,13 @@ const OrderSuccessPage = () => {
 
     fetchOrder();
 
-    const timer = setTimeout(() => setShowConfetti(false), 3000);
+    const timer = setTimeout(
+      () => setShowConfetti(false),
+      3000
+    );
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       clearTimeout(timer);
     };
 
@@ -69,7 +81,7 @@ const OrderSuccessPage = () => {
 
   const submitFeedback = async () => {
 
-    if (submittingRef.current) return;
+    if (submitting) return;
 
     if (!rating) {
       toast.error("Please select a rating");
@@ -78,8 +90,7 @@ const OrderSuccessPage = () => {
 
     try {
 
-      submittingRef.current = true;
-      setSubmitted(true);
+      setSubmitting(true);
 
       await API.post("/feedback", {
         order_id: orderId,
@@ -97,8 +108,7 @@ const OrderSuccessPage = () => {
 
       toast.error("Failed to submit feedback");
 
-      submittingRef.current = false;
-      setSubmitted(false);
+      setSubmitting(false);
 
     }
 
@@ -107,37 +117,42 @@ const OrderSuccessPage = () => {
   /* ================= LOADING ================= */
 
   if (!order) {
+
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500">
         Loading order...
       </div>
     );
+
   }
 
   const displayId =
-    order?.order_number ||
     order?.order_id ||
-    (order?._id ? String(order._id).slice(-6) : null) ||
-    orderId ||
-    "—";
+    (order?._id
+      ? String(order._id).slice(-6)
+      : orderId);
 
   return (
+
     <div className="min-h-screen flex items-center justify-center bg-green-50 p-4 relative overflow-hidden">
 
       {showConfetti && (
         <Confetti
           recycle={false}
           numberOfPieces={200}
+          width={window.innerWidth}
+          height={window.innerHeight}
         />
       )}
 
       {/* BACK */}
+
       <Button
         variant="outline"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/orders")}
         className="absolute top-4 left-4 z-20"
       >
-        ← Back
+        ← Orders
       </Button>
 
       <Card className="max-w-md w-full rounded-2xl shadow-lg z-10">
@@ -168,15 +183,15 @@ const OrderSuccessPage = () => {
             <p>
               <strong>Placed At:</strong>{" "}
               {order?.created_at
-                ? new Date(order.created_at).toLocaleString(
-                    "en-IN",
-                    { timeZone: "Asia/Kolkata" }
-                  )
+                ? new Date(order.created_at)
+                    .toLocaleString("en-IN", {
+                      timeZone: "Asia/Kolkata"
+                    })
                 : "—"}
             </p>
 
             <p className="text-green-600 font-medium capitalize">
-              Status: {order?.status || "preparing"} 🍳
+              Status: {order?.status || "pending"} 🍳
             </p>
 
           </div>
@@ -191,11 +206,11 @@ const OrderSuccessPage = () => {
 
             <div className="flex justify-center gap-2 text-3xl">
 
-              {[1, 2, 3, 4, 5].map((star) => (
+              {[1,2,3,4,5].map((star) => (
 
                 <button
                   key={star}
-                  disabled={submitted}
+                  disabled={submitting}
                   onClick={() => setRating(star)}
                   className={
                     star <= rating
@@ -218,7 +233,7 @@ const OrderSuccessPage = () => {
             placeholder="Any feedback? (optional)"
             className="w-full border rounded p-2 text-sm"
             value={feedback}
-            disabled={submitted}
+            disabled={submitting}
             onChange={(e) => setFeedback(e.target.value)}
           />
 
@@ -228,7 +243,7 @@ const OrderSuccessPage = () => {
 
             <Button
               onClick={submitFeedback}
-              disabled={submitted}
+              disabled={submitting}
               className="bg-orange-500 hover:bg-orange-600"
             >
               Submit Feedback
@@ -248,7 +263,9 @@ const OrderSuccessPage = () => {
       </Card>
 
     </div>
+
   );
+
 };
 
 export default OrderSuccessPage;

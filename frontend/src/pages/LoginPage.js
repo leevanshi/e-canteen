@@ -22,6 +22,7 @@ const LoginPage = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -31,7 +32,9 @@ const LoginPage = () => {
 
     if (submitting) return;
 
-    if (!email.trim() || !password.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password.trim()) {
       toast.error("Please fill all fields");
       return;
     }
@@ -45,24 +48,16 @@ const LoginPage = () => {
     try {
 
       const response = await API.post("/auth/login", {
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password
       });
 
       clearTimeout(slowTimer);
 
-      const data = response?.data;
+      const { access_token, user } = response.data || {};
 
-      if (!data) {
-        toast.error("Server returned empty response");
-        return;
-      }
-
-      const token = data.access_token;
-      const user = data.user;
-
-      if (!token || !user) {
-        toast.error("Invalid login response");
+      if (!access_token || !user) {
+        toast.error("Invalid server response");
         return;
       }
 
@@ -74,7 +69,7 @@ const LoginPage = () => {
           email: user.email,
           role
         },
-        token
+        access_token
       );
 
       toast.success("Login successful");
@@ -140,24 +135,34 @@ const LoginPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
 
+            {/* EMAIL */}
+
             <div>
+
               <Label>Email</Label>
+
               <Input
                 type="email"
-                placeholder="Enter your email"
+                required
+                placeholder="Enter your NMIMS email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={submitting}
               />
+
             </div>
 
+            {/* PASSWORD */}
+
             <div>
+
               <Label>Password</Label>
 
               <div className="relative">
 
                 <Input
                   type={showPassword ? "text" : "password"}
+                  required
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -176,6 +181,8 @@ const LoginPage = () => {
 
             </div>
 
+            {/* LOGIN BUTTON */}
+
             <Button
               type="submit"
               className="w-full bg-orange-500 hover:bg-orange-600"
@@ -184,24 +191,35 @@ const LoginPage = () => {
               {submitting ? "Logging in..." : "Login"}
             </Button>
 
+            {/* FORGOT PASSWORD */}
+
             <p className="text-center text-sm">
+
               <Link
                 to="/forgot-password"
                 className="text-orange-500 hover:underline"
               >
                 Forgot Password?
               </Link>
+
             </p>
 
+            {/* REGISTER */}
+
             <p className="text-center text-sm">
+
               Don't have an account?{" "}
+
               <Link
                 to="/join"
                 className="text-orange-500 font-medium hover:underline"
               >
                 Register now
               </Link>
+
             </p>
+
+            {/* BACK */}
 
             <Button
               type="button"

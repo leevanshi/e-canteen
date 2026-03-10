@@ -2,37 +2,37 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, CheckCircle } from "lucide-react";
 import { getUserOrders } from "../api";
-
 import { Button } from "../components/ui/button";
 
 /* ================= STATUS GROUPS ================= */
+
 const ACTIVE_STATUSES = new Set([
   "pending",
-  "placed",
-  "confirmed",
-  "preparing",
-  "prepared",
-  "ready",
+  "preparing"
 ]);
 
 const COMPLETED_STATUSES = new Set([
-  "completed",
-  "delivered",
+  "completed"
 ]);
 
 /* ================= TIME FORMAT (IST) ================= */
+
 const formatIST = (date) => {
+
   if (!date) return "—";
 
   try {
+
     return new Date(date).toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       dateStyle: "medium",
-      timeStyle: "short",
+      timeStyle: "short"
     });
+
   } catch {
     return "—";
   }
+
 };
 
 const OrdersPage = () => {
@@ -46,8 +46,10 @@ const OrdersPage = () => {
 
   const pollingRef = useRef(null);
   const fetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   /* ================= FETCH ================= */
+
   const fetchOrders = async () => {
 
     if (fetchingRef.current) return;
@@ -60,38 +62,85 @@ const OrdersPage = () => {
 
       const data = Array.isArray(res?.data) ? res.data : [];
 
+      if (!mountedRef.current) return;
+
       setOrders(data);
       setError("");
 
     } catch (err) {
 
       console.error("Failed to fetch orders ❌", err);
-      setError("Failed to load orders");
+
+      if (mountedRef.current) {
+        setError("Failed to load orders");
+      }
 
     } finally {
 
       fetchingRef.current = false;
-      setLoading(false);
+
+      if (mountedRef.current) {
+        setLoading(false);
+      }
 
     }
+
   };
 
   /* ================= POLLING ================= */
+
   useEffect(() => {
 
     fetchOrders();
 
-    pollingRef.current = setInterval(fetchOrders, 10000);
+    const interval = tab === "active" ? 7000 : 20000;
+
+    pollingRef.current = setInterval(fetchOrders, interval);
 
     return () => {
-      if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    };
+
+  }, [tab]);
+
+  /* ================= TAB VISIBILITY OPTIMIZATION ================= */
+
+  useEffect(() => {
+
+    const handleVisibility = () => {
+
+      if (document.hidden) {
         clearInterval(pollingRef.current);
+      } else {
+        fetchOrders();
       }
+
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () =>
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
+
+  }, []);
+
+  /* ================= MOUNT TRACK ================= */
+
+  useEffect(() => {
+
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
     };
 
   }, []);
 
   /* ================= FILTER ================= */
+
   const filteredOrders = useMemo(() => {
 
     return tab === "active"
@@ -109,26 +158,39 @@ const OrdersPage = () => {
   }, [orders, tab]);
 
   /* ================= LOADING ================= */
+
   if (loading) {
+
     return (
       <div className="min-h-screen flex justify-center items-center text-gray-500">
         Loading your orders...
       </div>
     );
+
   }
 
   /* ================= ERROR ================= */
+
   if (error) {
+
     return (
       <div className="min-h-screen flex flex-col justify-center items-center gap-4">
+
         <p className="text-red-500">{error}</p>
-        <Button onClick={fetchOrders}>Retry</Button>
+
+        <Button onClick={fetchOrders}>
+          Retry
+        </Button>
+
       </div>
     );
+
   }
 
   /* ================= UI ================= */
+
   return (
+
     <div className="max-w-5xl mx-auto px-4 py-8">
 
       <h1 className="text-2xl font-bold mb-4">
@@ -136,15 +198,17 @@ const OrdersPage = () => {
       </h1>
 
       {/* BACK BUTTON */}
+
       <Button
         variant="outline"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/menu")}
         className="mb-4"
       >
         ← Back
       </Button>
 
       {/* ================= TABS ================= */}
+
       <div className="flex gap-4 mb-6">
 
         <button
@@ -172,6 +236,7 @@ const OrdersPage = () => {
       </div>
 
       {/* ================= EMPTY ================= */}
+
       {filteredOrders.length === 0 ? (
 
         <div className="text-center text-gray-500">
@@ -198,7 +263,6 @@ const OrdersPage = () => {
             const mongoId = order?._id;
 
             const displayId =
-              order?.order_number ||
               order?.order_id ||
               (mongoId
                 ? mongoId.toString().slice(-4)
@@ -206,10 +270,6 @@ const OrdersPage = () => {
 
             const status = String(order?.status || "")
               .toLowerCase();
-
-            const isPrepared =
-              status === "prepared" ||
-              status === "ready";
 
             const isCompleted =
               COMPLETED_STATUSES.has(status);
@@ -219,7 +279,7 @@ const OrdersPage = () => {
               <div
                 key={mongoId}
                 className={`border rounded-xl p-4 shadow-sm ${
-                  isCompleted || isPrepared
+                  isCompleted
                     ? "border-green-500 bg-green-50"
                     : "bg-white"
                 }`}
@@ -244,13 +304,6 @@ const OrdersPage = () => {
                     <span className="flex items-center gap-1 text-green-700 font-semibold">
                       <CheckCircle size={18} />
                       Completed
-                    </span>
-
-                  ) : isPrepared ? (
-
-                    <span className="flex items-center gap-1 text-green-700 font-semibold">
-                      <CheckCircle size={18} />
-                      Ready to Pickup
                     </span>
 
                   ) : (
@@ -298,6 +351,7 @@ const OrdersPage = () => {
               </div>
 
             );
+
           })}
 
         </div>
@@ -305,7 +359,9 @@ const OrdersPage = () => {
       )}
 
     </div>
+
   );
+
 };
 
 export default OrdersPage;

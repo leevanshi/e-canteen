@@ -61,7 +61,7 @@ class ConnectionManager:
         for connection in self.active_connections:
             try:
                 await connection.send_json(data)
-            except:
+            except Exception:
                 disconnected.append(connection)
 
         for d in disconnected:

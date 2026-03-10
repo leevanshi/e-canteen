@@ -15,6 +15,7 @@ const OrderDetails = () => {
 
   const pollingRef = useRef(null);
   const fetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   /* ================= FETCH ORDER ================= */
 
@@ -26,14 +27,23 @@ const OrderDetails = () => {
 
       fetchingRef.current = true;
 
-      const res = await API.get(`/orders/${orderId}`);
+      const res = await API.get("/api/orders");
 
-      const data = res?.data || null;
+      const orders = Array.isArray(res?.data)
+        ? res.data
+        : [];
 
-      setOrder(data);
+      const found = orders.find(
+        (o) =>
+          String(o._id) === String(orderId) ||
+          String(o.order_id) === String(orderId)
+      );
 
-      /* stop polling when order finished */
-      const status = String(data?.status || "").toLowerCase();
+      if (!mountedRef.current) return;
+
+      setOrder(found || null);
+
+      const status = String(found?.status || "").toLowerCase();
 
       if (status === "completed" && pollingRef.current) {
         clearInterval(pollingRef.current);
@@ -46,7 +56,10 @@ const OrderDetails = () => {
     } finally {
 
       fetchingRef.current = false;
-      setLoading(false);
+
+      if (mountedRef.current) {
+        setLoading(false);
+      }
 
     }
 
@@ -73,14 +86,20 @@ const OrderDetails = () => {
 
   useEffect(() => {
 
+    mountedRef.current = true;
+
     fetchOrder();
 
     pollingRef.current = setInterval(fetchOrder, 5000);
 
     return () => {
+
+      mountedRef.current = false;
+
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
       }
+
     };
 
   }, [orderId]);
@@ -88,32 +107,37 @@ const OrderDetails = () => {
   /* ================= LOADING ================= */
 
   if (loading) {
+
     return (
       <p className="text-center mt-10 text-gray-500">
         Loading...
       </p>
     );
+
   }
 
   /* ================= NOT FOUND ================= */
 
   if (!order) {
+
     return (
       <p className="text-center text-red-500 mt-10">
         Order not found
       </p>
     );
+
   }
 
   const status = String(order.status || "pending").toLowerCase();
 
-  const steps = ["confirmed", "preparing", "ready", "completed"];
+  /* timeline aligned with backend */
+
+  const steps = ["pending", "preparing", "completed"];
 
   const currentStep =
     steps.indexOf(status) === -1 ? 0 : steps.indexOf(status);
 
   const displayId =
-    order.order_number ||
     order.order_id ||
     (order?._id ? String(order._id).slice(-4) : "—");
 
@@ -125,10 +149,10 @@ const OrderDetails = () => {
 
       <Button
         variant="outline"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate("/orders")}
         className="absolute -top-2 left-0"
       >
-        ← Back
+        ← Orders
       </Button>
 
       <div className="bg-white p-6 rounded-xl shadow mt-8">
@@ -168,9 +192,11 @@ const OrderDetails = () => {
         {/* TIMER */}
 
         {status === "preparing" && (
+
           <div className="mt-4 bg-orange-50 p-3 rounded text-center">
             ⏳ {getRemainingTime()}
           </div>
+
         )}
 
         {/* TIMELINE */}
@@ -243,10 +269,10 @@ const OrderDetails = () => {
 
         {/* READY MESSAGE */}
 
-        {status === "ready" && (
+        {status === "completed" && (
 
-          <div className="mt-6 bg-green-100 p-4 text-center rounded font-bold animate-pulse">
-            🎉 Ready for pickup!
+          <div className="mt-6 bg-green-100 p-4 text-center rounded font-bold">
+            🎉 Order Completed!
           </div>
 
         )}
@@ -254,6 +280,7 @@ const OrderDetails = () => {
       </div>
 
     </div>
+
   );
 
 };

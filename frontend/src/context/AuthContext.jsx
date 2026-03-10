@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback
+} from "react";
 
 const AuthContext = createContext(null);
 
@@ -16,8 +23,9 @@ const normalizeUser = (rawUser) => {
     email: rawUser.email || "",
     role
   };
-
 };
+
+/* ================= PROVIDER ================= */
 
 export const AuthProvider = ({ children }) => {
 
@@ -51,18 +59,19 @@ export const AuthProvider = ({ children }) => {
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
-      if (storedToken && storedUser) {
+      if (!storedToken || !storedUser) {
+        setLoading(false);
+        return;
+      }
 
-        const parsedUser = JSON.parse(storedUser);
-        const normalizedUser = normalizeUser(parsedUser);
+      const parsedUser = JSON.parse(storedUser);
+      const normalizedUser = normalizeUser(parsedUser);
 
-        if (normalizedUser) {
-          setToken(storedToken);
-          setUser(normalizedUser);
-        } else {
-          clearAuth();
-        }
-
+      if (!normalizedUser) {
+        clearAuth();
+      } else {
+        setToken(storedToken);
+        setUser(normalizedUser);
       }
 
     } catch (err) {
@@ -114,7 +123,9 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
 
-    const handleStorage = () => {
+    const handleStorage = (event) => {
+
+      if (event.key !== "token" && event.key !== "user") return;
 
       const storedToken = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
@@ -136,9 +147,7 @@ export const AuthProvider = ({ children }) => {
         }
 
       } catch {
-
         clearAuth();
-
       }
 
     };
@@ -151,7 +160,7 @@ export const AuthProvider = ({ children }) => {
 
   /* ================= ROLE HELPERS ================= */
 
-  const isAuthenticated = Boolean(user);
+  const isAuthenticated = Boolean(token);
 
   const isAdmin = user?.role === "admin";
   const isStudent = user?.role === "student";
@@ -169,14 +178,23 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     isStudent,
     isFaculty
-  }), [user, token, loading, login, logout]);
+  }), [
+    user,
+    token,
+    loading,
+    login,
+    logout,
+    isAuthenticated,
+    isAdmin,
+    isStudent,
+    isFaculty
+  ]);
 
   return (
     <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-
 };
 
 /* ================= HOOK ================= */
@@ -190,5 +208,4 @@ export const useAuth = () => {
   }
 
   return context;
-
 };

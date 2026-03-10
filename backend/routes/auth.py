@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr, field_validator
-from database import users_collection
+from database import users_collection, otp_collection
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
@@ -10,19 +10,26 @@ from dotenv import load_dotenv
 import os
 import logging
 import re
+import time
 from pymongo.errors import DuplicateKeyError
 from collections import defaultdict
 
+from otp_utils import generate_otp
+from email_service import send_otp_email
+
 # ================= LOAD ENV =================
+
 load_dotenv()
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ================= LOGGING =================
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ================= SECURITY =================
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
@@ -39,14 +46,23 @@ pwd_context = CryptContext(
 )
 
 # ================= LOGIN RATE LIMIT =================
+
 login_attempts = defaultdict(list)
 MAX_ATTEMPTS = 5
-ATTEMPT_WINDOW = 60  # seconds
+ATTEMPT_WINDOW = 60
+
+# ================= OTP RATE LIMIT =================
+
+otp_requests = defaultdict(list)
+OTP_MAX_REQUESTS = 3
+OTP_WINDOW = 60
 
 # ================= INDEX =================
+
 users_collection.create_index("email", unique=True)
 
 # ================= SCHEMAS =================
+
 
 class LoginSchema(BaseModel):
     email: EmailStr
@@ -76,7 +92,22 @@ class RegisterSchema(BaseModel):
         return v.strip().title()
 
 
+class EmailRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyOTPSchema(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+class ResetPasswordSchema(BaseModel):
+    email: EmailStr
+    password: str
+
+
 # ================= HELPERS =================
+
 
 def normalize_email(email: str) -> str:
     return email.lower().strip()
@@ -94,7 +125,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_token(data: dict) -> str:
+def create_token(data: dict):
 
     now = datetime.now(timezone.utc)
 
@@ -109,6 +140,7 @@ def create_token(data: dict) -> str:
 
 
 # ================= CURRENT USER =================
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
@@ -154,6 +186,7 @@ def get_current_user(
 
 # ================= ROLE GUARD =================
 
+
 def require_admin(user=Depends(get_current_user)):
 
     if normalize_role(user.get("role")) != "admin":
@@ -162,7 +195,89 @@ def require_admin(user=Depends(get_current_user)):
     return user
 
 
+# ================= SEND OTP =================
+
+
+@router.post("/send-otp")
+async def send_otp(data: EmailRequest):
+
+    email = normalize_email(data.email)
+
+    allowed_domains = [
+        "nmims.in",
+        "nmims.edu.in",
+        "nmims.edu"
+    ]
+
+    if email.split("@")[-1] not in allowed_domains:
+        raise HTTPException(400, "Only NMIMS email allowed")
+
+    # ===== RATE LIMIT =====
+
+    now = time.time()
+
+    otp_requests[email] = [
+        t for t in otp_requests[email]
+        if now - t < OTP_WINDOW
+    ]
+
+    if len(otp_requests[email]) >= OTP_MAX_REQUESTS:
+        raise HTTPException(
+            429,
+            "Too many OTP requests. Please wait a minute."
+        )
+
+    otp_requests[email].append(now)
+
+    otp = generate_otp()
+
+    expires = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    otp_collection.delete_many({"email": email})
+
+    otp_collection.insert_one({
+        "email": email,
+        "otp": otp,
+        "expires_at": expires,
+        "verified": False
+    })
+
+    await send_otp_email(email, otp)
+
+    logger.info(f"OTP sent to {email}")
+
+    return {"message": "OTP sent to email"}
+
+
+# ================= VERIFY OTP =================
+
+
+@router.post("/verify-otp")
+def verify_otp(data: VerifyOTPSchema):
+
+    email = normalize_email(data.email)
+
+    record = otp_collection.find_one({
+        "email": email,
+        "otp": data.otp
+    })
+
+    if not record:
+        raise HTTPException(400, "Invalid OTP")
+
+    if record["expires_at"] < datetime.now(timezone.utc):
+        raise HTTPException(400, "OTP expired")
+
+    otp_collection.update_one(
+        {"email": email},
+        {"$set": {"verified": True}}
+    )
+
+    return {"message": "OTP verified successfully"}
+
+
 # ================= REGISTER =================
+
 
 @router.post("/register", status_code=201)
 def register_user(data: RegisterSchema):
@@ -182,6 +297,11 @@ def register_user(data: RegisterSchema):
     if role not in ["student", "faculty"]:
         raise HTTPException(400, "Invalid role")
 
+    record = otp_collection.find_one({"email": email})
+
+    if not record or not record.get("verified"):
+        raise HTTPException(400, "Email not verified with OTP")
+
     try:
 
         users_collection.insert_one({
@@ -192,13 +312,39 @@ def register_user(data: RegisterSchema):
             "created_at": datetime.now(timezone.utc)
         })
 
+        otp_collection.delete_many({"email": email})
+
     except DuplicateKeyError:
         raise HTTPException(409, "User already exists")
 
     return {"message": f"{role.capitalize()} registered successfully"}
 
 
+# ================= RESET PASSWORD =================
+
+
+@router.post("/reset-password")
+def reset_password(data: ResetPasswordSchema):
+
+    email = normalize_email(data.email)
+
+    user = users_collection.find_one({"email": email})
+
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    users_collection.update_one(
+        {"email": email},
+        {"$set": {"password": hash_password(data.password)}}
+    )
+
+    logger.info(f"Password reset for {email}")
+
+    return {"message": "Password updated successfully"}
+
+
 # ================= LOGIN =================
+
 
 @router.post("/login")
 def login(data: LoginSchema):
@@ -206,7 +352,6 @@ def login(data: LoginSchema):
     email = normalize_email(data.email)
     now = datetime.now().timestamp()
 
-    # remove expired attempts
     login_attempts[email] = [
         t for t in login_attempts[email]
         if now - t < ATTEMPT_WINDOW
@@ -228,7 +373,6 @@ def login(data: LoginSchema):
         login_attempts[email].append(now)
         raise HTTPException(401, "Invalid credentials")
 
-    # success -> reset attempts
     login_attempts[email] = []
 
     role = normalize_role(user.get("role"))
@@ -252,6 +396,7 @@ def login(data: LoginSchema):
 
 
 # ================= ADMIN TEST =================
+
 
 @router.get("/admin/me")
 def get_admin_profile(user=Depends(require_admin)):

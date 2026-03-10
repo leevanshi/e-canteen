@@ -14,8 +14,7 @@ from database import (
     users_collection,
     wallet_collection,
     wallet_txn_collection,
-    counters_collection,
-    menu_collection
+    counters_collection
 )
 
 from routes.auth import get_current_user
@@ -43,9 +42,7 @@ def serialize_order(o):
         "items": o.get("items", []),
         "total_amount": o.get("total_amount"),
         "status": o.get("status"),
-        "created_at": created.isoformat()
-        if isinstance(created, datetime)
-        else None
+        "created_at": created.isoformat() if created else None
     }
 
 
@@ -80,10 +77,6 @@ class AdminPlaceOrder(BaseModel):
     total_amount: float
 
 
-class AvailabilityUpdate(BaseModel):
-    available: bool
-
-
 # ================= GET ALL ORDERS =================
 
 @router.get("/orders")
@@ -111,7 +104,7 @@ def get_admin_orders(
 # ================= UPDATE ORDER STATUS =================
 
 @router.put("/orders/{order_id}/status")
-def update_order_status(
+async def update_order_status(
     order_id: str,
     data: OrderStatusUpdate,
     current_user=Depends(get_current_user)
@@ -119,39 +112,49 @@ def update_order_status(
 
     ensure_admin_or_staff(current_user)
 
-    allowed = ["pending", "preparing", "completed", "cancelled"]
-
     status = data.status.lower()
 
-    if status not in allowed:
-        raise HTTPException(400, "Invalid order status")
-
-    now = datetime.now(IST)
+    allowed_transitions = {
+        "pending": ["preparing", "cancelled"],
+        "preparing": ["completed", "cancelled"],
+        "completed": [],
+        "cancelled": []
+    }
 
     if order_id.isdigit():
         query = {"order_id": int(order_id)}
     else:
-
         if not ObjectId.is_valid(order_id):
             raise HTTPException(400, "Invalid order ID")
-
         query = {"_id": ObjectId(order_id)}
 
-    result = orders_collection.update_one(
+    order = orders_collection.find_one(query)
+
+    if not order:
+        raise HTTPException(404, "Order not found")
+
+    current_status = order["status"]
+
+    if status not in allowed_transitions.get(current_status, []):
+        raise HTTPException(400, "Invalid status transition")
+
+    now = datetime.now(IST)
+
+    updated = orders_collection.find_one_and_update(
         query,
         {
             "$set": {"status": status, "updated_at": now},
-            "$push": {
-                "status_history": {
-                    "status": status,
-                    "time": now
-                }
-            }
-        }
+            "$push": {"status_history": {"status": status, "time": now}}
+        },
+        return_document=ReturnDocument.AFTER
     )
 
-    if result.matched_count == 0:
-        raise HTTPException(404, "Order not found")
+    # REALTIME UPDATE
+    await manager.broadcast({
+        "type": "order_status_update",
+        "order_id": updated["order_id"],
+        "status": status
+    })
 
     return {"success": True, "status": status}
 
@@ -171,6 +174,10 @@ async def place_walkin_order(
 
     if data.total_amount <= 0:
         raise HTTPException(400, "Invalid total amount")
+
+    for item in data.items:
+        if item.quantity <= 0 or item.price <= 0:
+            raise HTTPException(400, "Invalid item data")
 
     now = datetime.now(IST)
 
@@ -195,7 +202,6 @@ async def place_walkin_order(
 
     order["_id"] = str(result.inserted_id)
 
-    # REALTIME PUSH
     await manager.broadcast({
         "type": "new_order",
         "order": serialize_order(order)
@@ -218,24 +224,26 @@ def get_users(
     ensure_admin_or_staff(current_user)
 
     users_cursor = list(
-        users_collection.find({}, {"password": 0, "refresh_token": 0}).limit(limit)
+        users_collection.find(
+            {},
+            {"password": 0, "refresh_token": 0}
+        ).limit(limit)
     )
-
-    wallets = {
-        str(w["user_id"]): w.get("balance", 0)
-        for w in wallet_collection.find({})
-    }
 
     users = []
 
     for u in users_cursor:
+
+        wallet = wallet_collection.find_one({
+            "user_id": u["_id"]
+        })
 
         users.append({
             "_id": str(u["_id"]),
             "name": u.get("name"),
             "email": u.get("email"),
             "role": u.get("role"),
-            "wallet_balance": wallets.get(str(u["_id"]), 0)
+            "wallet_balance": wallet.get("balance", 0) if wallet else 0
         })
 
     return users

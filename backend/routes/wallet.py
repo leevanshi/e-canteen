@@ -3,20 +3,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, Field
-from pymongo import ReturnDocument
+
+from database import (
+    wallet_collection,
+    users_collection
+)
+
+from routes.auth import get_current_user
+
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
 router = APIRouter(prefix="/wallet", tags=["Wallet"])
-
-from database import (
-    wallet_collection,
-    wallet_txn_collection,
-    users_collection,
-    client
-)
-
-from routes.auth import get_current_user
 
 
 # ================= SCHEMA =================
@@ -61,64 +59,14 @@ def admin_add_money(
 
     # CHECK USER EXISTS
     user = users_collection.find_one({"_id": user_obj_id})
+
     if not user:
         raise HTTPException(404, "User not found")
 
     now = datetime.now(IST)
 
-    # ================= MONGODB TRANSACTION =================
-
-    with client.start_session() as session:
-
-        with session.start_transaction():
-
-            wallet = wallet_collection.find_one_and_update(
-                {"user_id": user_obj_id},
-                {
-                    "$inc": {"balance": data.amount},
-                    "$set": {"updated_at": now},
-                    "$setOnInsert": {
-                        "user_id": user_obj_id,
-                        "balance": 0,
-                        "created_at": now
-                    }
-                },
-                upsert=True,
-                return_document=ReturnDocument.AFTER,
-                session=session
-            )
-
-            new_balance = int(wallet.get("balance", 0))
-
-            wallet_txn_collection.insert_one(
-                {
-                    "user_id": user_obj_id,
-                    "amount": data.amount,
-                    "type": "credit",
-                    "source": "admin",
-                    "admin_id": ObjectId(current_user["_id"]),
-                    "reference": "manual_admin_credit",
-                    "balance_after": new_balance,
-                    "created_at": now
-                },
-                session=session
-            )
-
-    return {
-        "message": "Wallet credited successfully",
-        "user_id": data.user_id,
-        "amount_added": data.amount,
-        "new_balance": new_balance
-    }
-@router.post("/admin/add-money")
-def admin_add_money(data: AdminAddMoney, current_user=Depends(get_current_user)):
-
-    if current_user["role"] != "admin":
-        raise HTTPException(403, "Admin only")
-
-    now = datetime.now(IST)
-
-    balance = credit_wallet(
+    # USE WALLET SERVICE
+    new_balance = credit_wallet(
         data.user_id,
         data.amount,
         current_user["_id"],
@@ -126,6 +74,8 @@ def admin_add_money(data: AdminAddMoney, current_user=Depends(get_current_user))
     )
 
     return {
-        "message": "Wallet credited",
-        "new_balance": balance
+        "message": "Wallet credited successfully",
+        "user_id": data.user_id,
+        "amount_added": data.amount,
+        "new_balance": new_balance
     }

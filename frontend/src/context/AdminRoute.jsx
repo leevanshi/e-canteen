@@ -1,12 +1,12 @@
-// components/AdminRoute.jsx
-
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const AdminRoute = ({ children }) => {
-  const { user, loading } = useAuth();
 
-  // ⏳ Wait for auth restore
+  const { user, loading, isAuthenticated, isAdmin } = useAuth();
+
+  /* ================= WAIT FOR AUTH RESTORE ================= */
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -15,18 +15,22 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  // ❌ Not logged in
-  if (!user) {
+  /* ================= NOT LOGGED IN ================= */
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // ❌ Logged in but not admin
-  if (user.role !== "admin") {
+  /* ================= NOT ADMIN ================= */
+
+  if (!isAdmin) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // ✅ Admin allowed
-  return children;
+  /* ================= ALLOW ACCESS ================= */
+
+  return children ?? null;
+
 };
 
 export default AdminRoute;

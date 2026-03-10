@@ -9,6 +9,7 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1604908554165-3a7c22e0b9c6?q=80&w=600";
 
 const MenuPage = () => {
+
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,60 +22,118 @@ const MenuPage = () => {
 
   /* ================= FETCH MENU ================= */
 
-  const fetchMenu = async () => {
-    try {
-      const res = await API.get("/menu");
-
-      const data = Array.isArray(res.data) ? res.data : [];
-
-      const normalized = data.map((item) => ({
-        ...item,
-        _id: item._id || item.id
-      }));
-
-      setMenu(normalized);
-    } catch {
-      toast.error("Failed to load menu");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+
+    let active = true;
+
+    const fetchMenu = async () => {
+
+      try {
+
+        const res = await API.get("/menu");
+
+        const data = Array.isArray(res.data) ? res.data : [];
+
+        const normalized = data.map((item) => ({
+          ...item,
+          _id: item._id || item.id
+        }));
+
+        if (active) {
+          setMenu(normalized);
+        }
+
+      } catch {
+
+        toast.error("Failed to load menu");
+
+      } finally {
+
+        if (active) {
+          setLoading(false);
+        }
+
+      }
+
+    };
+
     fetchMenu();
+
+    return () => {
+      active = false;
+    };
+
   }, []);
+
+  /* ================= CART MAP (FAST LOOKUP) ================= */
+
+  const cartMap = useMemo(() => {
+
+    const map = {};
+
+    for (const item of cart) {
+      map[item._id] = item;
+    }
+
+    return map;
+
+  }, [cart]);
 
   /* ================= FILTER ================= */
 
   const categories = useMemo(() => {
-    const unique = [...new Set(menu.map((m) => m.category))];
+
+    const unique = [
+      ...new Set(
+        menu
+          .map((m) => m.category)
+          .filter(Boolean)
+      )
+    ];
+
     return ["all", ...unique];
+
   }, [menu]);
 
   const filteredMenu = useMemo(() => {
+
+    const searchTerm = search.trim().toLowerCase();
+
     return menu.filter((item) => {
-      const matchSearch = item.name
-        ?.toLowerCase()
-        .includes(search.toLowerCase());
+
+      const matchSearch =
+        !searchTerm ||
+        item.name?.toLowerCase().includes(searchTerm);
 
       const matchCategory =
         category === "all" || item.category === category;
 
       return matchSearch && matchCategory;
+
     });
+
   }, [menu, search, category]);
 
   /* ================= TOTAL ================= */
 
-  const totalItems = cart.reduce(
-    (sum, i) => sum + (i.quantity || 1),
-    0
-  );
+  const totalItems = useMemo(() => {
 
-  const totalPrice = cart.reduce(
-    (sum, i) => sum + (i.quantity || 1) * (i.price || 0),
-    0
-  );
+    return cart.reduce(
+      (sum, i) => sum + (i.quantity || 1),
+      0
+    );
+
+  }, [cart]);
+
+  const totalPrice = useMemo(() => {
+
+    return cart.reduce(
+      (sum, i) =>
+        sum + (i.quantity || 1) * (i.price || 0),
+      0
+    );
+
+  }, [cart]);
 
   if (loading) {
     return (
@@ -85,6 +144,7 @@ const MenuPage = () => {
   }
 
   return (
+
     <div className="max-w-6xl mx-auto px-4 py-5 pb-24">
 
       <h1 className="text-xl md:text-2xl font-bold mb-5">
@@ -106,6 +166,7 @@ const MenuPage = () => {
       <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
 
         {categories.map((c) => (
+
           <button
             key={c}
             onClick={() => setCategory(c)}
@@ -117,6 +178,7 @@ const MenuPage = () => {
           >
             {c}
           </button>
+
         ))}
 
       </div>
@@ -129,7 +191,7 @@ const MenuPage = () => {
 
           const id = item._id;
 
-          const cartItem = cart.find((c) => c._id === id);
+          const cartItem = cartMap[id];
 
           const quantity = cartItem?.quantity || 0;
 
@@ -143,6 +205,7 @@ const MenuPage = () => {
               <img
                 src={item.image || fallbackImage}
                 alt={item.name}
+                onError={(e) => (e.currentTarget.src = fallbackImage)}
                 className="w-full h-44 object-cover"
               />
 
@@ -157,7 +220,7 @@ const MenuPage = () => {
                 </p>
 
                 <p className="font-bold mt-2 text-lg">
-                  ₹{item.price}
+                  ₹{Number(item.price).toFixed(0)}
                 </p>
 
                 {quantity === 0 ? (
@@ -230,7 +293,9 @@ const MenuPage = () => {
       )}
 
     </div>
+
   );
+
 };
 
 export default MenuPage;

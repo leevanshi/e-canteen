@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Coffee, Loader2, Eye, EyeOff } from "lucide-react";
 
-import { registerUser } from "../api";
+import API from "../api";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -17,31 +17,101 @@ import {
 } from "../components/ui/card";
 
 const RegisterPage = () => {
+
   const navigate = useNavigate();
   const { role } = useParams();
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    if (!["student", "faculty", "admin"].includes(role)) {
-      navigate("/join", { replace: true });
-    }
-  }, [role, navigate]);
+  const [step, setStep] = useState(1);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
+    otp: ""
   });
+
+  useEffect(() => {
+    if (!["student", "faculty"].includes(role)) {
+      navigate("/join", { replace: true });
+    }
+  }, [role, navigate]);
 
   const handleChange = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  // ================= SEND OTP =================
+
+  const handleSendOtp = async () => {
+
+    if (!formData.email) {
+      toast.error("Enter email first");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+
+      await API.post("/auth/send-otp", {
+        email: formData.email.trim().toLowerCase()
+      });
+
+      toast.success("OTP sent to your email");
+      setStep(2);
+
+    } catch (err) {
+
+      toast.error(
+        err.response?.data?.detail || "Failed to send OTP"
+      );
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ================= VERIFY OTP =================
+
+  const handleVerifyOtp = async () => {
+
+    if (!formData.otp) {
+      toast.error("Enter OTP");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+
+      await API.post("/auth/verify-otp", {
+        email: formData.email.trim().toLowerCase(),
+        otp: formData.otp
+      });
+
+      toast.success("OTP verified");
+
+      setStep(3);
+
+    } catch (err) {
+
+      toast.error(
+        err.response?.data?.detail || "Invalid OTP"
+      );
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ================= REGISTER =================
+
+  const handleRegister = async (e) => {
+
     e.preventDefault();
-    if (loading) return;
 
     const { name, email, password } = formData;
 
@@ -52,148 +122,154 @@ const RegisterPage = () => {
 
     setLoading(true);
 
-    const slowTimer = setTimeout(() => {
-      toast.info("⏳ Server is waking up, please wait...");
-    }, 2000);
-
     try {
-      await registerUser({
+
+      await API.post("/auth/register", {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
-        role: role, // ✅ send role to backend
+        role
       });
 
-      clearTimeout(slowTimer);
+      toast.success("Account created successfully");
 
-      toast.success("Account registered successfully. Please login.");
       navigate("/login", { replace: true });
 
     } catch (err) {
-      clearTimeout(slowTimer);
 
-      console.error("REGISTER ERROR:", err);
+      toast.error(
+        err.response?.data?.detail || "Registration failed"
+      );
 
-      if (!err.response) {
-        toast.error(
-          "🚀 Server is starting... please wait 30–60 seconds and try again"
-        );
-      } else if (err.response.status === 409) {
-        toast.info("Account already exists. Please login.");
-        navigate("/login", { replace: true });
-      } else {
-        toast.error(
-          err.response?.data?.detail ||
-          err.response?.data?.message ||
-          "Registration failed"
-        );
-      }
     } finally {
       setLoading(false);
     }
   };
 
-  const roleLabel =
-    role?.charAt(0).toUpperCase() + role?.slice(1);
+  const roleLabel = role?.charAt(0).toUpperCase() + role?.slice(1);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-orange-50">
+
       <Card className="w-full max-w-md rounded-2xl shadow-lg">
+
         <CardHeader className="text-center">
           <Coffee className="mx-auto h-10 w-10 text-orange-500" />
           <CardTitle>Register as {roleLabel}</CardTitle>
           <CardDescription>Create your account</CardDescription>
         </CardHeader>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="space-y-4">
 
-            <div>
-              <Label>Name</Label>
-              <Input
-                required
-                value={formData.name}
-                onChange={(e) =>
-                  handleChange("name", e.target.value)
-                }
-                disabled={loading}
-              />
-            </div>
+          {/* STEP 1 EMAIL */}
 
-            <div>
+          {step === 1 && (
+            <>
               <Label>Email</Label>
+
               <Input
                 type="email"
-                required
                 value={formData.email}
                 onChange={(e) =>
                   handleChange("email", e.target.value)
                 }
-                disabled={loading}
               />
-            </div>
 
-            <div>
-              <Label>Password</Label>
+              <Button
+                onClick={handleSendOtp}
+                disabled={loading}
+                className="w-full bg-orange-500"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : "Send OTP"}
+              </Button>
+            </>
+          )}
 
-              <div className="relative">
+          {/* STEP 2 OTP */}
+
+          {step === 2 && (
+            <>
+              <Label>Enter OTP</Label>
+
+              <Input
+                value={formData.otp}
+                onChange={(e) =>
+                  handleChange("otp", e.target.value)
+                }
+              />
+
+              <Button
+                onClick={handleVerifyOtp}
+                disabled={loading}
+                className="w-full bg-orange-500"
+              >
+                Verify OTP
+              </Button>
+            </>
+          )}
+
+          {/* STEP 3 REGISTER */}
+
+          {step === 3 && (
+            <form onSubmit={handleRegister} className="space-y-4">
+
+              <div>
+                <Label>Name</Label>
+
                 <Input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.password}
+                  value={formData.name}
                   onChange={(e) =>
-                    handleChange("password", e.target.value)
+                    handleChange("name", e.target.value)
                   }
-                  disabled={loading}
                 />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(!showPassword)
-                  }
-                  className="absolute right-3 top-2 text-gray-500"
-                >
-                  {showPassword ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
-                </button>
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-              ) : (
-                "Register"
-              )}
-            </Button>
+              <div>
+                <Label>Password</Label>
 
-          </form>
+                <div className="relative">
 
-          <p className="mt-4 text-center text-sm">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) =>
+                      handleChange("password", e.target.value)
+                    }
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2 text-gray-500"
+                  >
+                    {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+                  </button>
+
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-orange-500"
+              >
+                Register
+              </Button>
+
+            </form>
+          )}
+
+          <p className="text-center text-sm">
             Already have an account?{" "}
-            <Link
-              to="/login"
-              className="text-orange-500 font-semibold"
-            >
+            <Link to="/login" className="text-orange-500 font-semibold">
               Login
             </Link>
           </p>
 
-          <div className="mt-2 text-center">
-            <Link to="/" className="text-xs text-muted-foreground">
-              Back to Home
-            </Link>
-          </div>
         </CardContent>
+
       </Card>
+
     </div>
   );
 };

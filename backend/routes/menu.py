@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime, timezone, timedelta
 
 from database import menu_collection
@@ -28,7 +28,7 @@ class MenuItemCreate(BaseModel):
 class MenuItemUpdate(BaseModel):
     name: Optional[str]
     description: Optional[str]
-    price: Optional[float]
+    price: Optional[float] = Field(None, gt=0)
     category: Optional[str]
     image: Optional[str]
     available: Optional[bool]
@@ -39,11 +39,14 @@ class MenuItemUpdate(BaseModel):
 @router.get("/")
 def get_menu():
 
-    items = menu_collection.find({"available": True})
+    items = menu_collection.find(
+        {"available": True}
+    ).sort("name", 1)
 
     result = []
 
     for item in items:
+
         result.append({
             "_id": str(item["_id"]),
             "name": item.get("name"),
@@ -63,7 +66,7 @@ def get_menu():
 def get_all_menu(current_user=Depends(get_current_user)):
 
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
+        raise HTTPException(403, "Admin only")
 
     items = menu_collection.find().sort("created_at", -1)
 
@@ -85,15 +88,17 @@ def create_menu_item(
 ):
 
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
+        raise HTTPException(403, "Admin only")
 
     now = datetime.now(IST)
 
+    name = data.name.strip().title()
+
     menu_id = menu_collection.insert_one({
-        "name": data.name.strip(),
+        "name": name,
         "description": data.description,
         "price": data.price,
-        "category": data.category,
+        "category": (data.category or "general").lower(),
         "image": data.image,
         "available": data.available,
         "created_at": now,
@@ -116,10 +121,10 @@ def update_menu_item(
 ):
 
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
+        raise HTTPException(403, "Admin only")
 
     if not ObjectId.is_valid(item_id):
-        raise HTTPException(status_code=400, detail="Invalid menu ID")
+        raise HTTPException(400, "Invalid menu ID")
 
     update_data = {
         k: v for k, v in data.model_dump().items()
@@ -127,7 +132,13 @@ def update_menu_item(
     }
 
     if not update_data:
-        raise HTTPException(status_code=400, detail="No fields to update")
+        raise HTTPException(400, "No fields to update")
+
+    if "name" in update_data:
+        update_data["name"] = update_data["name"].strip().title()
+
+    if "category" in update_data:
+        update_data["category"] = update_data["category"].lower()
 
     update_data["updated_at"] = datetime.now(IST)
 
@@ -137,12 +148,12 @@ def update_menu_item(
     )
 
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Menu item not found")
+        raise HTTPException(404, "Menu item not found")
 
     return {"message": "Menu item updated"}
 
 
-# ================= DELETE MENU ITEM =================
+# ================= SOFT DELETE MENU ITEM =================
 
 @router.delete("/admin/{item_id}")
 def delete_menu_item(
@@ -151,16 +162,22 @@ def delete_menu_item(
 ):
 
     if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
+        raise HTTPException(403, "Admin only")
 
     if not ObjectId.is_valid(item_id):
-        raise HTTPException(status_code=400, detail="Invalid menu ID")
+        raise HTTPException(400, "Invalid menu ID")
 
-    result = menu_collection.delete_one(
-        {"_id": ObjectId(item_id)}
+    result = menu_collection.update_one(
+        {"_id": ObjectId(item_id)},
+        {
+            "$set": {
+                "available": False,
+                "updated_at": datetime.now(IST)
+            }
+        }
     )
 
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Menu item not found")
+    if result.matched_count == 0:
+        raise HTTPException(404, "Menu item not found")
 
-    return {"message": "Menu item deleted"}
+    return {"message": "Menu item disabled"}
