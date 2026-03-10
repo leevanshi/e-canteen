@@ -49,7 +49,9 @@ class CreateOrder(BaseModel):
     pickup_time: Optional[str] = None
     payment_method: str
 
-
+class AddMoneyRequest(BaseModel):
+    user_id: str
+    amount: int
 # ================= PLACE ORDER =================
 
 @router.post("/")
@@ -203,6 +205,122 @@ def get_my_orders(current_user=Depends(get_current_user)):
             "order_id": o.get("order_id"),
             "total_amount": o.get("total_amount"),
             "status": o.get("status"),
+            "created_at": created.isoformat() if created else None
+        })
+
+    return result
+# ================= ADMIN GET ALL ORDERS =================
+
+@router.get("/admin/all")
+def get_all_orders():
+
+    orders = orders_collection.find().sort("created_at", -1)
+
+    result = []
+
+    for o in orders:
+
+        created = o.get("created_at")
+
+        result.append({
+            "_id": str(o["_id"]),
+            "order_id": o.get("order_id"),
+            "user_name": o.get("user_name"),
+            "items": o.get("items"),
+            "total_amount": o.get("total_amount"),
+            "status": o.get("status"),
+            "created_at": created.isoformat() if created else None
+        })
+
+    return result
+# ================= ADMIN UPDATE ORDER STATUS =================
+
+@router.put("/admin/{id}/status")
+def update_status(id: str, data: dict):
+
+    if not ObjectId.is_valid(id):
+        raise HTTPException(400, "Invalid order id")
+
+    status = data.get("status")
+
+    if status not in ["pending", "preparing", "completed"]:
+        raise HTTPException(400, "Invalid status")
+
+    now = datetime.now(IST)
+
+    order = orders_collection.find_one_and_update(
+        {"_id": ObjectId(id)},
+        {
+            "$set": {
+                "status": status,
+                "updated_at": now
+            },
+            "$push": {
+                "status_history": {
+                    "status": status,
+                    "time": now
+                }
+            }
+        },
+        return_document=ReturnDocument.AFTER
+    )
+
+    if not order:
+        raise HTTPException(404, "Order not found")
+
+    return {"message": "Status updated", "status": status}
+# ================= ADMIN ADD MONEY =================
+
+@router.post("/admin/add-money")
+def admin_add_money(data: AddMoneyRequest):
+
+    now = datetime.now(IST)
+
+    wallet = wallet_collection.find_one_and_update(
+        {"user_id": ObjectId(data.user_id)},
+        {
+            "$inc": {"balance": data.amount},
+            "$set": {"updated_at": now}
+        },
+        return_document=ReturnDocument.AFTER
+    )
+
+    if not wallet:
+        raise HTTPException(404, "Wallet not found")
+
+    wallet_txn_collection.insert_one({
+        "user_id": ObjectId(data.user_id),
+        "amount": data.amount,
+        "type": "credit",
+        "source": "admin",
+        "balance_after": wallet["balance"],
+        "created_at": now
+    })
+
+    return {
+        "message": "Money added",
+        "balance": wallet["balance"]
+    }
+# ================= ADMIN WALLET HISTORY =================
+
+@router.get("/admin/wallet-history")
+def wallet_history():
+
+    txns = wallet_txn_collection.find().sort("created_at", -1)
+
+    result = []
+
+    for t in txns:
+
+        created = t.get("created_at")
+
+        result.append({
+            "_id": str(t["_id"]),
+            "user_id": str(t.get("user_id")),
+            "amount": t.get("amount"),
+            "type": t.get("type"),
+            "source": t.get("source"),
+            "balance_after": t.get("balance_after"),
             "created_at": created.isoformat() if created else None
         })
 

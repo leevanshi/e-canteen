@@ -46,14 +46,20 @@ const AdminWalletPage = () => {
       setLoading(true);
 
       const res = await getUsers();
-      const data = res?.data?.users || res?.data || [];
+
+      const data =
+        Array.isArray(res?.data)
+          ? res.data
+          : res?.data?.users || [];
 
       const safeUsers = data.map((u, idx) => ({
+
         _id: u?._id || u?.id || `user-${idx}`,
         name: u?.name || "User",
         email: u?.email || "—",
-        wallet_balance: Number(u?.wallet_balance || u?.balance || 0),
+        wallet_balance: Number(u?.wallet_balance || 0),
         wallet_first_time: Boolean(u?.wallet_first_time)
+
       }));
 
       setUsers(safeUsers);
@@ -86,8 +92,8 @@ const AdminWalletPage = () => {
     const term = (search || "").toLowerCase();
 
     return users.filter((u) =>
-      u.name.toLowerCase().includes(term) ||
-      u.email.toLowerCase().includes(term)
+      (u.name || "").toLowerCase().includes(term) ||
+      (u.email || "").toLowerCase().includes(term)
     );
 
   }, [users, search]);
@@ -97,9 +103,9 @@ const AdminWalletPage = () => {
   const addMoney = async (userId) => {
 
     const raw = amounts[userId];
-    const amount = Number(raw);
+    const amount = parseInt(raw, 10);
 
-    if (!amount || amount <= 0) {
+    if (!raw || isNaN(amount) || amount <= 0) {
       toast.error("Enter valid amount");
       return;
     }
@@ -115,15 +121,15 @@ const AdminWalletPage = () => {
 
       const res = await adminAddMoney({
         user_id: userId,
-        amount: amount
+        amount
       });
 
       const newBalance =
-        res?.data?.balance ??
         res?.data?.new_balance ??
+        res?.data?.balance ??
         null;
 
-      toast.success(`₹${amount} added successfully`);
+      toast.success(`₹${amount} added`);
 
       setUsers((prev) =>
         prev.map((u) =>
@@ -166,11 +172,13 @@ const AdminWalletPage = () => {
   if (authLoading || loading) {
 
     return (
+
       <div className="max-w-6xl mx-auto p-6">
         <p className="text-gray-500 animate-pulse">
           Loading users...
         </p>
       </div>
+
     );
 
   }
@@ -227,7 +235,9 @@ const AdminWalletPage = () => {
 
             <div>
 
-              <p className="font-semibold">{u.name}</p>
+              <p className="font-semibold">
+                {u.name}
+              </p>
 
               <p className="text-sm text-gray-500">
                 {u.email}

@@ -83,17 +83,18 @@ NMIMS ECanteen
 const autoPrint = (content) => {
 
   const win = window.open("", "PRINT", "height=600,width=400");
+
   if (!win) return;
 
   win.document.write(`
-<html>
-<body>
-<pre style="font-family:monospace;font-size:12px;">
+    <html>
+      <body>
+        <pre style="font-family:monospace;font-size:12px;">
 ${content}
-</pre>
-</body>
-</html>
-`);
+        </pre>
+      </body>
+    </html>
+  `);
 
   win.document.close();
 
@@ -132,7 +133,7 @@ const AdminOrdersPage = () => {
 
     try {
 
-      const res = await API.get("/api/orders/admin/all");
+      const res = await API.get("/admin/orders");
 
       const data =
         Array.isArray(res.data)
@@ -184,6 +185,8 @@ const AdminOrdersPage = () => {
 
           playSound();
 
+          /* PRINT ONLY COUNTER ORDERS */
+
           if (order.order_type === "walk-in") {
             autoPrint(formatReceipt(order));
           }
@@ -225,7 +228,7 @@ const AdminOrdersPage = () => {
 
       setUpdatingId(id);
 
-      await API.put(`/api/orders/admin/${id}/status`, { status });
+      await API.put(`/admin/orders/${id}/status`, { status });
 
       setOrders((prev) =>
         prev.map((o) =>
@@ -233,7 +236,7 @@ const AdminOrdersPage = () => {
         )
       );
 
-    } catch {
+    } catch (err) {
 
       toast.error("Failed to update order");
 

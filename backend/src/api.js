@@ -73,6 +73,7 @@ API.interceptors.response.use(
       clearAuth();
 
       if (!window.location.pathname.includes("/login")) {
+        console.warn("Session expired → redirecting to login");
         window.location.href = "/login";
       }
     }
@@ -113,21 +114,25 @@ export const getUserOrders = () =>
   API.get("/api/orders");
 
 /* =========================
-   ADMIN ORDERS
+   ADMIN
 ========================= */
 
 export const getAdminOrders = () =>
-  API.get("/api/orders/admin/all");
+  API.get("/admin/orders");
+
+export const getOnlineOrders = () =>
+  API.get("/admin/orders/online");
 
 export const updateOrderStatus = (orderId, status) =>
-  API.put(`/api/orders/admin/${orderId}/status`, { status });
+  API.put(`/admin/orders/${orderId}/status`, { status });
+
+export const toggleMenuAvailability = (menuId, available) =>
+  API.put(`/admin/menu/${menuId}/availability`, {
+    available: Boolean(available),
+  });
 
 export const placeCounterOrder = (data) =>
-  API.post("/api/orders/admin/place-order", data);
-
-/* =========================
-   USERS
-========================= */
+  API.post("/admin/place-order", data);
 
 export const getUsers = () =>
   API.get("/admin/users");
@@ -140,7 +145,7 @@ export const getMyWallet = () =>
   API.get("/wallet/me");
 
 export const adminAddMoney = (data) =>
-  API.post("/api/orders/admin/add-money", data);
+  API.post("/wallet/admin/add-money", data);
 
 /* =========================
    FEEDBACK
