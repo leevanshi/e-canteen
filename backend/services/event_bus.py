@@ -1,42 +1,69 @@
 import logging
 import inspect
-
-listeners = {}
+import asyncio
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+# =========================
+# LISTENERS REGISTRY
+# =========================
 
-def subscribe(event_name, handler):
+listeners = defaultdict(list)
+
+
+# =========================
+# SUBSCRIBE
+# =========================
+
+def subscribe(event_name: str, handler):
     """
     Register a handler for an event.
     """
 
-    if event_name not in listeners:
-        listeners[event_name] = []
-
-    # Prevent duplicate handlers
     if handler not in listeners[event_name]:
         listeners[event_name].append(handler)
 
 
-async def emit(event_name, data):
+# =========================
+# SAFE EXECUTION
+# =========================
+
+async def _run_handler(handler, data, event_name):
+
+    try:
+
+        if inspect.iscoroutinefunction(handler):
+            await handler(data)
+
+        else:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, handler, data)
+
+    except Exception as e:
+
+        logger.error(
+            f"Event handler error for '{event_name}' -> {handler.__name__}: {e}"
+        )
+
+
+# =========================
+# EMIT EVENT
+# =========================
+
+async def emit(event_name: str, data):
     """
-    Emit an event to all subscribed handlers.
+    Emit event to all handlers concurrently.
     """
 
     handlers = listeners.get(event_name, [])
 
-    for handler in handlers:
+    if not handlers:
+        return
 
-        try:
+    tasks = [
+        _run_handler(handler, data, event_name)
+        for handler in handlers
+    ]
 
-            if inspect.iscoroutinefunction(handler):
-                await handler(data)
-            else:
-                handler(data)
-
-        except Exception as e:
-
-            logger.error(
-                f"Event handler error for '{event_name}': {e}"
-            )
+    await asyncio.gather(*tasks, return_exceptions=True)

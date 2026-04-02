@@ -6,7 +6,7 @@ from typing import List, Optional
 from pymongo import ReturnDocument
 from collections import defaultdict
 import time
-
+from services.email_service import send_order_email
 from database import (
     orders_collection,
     wallet_collection,
@@ -179,10 +179,28 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
                 "updated_at": now
             }
 
+
             result = orders_collection.insert_one(order_doc, session=session)
 
+    # ===== AFTER SUCCESS =====
     order_doc["_id"] = str(result.inserted_id)
 
+    # ================= SEND EMAIL =================
+    try:
+        order_details = "\n".join([
+            f"{item['name']} x {item['quantity']} = ₹{item['price'] * item['quantity']}"
+            for item in order_doc["items"]
+        ])
+
+        await send_order_email(
+            email=current_user["email"],
+            order_details=order_details
+        )
+
+    except Exception as e:
+        print("Email sending failed:", e)
+
+    # ================= BROADCAST =================
     await manager.broadcast({
         "type": "new_order",
         "order": {
@@ -200,8 +218,6 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
         "message": "Order placed successfully",
         "order_id": order_doc["order_id"]
     }
-
-
 # ================= GET MY ORDERS =================
 
 @router.get("/")
@@ -340,3 +356,5 @@ def admin_add_money(data: AddMoneyRequest, current_user=Depends(get_current_user
     })
 
     return {"message": "Money added", "balance": wallet["balance"]}
+order_doc["_id"] = str(result.inserted_id)
+

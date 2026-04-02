@@ -1,0 +1,27 @@
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #bill, #bill * {
+    visibility: visible;
+  }
+
+  #bill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 280px;
+    font-family: monospace;
+  }
+
+  button {
+    display: none;
+  }
+}

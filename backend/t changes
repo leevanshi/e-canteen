@@ -1,0 +1,48 @@
+[33m500b92e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Initial commit - E-Canteen full stack project
+[33m94c4b77[m Initial commit - e-canteen FastAPI project
+[33m2a588be[m updated auth module
+[33m38b9995[m Fixed auth routes and frontend bugs
+[33mea7d31b[m fixed timeout + improved auth handling
+[33mc85d384[m Fix CartPage crash (remove stray character)
+[33me329c14[m Fix role-based routing and auth guards
+[33m98450b8[m Updated frontend + backend fixes
+[33md2e70a1[m[33m ([m[1;31morigin/master[m[33m)[m Remove invalid login response error
+[33m796e10d[m Fix axios interceptor for auth routes
+[33m45ff5a8[m Fix login race condition and forced redirect
+[33m478a2cb[m Fix login page
+[33m88df2fb[m Fix login page
+[33m9d08b3d[m Fix auth token mismatch and axios interceptor
+[33m24024fb[m Fixed login response format
+[33m03af871[m Fixed CORS for Vercel frontend
+[33mef10307[m chore: remove vercel.json, use vercel root dir setting
+[33m628cd5d[m fix: configure vercel for CRA in frontend subfolder
+[33mb1b9521[m fix: add missing axios instance and CRA build fixes
+[33m21642e1[m fix: add missing axios instance to fix CRA build
+[33m8c84adb[m chore: force vercel rebuild
+[33m1e08902[m fix: remove invalid axios import from OrderSuccessPage
+[33mc1a08b9[m fix: remove localhost usage from forgot password page
+[33mdfeab83[m fix: remove /api prefix completely from api.js
+[33ma1b7a79[m fix: production deploy issues (auth, routes, env, roles)
+[33m3c427c8[m Fix API baseURL to Render backend
+[33mb2ca7c7[m Fix register role validation and endpoint
+[33mce8f72f[m Fix auth login endpoint
+[33me721645[m Fix CORS origins fallback
+[33m1540c1e[m fix: use VITE_API_BASE_URL for backend
+[33mabd6887[m fix CORS preflight issue for frontend register
+[33m2b47159[m fix mongodb atlas tls handshake on render
+[33m9aa4d16[m fix register crash with proper error handling
+[33m74a1db5[m fix mongodb atlas tls connection
+[33mf777732[m fix mongo env var name for render
+[33m987aa06[m force python 3.11 via runtime.txt
+[33m62751c6[m force python 3.11 runtime for render
+[33mf6f89c2[m fix mongo env var name mismatch
+[33m094a949[m fix CORS preflight by disabling credentials
+[33m684d6a3[m fix CORS for vercel frontend
+[33mf6cc586[m fix register endpoint to /api/register
+[33m8ba3b00[m fix register page to use render backend
+[33mbf97a82[m update api baseURL to render backend
+[33m6cb0025[m move routes to backend root
+[33m9cbbbcb[m remove emergentintegrations (not on pip)
+[33meb95d12[m Restore CRA public folder
+[33mbc86cfa[m Move public folder to root for Vercel
+[33m93ddbfe[m Initial safe commit

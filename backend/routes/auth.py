@@ -18,18 +18,15 @@ from otp_utils import generate_otp
 from email_service import send_otp_email
 
 # ================= LOAD ENV =================
-
 load_dotenv()
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ================= LOGGING =================
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ================= SECURITY =================
-
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
@@ -45,24 +42,19 @@ pwd_context = CryptContext(
     deprecated="auto"
 )
 
-# ================= LOGIN RATE LIMIT =================
-
+# ================= RATE LIMIT =================
 login_attempts = defaultdict(list)
 MAX_ATTEMPTS = 5
 ATTEMPT_WINDOW = 60
-
-# ================= OTP RATE LIMIT =================
 
 otp_requests = defaultdict(list)
 OTP_MAX_REQUESTS = 3
 OTP_WINDOW = 60
 
 # ================= INDEX =================
-
 users_collection.create_index("email", unique=True)
 
 # ================= SCHEMAS =================
-
 
 class LoginSchema(BaseModel):
     email: EmailStr
@@ -100,14 +92,31 @@ class VerifyOTPSchema(BaseModel):
     email: EmailStr
     otp: str
 
+    @field_validator("otp")
+    def validate_otp(cls, v):
+        if not re.fullmatch(r"\d{6}", v):
+            raise ValueError("OTP must be 6 digits")
+        return v
+
 
 class ResetPasswordSchema(BaseModel):
     email: EmailStr
     password: str
 
+    @field_validator("password")
+    def strong_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Must include uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Must include lowercase letter")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Must include a number")
+        return v
+
 
 # ================= HELPERS =================
-
 
 def normalize_email(email: str) -> str:
     return email.lower().strip()
@@ -126,7 +135,6 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_token(data: dict):
-
     now = datetime.now(timezone.utc)
 
     payload = {
@@ -141,15 +149,12 @@ def create_token(data: dict):
 
 # ================= CURRENT USER =================
 
-
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
-
     token = credentials.credentials
 
     try:
-
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
         if payload.get("type") != "access":
@@ -168,51 +173,27 @@ def get_current_user(
         if not user:
             raise HTTPException(401, "User not found")
 
-        role = normalize_role(user.get("role"))
-
         return {
             "_id": str(user["_id"]),
             "name": user.get("name"),
             "email": user.get("email"),
-            "role": role
+            "role": normalize_role(user.get("role"))
         }
 
     except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
-        )
-
-
-# ================= ROLE GUARD =================
-
-
-def require_admin(user=Depends(get_current_user)):
-
-    if normalize_role(user.get("role")) != "admin":
-        raise HTTPException(403, "Admin access required")
-
-    return user
+        raise HTTPException(401, "Invalid or expired token")
 
 
 # ================= SEND OTP =================
-
 
 @router.post("/send-otp")
 async def send_otp(data: EmailRequest):
 
     email = normalize_email(data.email)
 
-    allowed_domains = [
-        "nmims.in",
-        "nmims.edu.in",
-        "nmims.edu"
-    ]
-
-    if email.split("@")[-1] not in allowed_domains:
+    # 🔒 STRICT NMIMS VALIDATION
+    if not re.match(r"^[a-zA-Z0-9._%+-]+@(nmims\.in|nmims\.edu\.in|nmims\.edu)$", email):
         raise HTTPException(400, "Only NMIMS email allowed")
-
-    # ===== RATE LIMIT =====
 
     now = time.time()
 
@@ -222,15 +203,11 @@ async def send_otp(data: EmailRequest):
     ]
 
     if len(otp_requests[email]) >= OTP_MAX_REQUESTS:
-        raise HTTPException(
-            429,
-            "Too many OTP requests. Please wait a minute."
-        )
+        raise HTTPException(429, "Too many OTP requests")
 
     otp_requests[email].append(now)
 
     otp = generate_otp()
-
     expires = datetime.now(timezone.utc) + timedelta(minutes=5)
 
     otp_collection.delete_many({"email": email})
@@ -242,7 +219,12 @@ async def send_otp(data: EmailRequest):
         "verified": False
     })
 
-    await send_otp_email(email, otp)
+    # ✅ SAFE EMAIL
+    try:
+        await send_otp_email(email, otp)
+    except Exception as e:
+        logger.error(f"Email failed: {e}")
+        raise HTTPException(500, "Failed to send OTP email")
 
     logger.info(f"OTP sent to {email}")
 
@@ -250,7 +232,6 @@ async def send_otp(data: EmailRequest):
 
 
 # ================= VERIFY OTP =================
-
 
 @router.post("/verify-otp")
 def verify_otp(data: VerifyOTPSchema):
@@ -278,21 +259,11 @@ def verify_otp(data: VerifyOTPSchema):
 
 # ================= REGISTER =================
 
-
-@router.post("/register", status_code=201)
+@router.post("/register")
 def register_user(data: RegisterSchema):
 
     email = normalize_email(data.email)
     role = normalize_role(data.role)
-
-    allowed_domains = [
-        "nmims.in",
-        "nmims.edu.in",
-        "nmims.edu"
-    ]
-
-    if email.split("@")[-1] not in allowed_domains:
-        raise HTTPException(400, "Only NMIMS email allowed")
 
     if role not in ["student", "faculty"]:
         raise HTTPException(400, "Invalid role")
@@ -300,10 +271,9 @@ def register_user(data: RegisterSchema):
     record = otp_collection.find_one({"email": email})
 
     if not record or not record.get("verified"):
-        raise HTTPException(400, "Email not verified with OTP")
+        raise HTTPException(400, "Email not verified")
 
     try:
-
         users_collection.insert_one({
             "name": data.name,
             "email": email,
@@ -320,31 +290,7 @@ def register_user(data: RegisterSchema):
     return {"message": f"{role.capitalize()} registered successfully"}
 
 
-# ================= RESET PASSWORD =================
-
-
-@router.post("/reset-password")
-def reset_password(data: ResetPasswordSchema):
-
-    email = normalize_email(data.email)
-
-    user = users_collection.find_one({"email": email})
-
-    if not user:
-        raise HTTPException(404, "User not found")
-
-    users_collection.update_one(
-        {"email": email},
-        {"$set": {"password": hash_password(data.password)}}
-    )
-
-    logger.info(f"Password reset for {email}")
-
-    return {"message": "Password updated successfully"}
-
-
 # ================= LOGIN =================
-
 
 @router.post("/login")
 def login(data: LoginSchema):
@@ -358,50 +304,22 @@ def login(data: LoginSchema):
     ]
 
     if len(login_attempts[email]) >= MAX_ATTEMPTS:
-        raise HTTPException(
-            429,
-            "Too many login attempts. Try again later."
-        )
+        raise HTTPException(429, "Too many login attempts")
 
     user = users_collection.find_one({"email": email})
 
-    if not user or "password" not in user:
-        login_attempts[email].append(now)
-        raise HTTPException(401, "Invalid credentials")
-
-    if not verify_password(data.password, user["password"]):
+    if not user or not verify_password(data.password, user["password"]):
         login_attempts[email].append(now)
         raise HTTPException(401, "Invalid credentials")
 
     login_attempts[email] = []
 
-    role = normalize_role(user.get("role"))
-
     token = create_token({
         "sub": str(user["_id"]),
-        "role": role
+        "role": user.get("role")
     })
 
     return {
         "access_token": token,
-        "token_type": "bearer",
-        "expires_in_days": ACCESS_TOKEN_EXPIRE_DAYS,
-        "user": {
-            "id": str(user["_id"]),
-            "name": user.get("name"),
-            "email": user.get("email"),
-            "role": role
-        }
-    }
-
-
-# ================= ADMIN TEST =================
-
-
-@router.get("/admin/me")
-def get_admin_profile(user=Depends(require_admin)):
-
-    return {
-        "message": "Welcome Admin",
-        "user": user
+        "token_type": "bearer"
     }

@@ -2,16 +2,13 @@ from pymongo import MongoClient, ReturnDocument, ASCENDING, DESCENDING
 from datetime import timedelta, timezone, datetime
 from dotenv import load_dotenv
 import os
+import time
 
 # =========================
 # LOAD ENV
 # =========================
 
 load_dotenv()
-
-# =========================
-# ENV VARIABLES
-# =========================
 
 MONGO_URL = os.getenv("MONGO_URL")
 DB_NAME = os.getenv("DB_NAME", "ecanteen")
@@ -29,7 +26,7 @@ def now_ist():
     return datetime.now(IST)
 
 # =========================
-# CLIENT
+# CLIENT (NO CONNECTION YET)
 # =========================
 
 client = MongoClient(
@@ -42,20 +39,6 @@ client = MongoClient(
     minPoolSize=5,
     uuidRepresentation="standard"
 )
-
-# =========================
-# CONNECTION CHECK
-# =========================
-
-try:
-    client.admin.command("ping")
-    print("✅ MongoDB connected")
-except Exception as e:
-    raise RuntimeError(f"MongoDB connection failed: {e}")
-
-# =========================
-# DATABASE
-# =========================
 
 db = client[DB_NAME]
 
@@ -75,19 +58,34 @@ counters_collection = db["counters"]
 otp_collection = db["otp_verifications"]
 
 # =========================
+# CONNECTION CHECK
+# =========================
+
+def connect_with_retry(max_retries=5):
+
+    for attempt in range(max_retries):
+        try:
+            client.admin.command("ping")
+            print("✅ MongoDB connected")
+            return
+        except Exception as e:
+            print(f"⚠️ MongoDB connection failed (attempt {attempt+1}): {e}")
+            time.sleep(2)
+
+    raise RuntimeError("MongoDB connection failed after retries")
+
+# =========================
 # INDEX SETUP
 # =========================
 
 def init_indexes():
 
-    # USERS
     users_collection.create_index(
         [("email", ASCENDING)],
         unique=True,
         background=True
     )
 
-    # ORDERS
     orders_collection.create_index(
         [("order_id", ASCENDING)],
         unique=True,
@@ -114,7 +112,6 @@ def init_indexes():
         background=True
     )
 
-    # ACTIVE ORDERS (admin dashboard optimization)
     orders_collection.create_index(
         [("status", ASCENDING)],
         partialFilterExpression={
@@ -123,13 +120,11 @@ def init_indexes():
         background=True
     )
 
-    # MENU
     menu_collection.create_index(
         [("available", ASCENDING)],
         background=True
     )
 
-    # FEEDBACK
     feedback_collection.create_index(
         [("created_at", DESCENDING)],
         background=True
@@ -140,14 +135,12 @@ def init_indexes():
         background=True
     )
 
-    # WALLET
     wallet_collection.create_index(
         [("user_id", ASCENDING)],
         unique=True,
         background=True
     )
 
-    # WALLET TRANSACTIONS
     wallet_txn_collection.create_index(
         [("user_id", ASCENDING), ("created_at", DESCENDING)],
         background=True
@@ -163,14 +156,12 @@ def init_indexes():
         background=True
     )
 
-    # COUNTERS
     counters_collection.create_index(
         [("_id", ASCENDING)],
         unique=True,
         background=True
     )
 
-    # OTP TTL INDEX (auto delete expired OTPs)
     otp_collection.create_index(
         [("expires_at", ASCENDING)],
         expireAfterSeconds=0,
@@ -183,10 +174,6 @@ def init_indexes():
     )
 
     print("✅ MongoDB indexes initialized")
-
-
-# run once on startup
-init_indexes()
 
 # =========================
 # ORDER ID GENERATOR
@@ -205,7 +192,6 @@ def get_next_order_id() -> int:
     )
 
     return counter["seq"]
-
 
 # =========================
 # CLEAN SHUTDOWN

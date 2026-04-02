@@ -12,6 +12,12 @@ class UserRole(str, Enum):
     faculty = "faculty"
 
 
+# ================= COMMON EMAIL NORMALIZER =================
+
+def normalize_email_value(v: str):
+    return v.lower().strip()
+
+
 # ================= REGISTER =================
 
 class UserRegister(BaseModel):
@@ -26,12 +32,10 @@ class UserRegister(BaseModel):
 
     roll_number: Optional[str] = Field(None, max_length=20)
 
-    # normalize email
     @field_validator("email")
     def normalize_email(cls, v):
-        return v.lower().strip()
+        return normalize_email_value(v)
 
-    # strong password validation
     @field_validator("password")
     def validate_password(cls, v):
 
@@ -44,7 +48,7 @@ class UserRegister(BaseModel):
         if not re.search(r"[0-9]", v):
             raise ValueError("Password must include a number")
 
-        return v
+        return v.strip()
 
 
 # ================= LOGIN =================
@@ -56,7 +60,7 @@ class UserLogin(BaseModel):
 
     @field_validator("email")
     def normalize_email(cls, v):
-        return v.lower().strip()
+        return normalize_email_value(v)
 
 
 # ================= OTP REQUEST =================
@@ -67,7 +71,7 @@ class EmailRequest(BaseModel):
 
     @field_validator("email")
     def normalize_email(cls, v):
-        return v.lower().strip()
+        return normalize_email_value(v)
 
 
 # ================= OTP VERIFY =================
@@ -75,7 +79,11 @@ class EmailRequest(BaseModel):
 class VerifyOTPSchema(BaseModel):
 
     email: EmailStr
-    otp: str
+    otp: str = Field(..., min_length=4, max_length=6)
+
+    @field_validator("email")
+    def normalize_email(cls, v):
+        return normalize_email_value(v)
 
 
 # ================= USER RESPONSE =================
@@ -83,9 +91,12 @@ class VerifyOTPSchema(BaseModel):
 class UserResponse(BaseModel):
 
     id: str
-    name: Optional[str]
+    name: Optional[str] = None
     email: EmailStr
     role: UserRole
+
+    class Config:
+        from_attributes = True
 
 
 # ================= LOGIN RESPONSE =================
@@ -93,6 +104,6 @@ class UserResponse(BaseModel):
 class LoginResponse(BaseModel):
 
     access_token: str
-    token_type: str
+    token_type: str = "bearer"
     expires_in_days: int
     user: UserResponse

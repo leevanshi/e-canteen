@@ -6,6 +6,7 @@ from datetime import timedelta, timezone
 from pathlib import Path
 from typing import List
 import os
+import asyncio
 
 # ================= ENV =================
 
@@ -24,11 +25,10 @@ app = FastAPI(
 
 # ================= CORS =================
 
-allowed_origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "https://ecanteen-nmims.vercel.app"
-]
+allowed_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173"
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,27 +45,33 @@ class ConnectionManager:
 
     def __init__(self):
         self.active_connections: List[WebSocket] = []
+        self.lock = asyncio.Lock()
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        async with self.lock:
+            self.active_connections.append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+    async def disconnect(self, websocket: WebSocket):
+        async with self.lock:
+            if websocket in self.active_connections:
+                self.active_connections.remove(websocket)
 
     async def broadcast(self, data: dict):
 
+        async with self.lock:
+            connections = list(self.active_connections)
+
         disconnected = []
 
-        for connection in self.active_connections:
+        for connection in connections:
             try:
                 await connection.send_json(data)
             except Exception:
                 disconnected.append(connection)
 
-        for d in disconnected:
-            self.disconnect(d)
+        for ws in disconnected:
+            await self.disconnect(ws)
 
 
 manager = ConnectionManager()
@@ -82,7 +88,11 @@ async def orders_ws(websocket: WebSocket):
             await websocket.receive_text()
 
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        await manager.disconnect(websocket)
+
+# ================= DATABASE =================
+
+from database import connect_with_retry, init_indexes, close_mongo_connection
 
 # ================= EVENT SYSTEM =================
 
@@ -92,13 +102,25 @@ from services.order_events import (
     handle_kitchen_log
 )
 
+# ================= STARTUP =================
+
 @app.on_event("startup")
-def init_event_system():
+async def startup():
+
+    connect_with_retry()
+    init_indexes()
 
     subscribe("ORDER_CREATED", handle_wallet_deduction)
     subscribe("ORDER_CREATED", handle_kitchen_log)
 
-    print("Event system initialized")
+    print("✅ Startup completed")
+
+# ================= SHUTDOWN =================
+
+@app.on_event("shutdown")
+async def shutdown():
+    close_mongo_connection()
+    print("MongoDB closed")
 
 # ================= ROUTERS =================
 
