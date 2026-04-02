@@ -226,10 +226,13 @@ async def send_otp(data: EmailRequest):
         logger.error(f"Email failed: {e}")
         raise HTTPException(500, "Failed to send OTP email")
 
-    logger.info(f"OTP sent to {email}")
+    logger.info(f"OTP sent to {email} | OTP: {otp}")  # 🔥 add this
 
-    return {"message": "OTP sent to email"}
-
+    # ✅ RETURN OTP (ONLY FOR TESTING)
+    return {
+        "message": "OTP sent to email",
+        "otp": otp
+    }
 
 # ================= VERIFY OTP =================
 
