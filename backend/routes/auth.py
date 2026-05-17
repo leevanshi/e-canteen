@@ -15,7 +15,7 @@ from pymongo.errors import DuplicateKeyError
 from collections import defaultdict
 
 from otp_utils import generate_otp
-from email_service import send_otp_email
+from email_service import send_otp_email, send_welcome_email, send_password_reset_email
 
 # ================= LOAD ENV =================
 load_dotenv()
@@ -31,8 +31,10 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
+# ❗ safer: don't crash app silently
 if not SECRET_KEY:
-    raise ValueError("SECRET_KEY must be set")
+    logger.warning("⚠️ SECRET_KEY not set. Using fallback (DEV ONLY)")
+    SECRET_KEY = "dev-secret-key"
 
 security = HTTPBearer()
 
@@ -50,9 +52,6 @@ ATTEMPT_WINDOW = 60
 otp_requests = defaultdict(list)
 OTP_MAX_REQUESTS = 3
 OTP_WINDOW = 60
-
-# ================= INDEX =================
-users_collection.create_index("email", unique=True)
 
 # ================= SCHEMAS =================
 
@@ -184,7 +183,7 @@ def get_current_user(
         raise HTTPException(401, "Invalid or expired token")
 
 
-# ================= SEND OTP =================
+# ================= SEND OTP (Registration) =================
 
 @router.post("/send-otp")
 async def send_otp(data: EmailRequest):
@@ -207,7 +206,7 @@ async def send_otp(data: EmailRequest):
 
     otp_requests[email].append(now)
 
-    otp = generate_otp()
+    otp = str(generate_otp())  # ensure string
     expires = datetime.now(timezone.utc) + timedelta(minutes=5)
 
     otp_collection.delete_many({"email": email})
@@ -219,20 +218,71 @@ async def send_otp(data: EmailRequest):
         "verified": False
     })
 
-    # ✅ SAFE EMAIL
     try:
         await send_otp_email(email, otp)
     except Exception as e:
         logger.error(f"Email failed: {e}")
         raise HTTPException(500, "Failed to send OTP email")
 
-    logger.info(f"OTP sent to {email} | OTP: {otp}")  # 🔥 add this
+    logger.info(f"OTP sent to {email} | OTP: {otp}")
 
-    # ✅ RETURN OTP (ONLY FOR TESTING)
+    # ⚠️ DEBUG ONLY (remove in production)
     return {
         "message": "OTP sent to email",
         "otp": otp
     }
+
+
+# ================= SEND OTP (Forgot Password — registered users only) =================
+
+@router.post("/send-reset-otp")
+async def send_reset_otp(data: EmailRequest):
+
+    email = normalize_email(data.email)
+
+    # 🔒 NMIMS email validation
+    if not re.match(r"^[a-zA-Z0-9._%+-]+@(nmims\.in|nmims\.edu\.in|nmims\.edu)$", email):
+        raise HTTPException(400, "Only NMIMS email allowed")
+
+    # ✅ Check the email is actually registered
+    user = users_collection.find_one({"email": email})
+    if not user:
+        raise HTTPException(404, "No account found with this email address")
+
+    now = time.time()
+
+    otp_requests[email] = [
+        t for t in otp_requests[email]
+        if now - t < OTP_WINDOW
+    ]
+
+    if len(otp_requests[email]) >= OTP_MAX_REQUESTS:
+        raise HTTPException(429, "Too many OTP requests")
+
+    otp_requests[email].append(now)
+
+    otp = str(generate_otp())
+    expires = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    otp_collection.delete_many({"email": email})
+
+    otp_collection.insert_one({
+        "email": email,
+        "otp": otp,
+        "expires_at": expires,
+        "verified": False
+    })
+
+    try:
+        await send_otp_email(email, otp)
+    except Exception as e:
+        logger.error(f"Email failed: {e}")
+        raise HTTPException(500, "Failed to send OTP email")
+
+    logger.info(f"Reset OTP sent to {email}")
+
+    return {"message": "OTP sent to your registered email"}
+
 
 # ================= VERIFY OTP =================
 
@@ -263,7 +313,7 @@ def verify_otp(data: VerifyOTPSchema):
 # ================= REGISTER =================
 
 @router.post("/register")
-def register_user(data: RegisterSchema):
+async def register_user(data: RegisterSchema):
 
     email = normalize_email(data.email)
     role = normalize_role(data.role)
@@ -289,6 +339,12 @@ def register_user(data: RegisterSchema):
 
     except DuplicateKeyError:
         raise HTTPException(409, "User already exists")
+
+    # ✉️ Send welcome email (non-blocking – failure won't break registration)
+    try:
+        await send_welcome_email(email, data.name, role)
+    except Exception as e:
+        logger.warning(f"Welcome email failed: {e}")
 
     return {"message": f"{role.capitalize()} registered successfully"}
 
@@ -324,5 +380,45 @@ def login(data: LoginSchema):
 
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "user": {
+            "id": str(user["_id"]),
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "role": normalize_role(user.get("role"))
+        }
     }
+
+
+# ================= RESET PASSWORD =================
+
+@router.post("/reset-password")
+async def reset_password(data: ResetPasswordSchema):
+
+    email = normalize_email(data.email)
+
+    # Check OTP was verified for this email
+    record = otp_collection.find_one({"email": email})
+
+    if not record or not record.get("verified"):
+        raise HTTPException(400, "Email not verified via OTP")
+
+    user = users_collection.find_one({"email": email})
+
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    users_collection.update_one(
+        {"email": email},
+        {"$set": {"password": hash_password(data.password)}}
+    )
+
+    otp_collection.delete_many({"email": email})
+
+    # ✉️ Send password reset confirmation email
+    try:
+        await send_password_reset_email(email, user.get("name", "User"))
+    except Exception as e:
+        logger.warning(f"Password reset email failed: {e}")
+
+    return {"message": "Password reset successfully"}

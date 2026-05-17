@@ -5,7 +5,7 @@ import axios from "axios";
 ========================= */
 
 const BASE_URL =
-  import.meta.env.VITE_API_URL || "https://e-canteen-7.onrender.com";
+  process.env.REACT_APP_API_URL || "https://e-canteen-7.onrender.com";
 
 const API = axios.create({
   baseURL: BASE_URL,
@@ -88,6 +88,9 @@ API.interceptors.response.use(
 export const sendOTP = (email) =>
   API.post("/auth/send-otp", { email });
 
+export const sendResetOTP = (email) =>
+  API.post("/auth/send-reset-otp", { email });
+
 export const verifyOTP = (data) =>
   API.post("/auth/verify-otp", data);
 
@@ -96,6 +99,9 @@ export const registerUser = (data) =>
 
 export const loginUser = (data) =>
   API.post("/auth/login", data);
+
+export const resetPassword = (data) =>
+  API.post("/auth/reset-password", data);
 
 /* =========================
    MENU

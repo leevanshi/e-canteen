@@ -18,7 +18,7 @@ from database import (
 )
 
 from routes.auth import get_current_user
-from main import manager
+from server import manager
 
 
 # ================= HELPERS =================

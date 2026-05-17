@@ -17,7 +17,7 @@ from database import (
 )
 
 from routes.auth import get_current_user
-from main import manager
+from server import manager
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -356,5 +356,3 @@ def admin_add_money(data: AddMoneyRequest, current_user=Depends(get_current_user
     })
 
     return {"message": "Money added", "balance": wallet["balance"]}
-order_doc["_id"] = str(result.inserted_id)
-

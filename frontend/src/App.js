@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import { useEffect } from "react";
 
 /* CONTEXT */
-import { CartProvider } from "./context/CartContext";
+
 
 /* PUBLIC */
 import LandingPage from "./pages/LandingPage";
@@ -69,13 +69,9 @@ const App = () => {
   }, []);
 
   return (
-
-    <CartProvider>
-
+    <>
       <Toaster position="top-right" richColors />
-
       {!hideNavbar && <Navbar />}
-
       <Routes>
 
         {/* PUBLIC */}
@@ -259,7 +255,7 @@ const App = () => {
 
       </Routes>
 
-    </CartProvider>
+    </>
 
   );
 };
