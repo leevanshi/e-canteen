@@ -23,6 +23,17 @@ class MenuItemCreate(BaseModel):
     category: Optional[str] = "general"
     image: Optional[str] = None
     available: bool = True
+    
+    # Nutrition fields
+    calories: Optional[int] = 0
+    protein: Optional[float] = 0.0
+    carbs: Optional[float] = 0.0
+    fats: Optional[float] = 0.0
+    fiber: Optional[float] = 0.0
+    sugar: Optional[float] = 0.0
+    sodium: Optional[float] = 0.0
+    serving_size: Optional[str] = "1 portion"
+    health_score: Optional[int] = 0
 
 
 class MenuItemUpdate(BaseModel):
@@ -32,6 +43,17 @@ class MenuItemUpdate(BaseModel):
     category: Optional[str]
     image: Optional[str]
     available: Optional[bool]
+    
+    # Nutrition fields
+    calories: Optional[int]
+    protein: Optional[float]
+    carbs: Optional[float]
+    fats: Optional[float]
+    fiber: Optional[float]
+    sugar: Optional[float]
+    sodium: Optional[float]
+    serving_size: Optional[str]
+    health_score: Optional[int]
 
 
 # ================= GET MENU =================
@@ -54,7 +76,18 @@ def get_menu():
             "price": item.get("price"),
             "category": item.get("category"),
             "image": item.get("image"),
-            "available": item.get("available", True)
+            "available": item.get("available", True),
+            "nutrition": {
+                "calories": item.get("calories", 0),
+                "protein": item.get("protein", 0),
+                "carbs": item.get("carbs", 0),
+                "fats": item.get("fats", 0),
+                "fiber": item.get("fiber", 0),
+                "sugar": item.get("sugar", 0),
+                "sodium": item.get("sodium", 0),
+                "serving_size": item.get("serving_size", "1 portion"),
+                "health_score": item.get("health_score", 0),
+            }
         })
 
     return result
@@ -101,6 +134,15 @@ def create_menu_item(
         "category": (data.category or "general").lower(),
         "image": data.image,
         "available": data.available,
+        "calories": data.calories,
+        "protein": data.protein,
+        "carbs": data.carbs,
+        "fats": data.fats,
+        "fiber": data.fiber,
+        "sugar": data.sugar,
+        "sodium": data.sodium,
+        "serving_size": data.serving_size,
+        "health_score": data.health_score,
         "created_at": now,
         "updated_at": now
     }).inserted_id

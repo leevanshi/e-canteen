@@ -6,7 +6,7 @@ from typing import List, Optional
 from pymongo import ReturnDocument
 from collections import defaultdict
 import time
-from services.email_service import send_order_email
+from email_service import send_order_email
 from database import (
     orders_collection,
     wallet_collection,

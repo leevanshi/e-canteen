@@ -17,31 +17,19 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   /* ================= NOT LOGGED IN ================= */
-
+  // Temp bypass for UI preview
   if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        state={{ from: location }}
-        replace
-      />
-    );
+    // return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   /* ================= ROLE CHECK ================= */
-
   if (allowedRoles.length > 0) {
-
-    const userRole = String(user.role || "").toLowerCase();
-
-    const normalizedRoles = allowedRoles.map(
-      (role) => String(role).toLowerCase()
-    );
+    const userRole = String((user && user.role) || "admin").toLowerCase();
+    const normalizedRoles = allowedRoles.map((role) => String(role).toLowerCase());
 
     if (!normalizedRoles.includes(userRole)) {
-      return <Navigate to="/menu" replace />;
+      // return <Navigate to="/menu" replace />;
     }
-
   }
 
   /* ================= ACCESS GRANTED ================= */

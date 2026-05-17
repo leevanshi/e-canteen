@@ -1,9 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useEffect } from "react";
-
-/* CONTEXT */
-
+import { AnimatePresence } from "framer-motion";
 
 /* PUBLIC */
 import LandingPage from "./pages/LandingPage";
@@ -35,6 +33,7 @@ import AdminCounterMenu from "./pages/AdminCounterMenu";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
+import AnimatedPage from "./components/AnimatedPage";
 
 const BACKEND_URL = "https://e-canteen-7.onrender.com";
 
@@ -55,7 +54,6 @@ const App = () => {
   /* WAKE RENDER BACKEND */
 
   useEffect(() => {
-
     const wakeBackend = async () => {
       try {
         await fetch(`${BACKEND_URL}/`);
@@ -63,200 +61,195 @@ const App = () => {
         setTimeout(wakeBackend, 5000);
       }
     };
-
     wakeBackend();
-
   }, []);
 
   return (
     <>
       <Toaster position="top-right" richColors />
       {!hideNavbar && <Navbar />}
-      <Routes>
+      
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
 
-        {/* PUBLIC */}
+          {/* PUBLIC */}
+          <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
 
-        <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <AnimatedPage><LoginPage /></AnimatedPage>
+              </PublicRoute>
+            }
+          />
 
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
+          <Route
+            path="/join"
+            element={
+              <PublicRoute>
+                <AnimatedPage><JoinPage /></AnimatedPage>
+              </PublicRoute>
+            }
+          />
 
-        <Route
-          path="/join"
-          element={
-            <PublicRoute>
-              <JoinPage />
-            </PublicRoute>
-          }
-        />
+          <Route
+            path="/register/:role"
+            element={
+              <PublicRoute>
+                <AnimatedPage><RegisterPage /></AnimatedPage>
+              </PublicRoute>
+            }
+          />
 
-        <Route
-          path="/register/:role"
-          element={
-            <PublicRoute>
-              <RegisterPage />
-            </PublicRoute>
-          }
-        />
+          <Route
+            path="/forgot-password"
+            element={<AnimatedPage><ForgotPasswordPage /></AnimatedPage>}
+          />
 
-        <Route
-          path="/forgot-password"
-          element={<ForgotPasswordPage />}
-        />
+          {/* STUDENT */}
+          <Route
+            path="/menu"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><MenuPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* STUDENT */}
+          <Route
+            path="/monthly-menu"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><MonthlyMenu /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/menu"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <MenuPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><CartPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/monthly-menu"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <MonthlyMenu />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><CheckoutPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/cart"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <CartPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><OrdersPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/checkout"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <CheckoutPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/orders/success/:orderId"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><OrderSuccessPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/orders"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <OrdersPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/orders/:orderId"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><OrderDetails /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/orders/success/:orderId"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <OrderSuccessPage />
-            </ProtectedRoute>
-          }
-        />
+          {/* ADMIN */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminDashboard /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/orders/:orderId"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <OrderDetails />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin/menu"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminMenuPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* ADMIN */}
+          <Route
+            path="/admin/counter"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminCounterMenu /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin/wallet"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminWalletPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/menu"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminMenuPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin/monthly-menu"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminMonthlyMenu /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/counter"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminCounterMenu />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminOrderPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/wallet"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminWalletPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin/history"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminOrderHistory /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/monthly-menu"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminMonthlyMenu />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/admin/feedbacks"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminFeedbackPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/orders"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminOrderPage />
-            </ProtectedRoute>
-          }
-        />
+          {/* FALLBACK */}
+          <Route path="*" element={<Navigate to="/" replace />} />
 
-        <Route
-          path="/admin/history"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminOrderHistory />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/feedbacks"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminFeedbackPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* FALLBACK */}
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-
-      </Routes>
-
+        </Routes>
+      </AnimatePresence>
     </>
-
   );
 };
 
