@@ -12,7 +12,8 @@ from database import users_collection
 
 # ================= ENV =================
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 # ================= TIMEZONE =================
 
@@ -27,11 +28,17 @@ app = FastAPI(
 
 # ================= CORS =================
 
-allowed_origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",  # Keep Vite just in case
-    "https://e-canteen-frontend.vercel.app"  # Fallback explicit
-]
+cors_origins = os.getenv("CORS_ORIGINS", "")
+allowed_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
+
+if not allowed_origins:
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",  # Keep Vite just in case
+        "https://e-canteen-frontend.vercel.app"  # Fallback explicit
+    ]
+
+print("CORS allowed origins:", allowed_origins)
 
 app.add_middleware(
     CORSMiddleware,

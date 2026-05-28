@@ -24,7 +24,7 @@ class FeedbackCreate(BaseModel):
 # =========================
 # USER ➜ SUBMIT FEEDBACK
 # =========================
-@router.post("")
+@router.post("/")
 def submit_feedback(
     payload: FeedbackCreate,
     current_user=Depends(get_current_user)

@@ -4,8 +4,13 @@ import axios from "axios";
    BASE CONFIG
 ========================= */
 
+const DEV_FALLBACK_URL = "http://localhost:8001";
+const PROD_FALLBACK_URL = "https://e-canteen-7.onrender.com";
+const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const BASE_URL =
-  process.env.REACT_APP_API_URL || "https://e-canteen-7.onrender.com";
+  process.env.REACT_APP_API_URL ||
+  process.env.REACT_APP_API_BASE_URL ||
+  (isLocalhost ? DEV_FALLBACK_URL : PROD_FALLBACK_URL);
 
 const API = axios.create({
   baseURL: BASE_URL,
@@ -14,6 +19,8 @@ const API = axios.create({
   },
   timeout: 45000,
 });
+
+console.debug("[API] baseURL:", BASE_URL);
 
 /* =========================
    HELPERS

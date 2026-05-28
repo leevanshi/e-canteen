@@ -1,6 +1,7 @@
 from pymongo import MongoClient, ReturnDocument, ASCENDING, DESCENDING
 from datetime import timedelta, timezone, datetime
 from dotenv import load_dotenv
+from pathlib import Path
 import os
 import time
 
@@ -8,7 +9,8 @@ import time
 # LOAD ENV
 # =========================
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 MONGO_URL = os.getenv("MONGO_URL")
 DB_NAME = os.getenv("DB_NAME", "ecanteen")
@@ -153,12 +155,6 @@ def init_indexes():
 
     wallet_txn_collection.create_index(
         [("source", ASCENDING)],
-        background=True
-    )
-
-    counters_collection.create_index(
-        [("_id", ASCENDING)],
-        unique=True,
         background=True
     )
 

@@ -35,7 +35,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import AnimatedPage from "./components/AnimatedPage";
 
-const BACKEND_URL = "https://e-canteen-7.onrender.com";
+const DEV_BACKEND_URL = "http://localhost:8001";
+const PROD_BACKEND_URL = "https://e-canteen-7.onrender.com";
+const BACKEND_URL =
+  process.env.REACT_APP_API_URL ||
+  process.env.REACT_APP_API_BASE_URL ||
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? DEV_BACKEND_URL
+    : PROD_BACKEND_URL);
 
 const App = () => {
 

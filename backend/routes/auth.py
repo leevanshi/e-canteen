@@ -7,6 +7,7 @@ from jose import jwt, JWTError
 from bson import ObjectId
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
+from pathlib import Path
 import os
 import logging
 import re
@@ -14,11 +15,11 @@ import time
 from pymongo.errors import DuplicateKeyError
 from collections import defaultdict
 
-from otp_utils import generate_otp
-from email_service import send_otp_email, send_welcome_email, send_password_reset_email
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
-# ================= LOAD ENV =================
-load_dotenv()
+from otp_utils import generate_otp
+from email_config import MAIL_SUPPRESS_SEND, MAIL_DEBUG
+from email_service import send_otp_email, send_welcome_email, send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -222,7 +223,10 @@ async def send_otp(data: EmailRequest):
         await send_otp_email(email, otp)
     except Exception as e:
         logger.error(f"Email failed: {e}")
-        raise HTTPException(500, "Failed to send OTP email")
+        if MAIL_SUPPRESS_SEND or MAIL_DEBUG:
+            logger.warning("OTP email send bypassed due to local debug or suppressed email mode")
+        else:
+            raise HTTPException(500, f"Failed to send OTP email: {e}")
 
     logger.info(f"OTP sent to {email} | OTP: {otp}")
 
@@ -277,11 +281,18 @@ async def send_reset_otp(data: EmailRequest):
         await send_otp_email(email, otp)
     except Exception as e:
         logger.error(f"Email failed: {e}")
-        raise HTTPException(500, "Failed to send OTP email")
+        if MAIL_SUPPRESS_SEND or MAIL_DEBUG:
+            logger.warning("Reset OTP email send bypassed due to local debug or suppressed email mode")
+        else:
+            raise HTTPException(500, "Failed to send OTP email")
 
     logger.info(f"Reset OTP sent to {email}")
 
-    return {"message": "OTP sent to your registered email"}
+    response = {"message": "OTP sent to your registered email"}
+    if MAIL_SUPPRESS_SEND or MAIL_DEBUG:
+        response["otp"] = otp
+
+    return response
 
 
 # ================= VERIFY OTP =================
@@ -299,7 +310,13 @@ def verify_otp(data: VerifyOTPSchema):
     if not record:
         raise HTTPException(400, "Invalid OTP")
 
-    if record["expires_at"] < datetime.now(timezone.utc):
+    # handle naive datetimes stored in MongoDB by assuming UTC
+    expires_at = record.get("expires_at")
+    if getattr(expires_at, "tzinfo", None) is None:
+        from datetime import timezone as _tz
+        expires_at = expires_at.replace(tzinfo=_tz.utc)
+
+    if expires_at < datetime.now(timezone.utc):
         raise HTTPException(400, "OTP expired")
 
     otp_collection.update_one(
@@ -422,3 +439,17 @@ async def reset_password(data: ResetPasswordSchema):
         logger.warning(f"Password reset email failed: {e}")
 
     return {"message": "Password reset successfully"}
+
+
+# ================= TEST EMAIL (for diagnostics)
+@router.post("/test-email")
+async def test_email(data: EmailRequest):
+    """Send a simple test/welcome email to verify delivery (useful for debugging SMTP/API)."""
+    email = normalize_email(data.email)
+
+    success = await send_welcome_email(email, "Test User", "student")
+    if not success:
+        logger.error("Test email failed: no delivery after SMTP/SendGrid attempts")
+        raise HTTPException(500, "Failed to send test email: delivery could not be completed")
+
+    return {"message": "Test email sent"}

@@ -68,8 +68,13 @@ const ForgotPasswordPage = () => {
     if (!email) { toast.error("Enter your email first"); return; }
     setLoading(true);
     try {
-      await API.post("/auth/send-reset-otp", { email: email.trim().toLowerCase() });
-      toast.success("OTP sent to your registered email 📬");
+      const res = await API.post("/auth/send-reset-otp", { email: email.trim().toLowerCase() });
+      const otpCode = res?.data?.otp;
+      if (process.env.NODE_ENV === "development" && otpCode) {
+        toast.success(`OTP sent! Use code: ${otpCode}`);
+      } else {
+        toast.success("OTP sent to your registered email 📬");
+      }
       setStep(2);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Failed to send OTP");

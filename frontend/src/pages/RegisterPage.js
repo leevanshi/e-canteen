@@ -62,8 +62,13 @@ const RegisterPage = () => {
     if (!formData.email) { toast.error("Enter your NMIMS email first"); return; }
     setLoading(true);
     try {
-      await API.post("/auth/send-otp", { email: formData.email.trim().toLowerCase() });
-      toast.success("OTP sent! Check your inbox 📬");
+      const res = await API.post("/auth/send-otp", { email: formData.email.trim().toLowerCase() });
+      const otp = res?.data?.otp;
+      if (process.env.NODE_ENV === "development" && otp) {
+        toast.success(`OTP sent! Use code: ${otp}`);
+      } else {
+        toast.success("OTP sent! Check your inbox 📬");
+      }
       setStep(2);
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to send OTP");

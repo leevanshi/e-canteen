@@ -1,7 +1,15 @@
 /* =========================
    API CONFIG
 ========================= */
-export const API_BASE_URL = "https://e-canteen-7.onrender.com";
+const DEV_BASE_URL = "http://localhost:8001";
+const PROD_BASE_URL = "https://e-canteen-7.onrender.com";
+
+export const API_BASE_URL =
+  process.env.REACT_APP_API_URL ||
+  process.env.REACT_APP_API_BASE_URL ||
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? DEV_BASE_URL
+    : PROD_BASE_URL);
 
 
 /* =========================
