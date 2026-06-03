@@ -43,6 +43,8 @@ if not SECRET_KEY:
     SECRET_KEY = "dev-secret-key"
 
 security = HTTPBearer()
+# optional bearer for endpoints that may accept either secret or auth
+optional_security = HTTPBearer(auto_error=False)
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -189,6 +191,53 @@ def get_current_user(
         raise HTTPException(401, "Invalid or expired token")
 
 
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(optional_security)
+):
+    """Return current user if Authorization header present, otherwise None."""
+    if not credentials:
+        return None
+
+    auth_header = f"{credentials.scheme} {credentials.credentials}"
+    return get_current_user_from_header(auth_header)
+
+
+def get_current_user_from_header(auth_header: str):
+    if not auth_header or not auth_header.lower().startswith("bearer "):
+        raise HTTPException(401, "Invalid authorization header")
+
+    token = auth_header.split(" ", 1)[1].strip()
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "access":
+            raise HTTPException(401, "Invalid token type")
+
+        user_id = payload.get("sub")
+        if not user_id or not ObjectId.is_valid(user_id):
+            raise HTTPException(401, "Invalid token")
+
+        user = users_collection.find_one({"_id": ObjectId(user_id)}, {"password": 0})
+        if not user:
+            raise HTTPException(401, "User not found")
+
+        return {
+            "_id": str(user["_id"]),
+            "name": user.get("name"),
+            "email": user.get("email"),
+            "role": normalize_role(user.get("role"))
+        }
+    except JWTError:
+        raise HTTPException(401, "Invalid or expired token")
+
+
+def require_admin(current_user=Depends(get_current_user)):
+    """Dependency to require admin role."""
+    if not current_user or current_user.get("role") != "admin":
+        raise HTTPException(403, "Admin role required")
+    return current_user
+
+
 # ================= SEND OTP (Registration) =================
 
 @router.post("/send-otp")
@@ -196,9 +245,6 @@ async def send_otp(data: EmailRequest):
 
     email = normalize_email(data.email)
 
-    # 🔒 STRICT NMIMS VALIDATION
-    if not re.match(r"^[a-zA-Z0-9._%+-]+@(nmims\.in|nmims\.edu\.in|nmims\.edu)$", email):
-        raise HTTPException(400, "Only NMIMS email allowed")
 
     now = time.time()
 
@@ -246,9 +292,6 @@ async def send_reset_otp(data: EmailRequest):
 
     email = normalize_email(data.email)
 
-    # 🔒 NMIMS email validation
-    if not re.match(r"^[a-zA-Z0-9._%+-]+@(nmims\.in|nmims\.edu\.in|nmims\.edu)$", email):
-        raise HTTPException(400, "Only NMIMS email allowed")
 
     # ✅ Check the email is actually registered
     user = users_collection.find_one({"email": email})

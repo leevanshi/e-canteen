@@ -132,7 +132,7 @@ return (
 
         <p className="text-gray-600 mb-10 text-lg md:text-xl">
           Skip queues, save time, and enjoy fresh meals with our smart
-          canteen system for NMIMS Chandigarh.
+          canteen system for your campus.
         </p>
 
         <Button
@@ -190,7 +190,7 @@ return (
     {/* ================= FOOTER ================= */}
     <footer className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-14 text-center">
       <p className="text-sm opacity-80">
-        © 2026 E-Canteen • Designed for NMIMS Chandigarh
+        © 2026 eCanteen • Student Food Ordering Platform
       </p>
     </footer>
   </div>

@@ -1,7 +1,7 @@
 import requests, sys, time
 
 base='http://127.0.0.1:8002/auth'
-email='leevanshi.sharma813@nmims.in'
+email='test@example.com'
 
 try:
     r = requests.post(base+'/send-otp', json={'email': email}, timeout=60)

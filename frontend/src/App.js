@@ -28,6 +28,7 @@ import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import AdminWalletPage from "./pages/AdminWalletPage";
 import AdminMenuPage from "./pages/AdminMenuPage";
 import AdminCounterMenu from "./pages/AdminCounterMenu";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
 
 /* COMPONENTS */
 import Navbar from "./components/Navbar";
@@ -248,6 +249,13 @@ const App = () => {
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AnimatedPage><AdminFeedbackPage /></AnimatedPage>
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/unauthorized"
+            element={
+              <AnimatedPage><UnauthorizedPage /></AnimatedPage>
             }
           />
 

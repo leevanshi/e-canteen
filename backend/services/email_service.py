@@ -249,54 +249,54 @@ async def send_bulk_email(
 
 
 async def send_otp_email(email: str, otp: str) -> bool:
-    subject = "NMIMS E-Canteen OTP Verification"
+    subject = "eCanteen OTP Verification"
     plain_text = (
         f"Hello,\n\nYour OTP is: {otp}\n\n"
         "This OTP will expire in 5 minutes.\n\n"
         "Do not share this code with anyone.\n\n"
-        "Regards,\nNMIMS E-Canteen"
+        "Regards,\neCanteen"
     )
     html = (
         f"<html><body>"
-        f"<h2>NMIMS E-Canteen</h2>"
+        f"<h2>eCanteen</h2>"
         f"<p>Your OTP is:</p>"
         f"<h1 style=\"letter-spacing:4px\">{otp}</h1>"
         f"<p>This OTP will expire in <strong>5 minutes</strong>.</p>"
         f"<p>Do not share this code with anyone.</p>"
-        f"<p>Regards,<br/>NMIMS E-Canteen</p>"
+        f"<p>Regards,<br/>eCanteen</p>"
         f"</body></html>"
     )
     return await send_email(email, subject, plain_text, html)
 
 
 async def send_welcome_email(email: str, name: str, role: str) -> bool:
-    subject = "Welcome to NMIMS E-Canteen!"
+    subject = "Welcome to eCanteen!"
     plain_text = (
         f"Hello {name},\n\n"
-        "Welcome to NMIMS eCanteen. Your account has been successfully created.\n\n"
+        "Welcome to eCanteen. Your account has been successfully created.\n\n"
         f"Role: {role.capitalize()}\n\n"
-        "We look forward to serving you fresh meals on campus.\n\n"
-        "Regards,\nNMIMS E-Canteen"
+        "We look forward to serving you fresh meals.\n\n"
+        "Regards,\neCanteen"
     )
     html = (
         f"<html><body>"
         f"<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;\">"
-        f"<h1 style=\"color:#f97316;\">Welcome to NMIMS eCanteen!</h1>"
+        f"<h1 style=\"color:#f97316;\">Welcome to eCanteen!</h1>"
         f"<p>Hi {name},</p>"
         f"<p>Your account has been successfully created as a <strong>{role.capitalize()}</strong>.</p>"
-        f"<p>You're now ready to place orders and enjoy campus dining delivered through our app.</p>"
-        f"<p>Regards,<br/>NMIMS E-Canteen Team</p>"
+        f"<p>You're now ready to place orders and enjoy dining through our app.</p>"
+        f"<p>Regards,<br/>eCanteen Team</p>"
         f"</div></body></html>"
     )
     return await send_email(email, subject, plain_text, html)
 
 
 async def send_password_reset_email(email: str, name: str) -> bool:
-    subject = "Your NMIMS E-Canteen Password Has Been Reset"
+    subject = "Your eCanteen Password Has Been Reset"
     plain_text = (
         f"Hello {name},\n\n"
         "Your password was successfully reset. If you did not request this change, please contact support immediately.\n\n"
-        "Regards,\nNMIMS E-Canteen"
+        "Regards,\neCanteen"
     )
     html = (
         f"<html><body>"
@@ -304,19 +304,19 @@ async def send_password_reset_email(email: str, name: str) -> bool:
         f"<p>Hi {name},</p>"
         f"<p>Your password was successfully reset.</p>"
         f"<p>If you did not request this change, please contact support immediately.</p>"
-        f"<p>Regards,<br/>NMIMS E-Canteen</p>"
+        f"<p>Regards,<br/>eCanteen</p>"
         f"</body></html>"
     )
     return await send_email(email, subject, plain_text, html)
 
 
 async def send_order_email(email: str, order_details: str, order_id: Optional[str] = None) -> bool:
-    subject = f"NMIMS E-Canteen Order Confirmation{f' - #{order_id}' if order_id else ''}"
+    subject = f"eCanteen Order Confirmation{f' - #{order_id}' if order_id else ''}"
     plain_text = (
         "Hello,\n\nThank you for your order. The details are below:\n\n"
         f"{order_details}\n\n"
         "We will notify you once your order is ready.\n\n"
-        "Regards,\nNMIMS E-Canteen"
+        "Regards,\neCanteen"
     )
     html = (
         f"<html><body>"
@@ -324,25 +324,25 @@ async def send_order_email(email: str, order_details: str, order_id: Optional[st
         f"<p>Thank you for your order. Here are the details:</p>"
         f"<pre style=\"font-family:inherit;white-space:pre-wrap;\">{order_details}</pre>"
         f"<p>We will notify you once your order is ready.</p>"
-        f"<p>Regards,<br/>NMIMS E-Canteen</p>"
+        f"<p>Regards,<br/>eCanteen</p>"
         f"</body></html>"
     )
     return await send_email(email, subject, plain_text, html)
 
 
 async def send_order_status_update(email: str, order_id: str, status: str) -> bool:
-    subject = f"Order Status Update - NMIMS E-Canteen#{order_id}"
+    subject = f"Order Status Update - eCanteen #{order_id}"
     plain_text = (
         f"Hello,\n\nYour order #{order_id} status has been updated to: {status}.\n\n"
         "Please check the app for latest order details.\n\n"
-        "Regards,\nNMIMS E-Canteen"
+        "Regards,\neCanteen"
     )
     html = (
         f"<html><body>"
         f"<h2>Order Status Updated</h2>"
         f"<p>Your order <strong>#{order_id}</strong> is now <strong>{status}</strong>.</p>"
         f"<p>Please check the app for the latest order details.</p>"
-        f"<p>Regards,<br/>NMIMS E-Canteen</p>"
+        f"<p>Regards,<br/>eCanteen</p>"
         f"</body></html>"
     )
     return await send_email(email, subject, plain_text, html)

@@ -69,7 +69,7 @@ const JoinPage = () => {
           >
             <Coffee className="text-white" size={30} />
           </motion.div>
-          <h1 className="text-3xl font-extrabold text-gray-800">Join NMIMS eCanteen</h1>
+          <h1 className="text-3xl font-extrabold text-gray-800">Join eCanteen</h1>
           <p className="text-gray-500 mt-2 text-base">Choose your role to get started</p>
         </motion.div>
 
@@ -125,7 +125,7 @@ const JoinPage = () => {
         </motion.div>
 
         <motion.p variants={item} className="text-center text-xs text-gray-400 mt-4">
-          NMIMS Chandigarh · eCanteen Platform
+          eCanteen · Student Food Ordering Platform
         </motion.p>
       </motion.div>
     </div>

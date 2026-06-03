@@ -36,19 +36,9 @@ const statusBadge = (status = "") => {
 const STATUS_PRIORITY = {
   pending: 1,
   preparing: 2,
-  completed: 3,
-};
-
-/* ================= RECEIPT ================= */
-
-const formatReceipt = (order) => {
-
-  const items = Array.isArray(order.items) ? order.items : [];
-
   return `
-NMIMS E-CANTEEN
-SVKMS NMIMS UNIVERSITY
-Chandigarh Campus
+eCanteen Receipt
+Student Food Ordering Platform
 --------------------------------
 
 Order No : ${order.order_id || order._id}
@@ -73,8 +63,16 @@ Total                   ₹${order.total_amount}
 
 --------------------------------
 Thank you for using
-NMIMS ECanteen
+eCanteen
+`;
+  .join("\n")}
 --------------------------------
+
+Total                   ₹${order.total_amount}
+
+--------------------------------
+Thank you for using
+eCanteen
 `;
 };
 

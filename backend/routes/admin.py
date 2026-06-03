@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from pydantic import BaseModel
 from typing import List
 from bson import ObjectId
@@ -17,16 +17,28 @@ from database import (
     counters_collection
 )
 
-from routes.auth import get_current_user
+from routes.auth import get_current_user, get_current_user_optional, hash_password
+import os
 from server import manager
 from email_service import send_order_status_update
+from services.audit import log_audit
 
 
 # ================= HELPERS =================
 
-def ensure_admin_or_staff(user: dict):
-    if not user or user.get("role") not in ["admin", "staff"]:
-        raise HTTPException(403, "Admin or Staff access required")
+def ensure_admin(user: dict):
+    if not user or user.get("role") != "admin":
+        raise HTTPException(403, "Admin access required")
+
+
+# Admin register secret (allows one-time admin creation without existing admin)
+ADMIN_REGISTER_SECRET = os.getenv("ADMIN_REGISTER_SECRET")
+
+
+class AdminCreateSchema(BaseModel):
+    name: str
+    email: str
+    password: str
 
 
 def serialize_order(o):
@@ -87,7 +99,7 @@ def get_admin_orders(
     current_user=Depends(get_current_user)
 ):
 
-    ensure_admin_or_staff(current_user)
+    ensure_admin(current_user)
 
     skip = (page - 1) * limit
 
@@ -102,6 +114,48 @@ def get_admin_orders(
     return [serialize_order(o) for o in orders]
 
 
+@router.post("/create-admin")
+def create_admin_user(
+    data: AdminCreateSchema,
+    x_admin_register_secret: str | None = Header(None, convert_underscores=False),
+    current_user=Depends(get_current_user_optional)
+):
+    """Create an admin account. Allowed only if the caller is already an admin, or the
+    correct ADMIN_REGISTER_SECRET is provided in header `X-Admin-Register-Secret`.
+    """
+
+    # If caller is admin, allow. Otherwise check secret header.
+    caller_is_admin = bool(current_user and current_user.get("role") == "admin")
+    secret_ok = bool(ADMIN_REGISTER_SECRET and x_admin_register_secret == ADMIN_REGISTER_SECRET)
+
+    if not (caller_is_admin or secret_ok):
+        raise HTTPException(403, "Admin creation requires admin authentication or valid secret")
+
+    # Basic validation
+    email = data.email.strip().lower()
+
+    if users_collection.find_one({"email": email}):
+        raise HTTPException(409, "User with this email already exists")
+
+    user_doc = {
+        "name": data.name.strip().title(),
+        "email": email,
+        "password": hash_password(data.password),
+        "role": "admin",
+        "created_at": datetime.now(IST)
+    }
+
+    users_collection.insert_one(user_doc)
+
+    # Audit
+    try:
+        log_audit("create_admin", user_id=current_user.get("_id") if current_user else None, details={"email": email})
+    except Exception:
+        pass
+
+    return {"message": "Admin user created"}
+
+
 # ================= UPDATE ORDER STATUS =================
 
 @router.put("/orders/{order_id}/status")
@@ -111,7 +165,7 @@ async def update_order_status(
     current_user=Depends(get_current_user)
 ):
 
-    ensure_admin_or_staff(current_user)
+    ensure_admin(current_user)
 
     status = data.status.lower()
 
@@ -167,6 +221,12 @@ async def update_order_status(
         except Exception as e:
             print("Order status email failed:", e)
 
+    # Audit
+    try:
+        log_audit("order_status_update", user_id=current_user.get("_id"), details={"order_id": str(updated.get("order_id")), "status": status})
+    except Exception:
+        pass
+
     return {"success": True, "status": status}
 
 
@@ -178,7 +238,7 @@ async def place_walkin_order(
     current_user=Depends(get_current_user)
 ):
 
-    ensure_admin_or_staff(current_user)
+    ensure_admin(current_user)
 
     if not data.items:
         raise HTTPException(400, "Order must contain items")
@@ -218,6 +278,12 @@ async def place_walkin_order(
         "order": serialize_order(order)
     })
 
+    # Audit
+    try:
+        log_audit("place_walkin_order", user_id=current_user.get("_id"), details={"order_id": order_id, "total": data.total_amount})
+    except Exception:
+        pass
+
     return {
         "success": True,
         "order_id": order_id
@@ -232,7 +298,7 @@ def get_users(
     current_user=Depends(get_current_user)
 ):
 
-    ensure_admin_or_staff(current_user)
+    ensure_admin(current_user)
 
     users_cursor = list(
         users_collection.find(
@@ -268,7 +334,7 @@ def wallet_history(
     current_user=Depends(get_current_user)
 ):
 
-    ensure_admin_or_staff(current_user)
+    ensure_admin(current_user)
 
     txns = wallet_txn_collection.find().sort("created_at", -1).limit(limit)
 

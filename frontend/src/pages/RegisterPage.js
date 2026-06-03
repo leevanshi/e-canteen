@@ -38,7 +38,7 @@ const StepIndicator = ({ current, total }) => (
 /* ================= STEP ICONS ================= */
 const stepIcons = [Mail, ShieldCheck, UserPlus];
 const stepTitles = ["Verify Email", "Enter OTP", "Create Account"];
-const stepDescs = ["We'll send a 6-digit code", "Check your NMIMS inbox", "Almost there!"];
+const stepDescs = ["We'll send a 6-digit code", "Check your inbox", "Almost there!"];
 
 /* ================= COMPONENT ================= */
 const RegisterPage = () => {
@@ -59,7 +59,7 @@ const RegisterPage = () => {
 
   /* --- Send OTP --- */
   const handleSendOtp = async () => {
-    if (!formData.email) { toast.error("Enter your NMIMS email first"); return; }
+    if (!formData.email) { toast.error("Enter your email first"); return; }
     setLoading(true);
     try {
       const res = await API.post("/auth/send-otp", { email: formData.email.trim().toLowerCase() });
@@ -150,15 +150,14 @@ const RegisterPage = () => {
               {step === 1 && (
                 <motion.div key="step1" variants={slideIn} initial="hidden" animate="visible" exit="exit" className="space-y-4">
                   <div>
-                    <Label className="text-gray-700 font-semibold text-sm">NMIMS Email</Label>
+                    <Label className="text-gray-700 font-semibold text-sm">Email Address</Label>
                     <Input
                       type="email"
-                      placeholder="yourname@nmims.edu.in"
+                      placeholder="yourname@gmail.com"
                       value={formData.email}
                       onChange={(e) => set("email", e.target.value)}
                       className="mt-1.5 rounded-xl border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 transition-all"
                     />
-                    <p className="text-xs text-gray-400 mt-1">Only @nmims.in / @nmims.edu.in emails allowed</p>
                   </div>
                   <motion.button
                     onClick={handleSendOtp}
@@ -254,7 +253,7 @@ const RegisterPage = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-4">NMIMS Chandigarh · eCanteen Platform</p>
+        <p className="text-center text-xs text-gray-400 mt-4">eCanteen · Student Food Ordering Platform</p>
       </motion.div>
     </div>
   );

@@ -94,18 +94,18 @@ const LoginPage = () => {
                 <Coffee className="text-white" size={30} />
               </motion.div>
               <h1 className="text-2xl font-extrabold text-gray-800">Welcome back</h1>
-              <p className="text-sm text-gray-500 mt-1">Sign in to NMIMS eCanteen</p>
+              <p className="text-sm text-gray-500 mt-1">Sign in to eCanteen</p>
             </motion.div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
 
               {/* Email */}
               <motion.div variants={item}>
-                <Label className="text-gray-700 font-semibold text-sm">NMIMS Email</Label>
+                <Label className="text-gray-700 font-semibold text-sm">Email Address</Label>
                 <Input
                   type="email"
                   required
-                  placeholder="yourname@nmims.edu.in"
+                  placeholder="yourname@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={submitting}
@@ -176,7 +176,7 @@ const LoginPage = () => {
         </div>
 
         <motion.p variants={item} className="text-center text-xs text-gray-400 mt-4">
-          NMIMS Chandigarh · eCanteen Platform
+          eCanteen · Student Food Ordering Platform
         </motion.p>
 
       </motion.div>

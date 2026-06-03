@@ -1,5 +1,6 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from datetime import timedelta, timezone
@@ -8,6 +9,7 @@ from typing import List
 import os
 import asyncio
 from database import users_collection
+from services.audit import log_audit
 
 
 # ================= ENV =================
@@ -137,12 +139,65 @@ async def shutdown():
 
 # ================= ROUTERS =================
 
-from routes.auth import router as auth_router
+from routes.auth import router as auth_router, get_current_user_from_header
 from routes.wallet import router as wallet_router
 from routes.menu import router as menu_router
 from routes.orders import router as orders_router
-from routes.admin import router as admin_router
+from routes.admin import router as admin_router, ADMIN_REGISTER_SECRET
 from routes.feedback import router as feedback_router
+
+
+def get_client_ip(request: Request) -> str | None:
+    x_forwarded = request.headers.get("x-forwarded-for")
+    if x_forwarded:
+        return x_forwarded.split(",")[0].strip()
+    return request.client.host if request.client else None
+
+
+@app.middleware("http")
+async def admin_path_guard(request: Request, call_next):
+    path = request.url.path
+
+    if path.startswith("/admin"):
+        auth_header = request.headers.get("authorization")
+        secret_header = request.headers.get("x-admin-register-secret")
+        client_ip = get_client_ip(request)
+
+        def deny(status_code: int, detail: str, action: str, user_id: str | None = None):
+            try:
+                log_audit(action, user_id=user_id, ip=client_ip, details={"path": path, "detail": detail})
+            except Exception:
+                pass
+            return JSONResponse(status_code=status_code, content={"detail": detail})
+
+        if path == "/admin/create-admin":
+            if secret_header and ADMIN_REGISTER_SECRET and secret_header == ADMIN_REGISTER_SECRET:
+                return await call_next(request)
+
+            if not auth_header:
+                return deny(403, "Admin creation requires admin auth or valid secret", "admin_create_denied", None)
+
+            try:
+                user = get_current_user_from_header(auth_header)
+                if user.get("role") != "admin":
+                    return deny(403, "Admin role required", "admin_create_denied", user.get("_id"))
+            except HTTPException as exc:
+                return deny(exc.status_code, exc.detail, "admin_create_denied", None)
+
+            return await call_next(request)
+
+        if not auth_header:
+            return deny(401, "Authorization required for admin routes", "admin_access_denied", None)
+
+        try:
+            user = get_current_user_from_header(auth_header)
+            if user.get("role") != "admin":
+                return deny(403, "Admin role required", "admin_access_denied", user.get("_id"))
+        except HTTPException as exc:
+            return deny(exc.status_code, exc.detail, "admin_access_denied", None)
+
+    return await call_next(request)
+
 
 app.include_router(auth_router)
 app.include_router(menu_router)

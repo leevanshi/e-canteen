@@ -58,6 +58,7 @@ wallet_txn_collection = db["wallet_transactions"]
 
 counters_collection = db["counters"]
 otp_collection = db["otp_verifications"]
+audit_collection = db["audit_logs"]
 
 # =========================
 # CONNECTION CHECK

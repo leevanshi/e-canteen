@@ -25,7 +25,7 @@ const item = {
 /* ================= STEP CONFIG ================= */
 const stepIcons  = [KeyRound, ShieldCheck, Lock];
 const stepLabels = ["Enter Email", "Verify OTP", "New Password"];
-const stepDescs  = ["We'll verify your registered account", "Check your NMIMS inbox", "Choose a strong password"];
+const stepDescs  = ["We'll verify your registered account", "Check your inbox", "Choose a strong password"];
 
 /* ================= STEP INDICATOR ================= */
 const StepIndicator = ({ step }) => (
@@ -155,12 +155,12 @@ const ForgotPasswordPage = () => {
               {step === 1 && (
                 <motion.div key="s1" variants={slideIn} initial="hidden" animate="visible" exit="exit" className="space-y-4">
                   <div>
-                    <Label className="text-gray-700 font-semibold text-sm">Registered NMIMS Email</Label>
+                    <Label className="text-gray-700 font-semibold text-sm">Registered Email</Label>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="yourname@nmims.edu.in"
+                      placeholder="yourname@gmail.com"
                       className="mt-1.5 rounded-xl border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 transition-all"
                     />
                     <p className="text-xs text-gray-400 mt-1">OTP will only be sent to a registered account</p>
@@ -274,7 +274,7 @@ const ForgotPasswordPage = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-4">NMIMS Chandigarh · eCanteen Platform</p>
+        <p className="text-center text-xs text-gray-400 mt-4">eCanteen · Student Food Ordering Platform</p>
       </motion.div>
     </div>
   );
