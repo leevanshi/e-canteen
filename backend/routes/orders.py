@@ -6,7 +6,7 @@ from typing import List, Optional
 from pymongo import ReturnDocument
 from collections import defaultdict
 import time
-from email_service import send_order_email
+from email_service import send_order_email, send_admin_notification
 from database import (
     orders_collection,
     wallet_collection,
@@ -168,6 +168,7 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
                 "order_type": "online",
                 "user_id": ObjectId(user_id),
                 "user_name": current_user["name"],
+                "user_email": current_user["email"],
                 "items": clean_items,
                 "total_amount": total,
                 "pickup_time": data.pickup_time,
@@ -194,7 +195,17 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 
         await send_order_email(
             email=current_user["email"],
-            order_details=order_details
+            order_details=order_details,
+            order_id=str(order_doc["order_id"])
+        )
+
+        await send_admin_notification(
+            subject=f"New order placed - #{order_doc['order_id']}",
+            body=(
+                f"New order #{order_doc['order_id']} was placed by {order_doc['user_name']}\n"
+                f"Email: {order_doc['user_email']}\n\n"
+                f"Order details:\n{order_details}"
+            )
         )
 
     except Exception as e:

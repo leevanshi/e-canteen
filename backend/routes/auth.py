@@ -18,8 +18,13 @@ from collections import defaultdict
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 from otp_utils import generate_otp
-from email_config import MAIL_SUPPRESS_SEND, MAIL_DEBUG
-from email_service import send_otp_email, send_welcome_email, send_password_reset_email
+from email_service import (
+    SMTP_DEBUG,
+    SMTP_SUPPRESS_SEND,
+    send_otp_email,
+    send_welcome_email,
+    send_password_reset_email,
+)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -222,19 +227,16 @@ async def send_otp(data: EmailRequest):
     try:
         await send_otp_email(email, otp)
     except Exception as e:
-        logger.error(f"Email failed: {e}")
-        if MAIL_SUPPRESS_SEND or MAIL_DEBUG:
-            logger.warning("OTP email send bypassed due to local debug or suppressed email mode")
-        else:
-            raise HTTPException(500, f"Failed to send OTP email: {e}")
+        logger.error(f"OTP email failed: {e}")
+        raise HTTPException(500, f"Failed to send OTP email: {e}")
 
     logger.info(f"OTP sent to {email} | OTP: {otp}")
 
-    # ⚠️ DEBUG ONLY (remove in production)
-    return {
-        "message": "OTP sent to email",
-        "otp": otp
-    }
+    response = {"message": "OTP sent to email"}
+    if SMTP_DEBUG or SMTP_SUPPRESS_SEND:
+        response["otp"] = otp
+
+    return response
 
 
 # ================= SEND OTP (Forgot Password — registered users only) =================
@@ -280,16 +282,13 @@ async def send_reset_otp(data: EmailRequest):
     try:
         await send_otp_email(email, otp)
     except Exception as e:
-        logger.error(f"Email failed: {e}")
-        if MAIL_SUPPRESS_SEND or MAIL_DEBUG:
-            logger.warning("Reset OTP email send bypassed due to local debug or suppressed email mode")
-        else:
-            raise HTTPException(500, "Failed to send OTP email")
+        logger.error(f"Reset OTP email failed: {e}")
+        raise HTTPException(500, f"Failed to send OTP email: {e}")
 
     logger.info(f"Reset OTP sent to {email}")
 
     response = {"message": "OTP sent to your registered email"}
-    if MAIL_SUPPRESS_SEND or MAIL_DEBUG:
+    if SMTP_DEBUG or SMTP_SUPPRESS_SEND:
         response["otp"] = otp
 
     return response
@@ -449,7 +448,7 @@ async def test_email(data: EmailRequest):
 
     success = await send_welcome_email(email, "Test User", "student")
     if not success:
-        logger.error("Test email failed: no delivery after SMTP/SendGrid attempts")
+        logger.error("Test email failed: no delivery after SMTP attempts")
         raise HTTPException(500, "Failed to send test email: delivery could not be completed")
 
     return {"message": "Test email sent"}

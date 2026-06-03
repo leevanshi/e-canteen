@@ -19,6 +19,7 @@ from database import (
 
 from routes.auth import get_current_user
 from server import manager
+from email_service import send_order_status_update
 
 
 # ================= HELPERS =================
@@ -155,6 +156,16 @@ async def update_order_status(
         "order_id": updated["order_id"],
         "status": status
     })
+
+    if updated.get("user_email"):
+        try:
+            await send_order_status_update(
+                email=updated["user_email"],
+                order_id=str(updated["order_id"]),
+                status=status
+            )
+        except Exception as e:
+            print("Order status email failed:", e)
 
     return {"success": True, "status": status}
 

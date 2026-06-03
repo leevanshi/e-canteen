@@ -16,22 +16,22 @@ def normalize_env_value(value: str | None) -> str | None:
     return value
 
 
-MAIL_STARTTLS = os.getenv("MAIL_STARTTLS", "True").lower() in ("1", "true", "yes")
-MAIL_SSL_TLS = os.getenv("MAIL_SSL_TLS", "False").lower() in ("1", "true", "yes")
-MAIL_SUPPRESS_SEND = os.getenv("MAIL_SUPPRESS_SEND", "False").lower() in ("1", "true", "yes")
-MAIL_DEBUG = os.getenv("MAIL_DEBUG", "False").lower() in ("1", "true", "yes")
+SMTP_STARTTLS = os.getenv("SMTP_STARTTLS", "True").lower() in ("1", "true", "yes")
+SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "False").lower() in ("1", "true", "yes")
+SMTP_SUPPRESS_SEND = os.getenv("SMTP_SUPPRESS_SEND", "False").lower() in ("1", "true", "yes")
+SMTP_DEBUG = os.getenv("SMTP_DEBUG", "False").lower() in ("1", "true", "yes")
 
 # Ensure the environment variables that pydantic expects as integers are normalized
-os.environ["MAIL_SUPPRESS_SEND"] = "1" if MAIL_SUPPRESS_SEND else "0"
-os.environ["MAIL_DEBUG"] = "1" if MAIL_DEBUG else "0"
+os.environ["SMTP_SUPPRESS_SEND"] = "1" if SMTP_SUPPRESS_SEND else "0"
+os.environ["SMTP_DEBUG"] = "1" if SMTP_DEBUG else "0"
 
 conf = ConnectionConfig(
-    MAIL_USERNAME=normalize_env_value(os.getenv("MAIL_USERNAME")),
-    MAIL_PASSWORD=normalize_env_value(os.getenv("MAIL_PASSWORD")),
-    MAIL_FROM=normalize_env_value(os.getenv("MAIL_FROM")) or normalize_env_value(os.getenv("MAIL_USERNAME")),
-    MAIL_PORT=int(os.getenv("MAIL_PORT", 587)),
-    MAIL_SERVER=normalize_env_value(os.getenv("MAIL_SERVER")),
-    MAIL_STARTTLS=MAIL_STARTTLS,
-    MAIL_SSL_TLS=MAIL_SSL_TLS,
+    MAIL_USERNAME=normalize_env_value(os.getenv("SMTP_USER")) or normalize_env_value(os.getenv("MAIL_USERNAME")),
+    MAIL_PASSWORD=normalize_env_value(os.getenv("SMTP_PASSWORD")) or normalize_env_value(os.getenv("MAIL_PASSWORD")),
+    MAIL_FROM=normalize_env_value(os.getenv("EMAIL_FROM")) or normalize_env_value(os.getenv("MAIL_FROM")) or normalize_env_value(os.getenv("SMTP_USER")),
+    MAIL_PORT=int(os.getenv("SMTP_PORT", os.getenv("MAIL_PORT", 587))),
+    MAIL_SERVER=normalize_env_value(os.getenv("SMTP_HOST")) or normalize_env_value(os.getenv("MAIL_SERVER")),
+    MAIL_STARTTLS=SMTP_STARTTLS,
+    MAIL_SSL_TLS=SMTP_USE_SSL,
     USE_CREDENTIALS=True
 )
