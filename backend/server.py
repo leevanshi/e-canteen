@@ -51,6 +51,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    try:
+        print(f"REQUEST: {request.method} {request.url}")
+    except Exception:
+        pass
+
+    response = await call_next(request)
+
+    try:
+        print(f"RESPONSE: {response.status_code} for {request.method} {request.url}")
+    except Exception:
+        pass
+
+    return response
+
 # ================= WEBSOCKET MANAGER =================
 
 class ConnectionManager:
@@ -205,6 +222,16 @@ app.include_router(orders_router)
 app.include_router(admin_router)
 app.include_router(wallet_router)
 app.include_router(feedback_router)
+
+
+@app.on_event("startup")
+async def print_registered_routes():
+    print("Registered routes:")
+    for route in app.routes:
+        try:
+            print(route.path)
+        except Exception:
+            pass
 
 # ================= STATIC FILES =================
 

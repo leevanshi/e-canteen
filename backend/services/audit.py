@@ -24,4 +24,3 @@ def log_audit(action: str, user_id: str | None, ip: str | None = None, details: 
     except Exception:
         # Do not raise — audit should not break the main flow
         pass
-*** End Patch

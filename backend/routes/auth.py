@@ -245,6 +245,8 @@ async def send_otp(data: EmailRequest):
 
     email = normalize_email(data.email)
 
+    logger.info(f"send-otp requested for: {email}")
+
 
     now = time.time()
 
@@ -291,6 +293,7 @@ async def send_otp(data: EmailRequest):
 async def send_reset_otp(data: EmailRequest):
 
     email = normalize_email(data.email)
+    logger.info(f"send-reset-otp requested for: {email}")
 
 
     # ✅ Check the email is actually registered
