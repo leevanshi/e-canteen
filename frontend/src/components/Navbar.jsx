@@ -56,11 +56,11 @@ const Navbar = () => {
 
   return (
 
-    <nav className="w-full bg-white shadow-md px-6 py-4 flex items-center justify-between">
+    <nav className="w-full bg-surface border-b border-border shadow-soft px-6 py-4 flex flex-wrap items-center justify-between gap-3">
 
       <button
         onClick={handleLogoClick}
-        className="text-2xl font-bold text-orange-600"
+        className="text-2xl font-semibold text-primary"
       >
         ☕ E-Canteen
       </button>
@@ -70,15 +70,15 @@ const Navbar = () => {
       {isStudent && (
         <div className="flex items-center gap-6 text-sm font-medium">
 
-          <Link to="/menu" className="hover:text-orange-500">
+          <Link to="/menu" className="text-sm font-medium text-text hover:text-primary transition-colors duration-200">
             Menu
           </Link>
 
-          <Link to="/monthly-menu" className="hover:text-orange-500">
+          <Link to="/monthly-menu" className="text-sm font-medium text-text hover:text-primary transition-colors duration-200">
             Monthly Menu
           </Link>
 
-          <Link to="/orders" className="hover:text-orange-500">
+          <Link to="/orders" className="text-sm font-medium text-text hover:text-primary transition-colors duration-200">
             My Orders
           </Link>
 
@@ -129,13 +129,14 @@ const Navbar = () => {
           <>
             <Button
               variant="outline"
+              className="border-border text-text hover:border-primary hover:text-primary"
               onClick={() => navigate("/login")}
             >
               Login
             </Button>
 
             <Button
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              variant="default"
               onClick={() => navigate("/join")}
             >
               Register
