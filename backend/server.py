@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -8,7 +9,6 @@ from pathlib import Path
 from typing import List
 import os
 import asyncio
-from database import users_collection
 from services.audit import log_audit
 
 
@@ -23,6 +23,12 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 # ================= APP =================
 
+logging.basicConfig(
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="E-Canteen Backend",
     version="1.0.0"
@@ -30,24 +36,14 @@ app = FastAPI(
 
 # ================= CORS =================
 
-cors_origins = os.getenv("CORS_ORIGINS", "")
-allowed_origins = [origin.strip() for origin in cors_origins.split(",") if origin.strip()]
-
-if not allowed_origins:
-    allowed_origins = [
-        "http://localhost:3000",
-        "http://localhost:5173",  # Keep Vite just in case
-        "https://e-canteen-frontend.vercel.app"  # Fallback explicit
-    ]
-
-print("CORS allowed origins:", allowed_origins)
+allowed_origins = ["https://ecanteen-mnims.vercel.app"]
+logger.info("CORS allowed origins: %s", allowed_origins)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # Matches ANY vercel.app subdomain
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -135,17 +131,17 @@ from services.order_events import (
 
 @app.on_event("startup")
 async def startup():
+    try:
+        connect_with_retry()
+        init_indexes()
 
-    connect_with_retry()
-    init_indexes()
+        subscribe("ORDER_CREATED", handle_wallet_deduction)
+        subscribe("ORDER_CREATED", handle_kitchen_log)
 
-    # ✅ NOW it's safe
-    users_collection.create_index("email", unique=True)
-
-    subscribe("ORDER_CREATED", handle_wallet_deduction)
-    subscribe("ORDER_CREATED", handle_kitchen_log)
-
-    print("✅ Startup completed")
+        logger.info("✅ Startup completed")
+    except Exception as exc:
+        logger.exception("Startup failed: %s", exc)
+        raise
 
 # ================= SHUTDOWN =================
 
@@ -226,10 +222,10 @@ app.include_router(feedback_router)
 
 @app.on_event("startup")
 async def print_registered_routes():
-    print("Registered routes:")
+    logger.info("Registered routes:")
     for route in app.routes:
         try:
-            print(route.path)
+            logger.info(route.path)
         except Exception:
             pass
 
@@ -245,7 +241,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 # ================= HEALTH =================
 
 @app.get("/health")
-def health():
+async def health():
     return {"status": "ok"}
 
 # ================= ROOT =================

@@ -1,9 +1,14 @@
+import logging
+import traceback
 from pymongo import MongoClient, ReturnDocument, ASCENDING, DESCENDING
+from pymongo.errors import PyMongoError
 from datetime import timedelta, timezone, datetime
 from dotenv import load_dotenv
 from pathlib import Path
 import os
 import time
+
+logger = logging.getLogger(__name__)
 
 # =========================
 # LOAD ENV
@@ -81,41 +86,112 @@ def connect_with_retry(max_retries=5):
 # INDEX SETUP
 # =========================
 
+def normalize_index_spec(index_spec):
+    if isinstance(index_spec, dict):
+        return tuple(index_spec.items())
+    return tuple((key, value) for key, value in index_spec)
+
+
+def index_options_match(existing, desired_kwargs):
+    compare_keys = [
+        "unique",
+        "expireAfterSeconds",
+        "partialFilterExpression",
+        "sparse",
+        "collation",
+    ]
+
+    for key in compare_keys:
+        existing_value = existing.get(key)
+        desired_value = desired_kwargs.get(key)
+
+        if existing_value != desired_value:
+            return False
+
+    return True
+
+
+def safe_create_index(collection, index_spec, **kwargs):
+    try:
+        desired_key = normalize_index_spec(index_spec)
+        existing_indexes = collection.index_information()
+
+        for existing_name, existing_info in existing_indexes.items():
+            existing_key = normalize_index_spec(existing_info.get("key", []))
+
+            if existing_key == desired_key:
+                if index_options_match(existing_info, kwargs):
+                    logger.info(
+                        "Index already exists and matches desired options: %s.%s",
+                        collection.name,
+                        existing_name,
+                    )
+                else:
+                    logger.warning(
+                        "Conflicting existing index for %s %s: %s. Skipping creation.",
+                        collection.name,
+                        desired_key,
+                        existing_info,
+                    )
+                return existing_name
+
+        index_name = collection.create_index(index_spec, **kwargs)
+        logger.info("✅ Index created: %s.%s", collection.name, index_name)
+        return index_name
+
+    except PyMongoError as exc:
+        logger.exception(
+            "⚠️ Skipping index creation for %s %s %s: %s",
+            collection.name,
+            index_spec,
+            kwargs,
+            exc,
+        )
+        return None
+
+
 def init_indexes():
 
-    users_collection.create_index(
+    safe_create_index(
+        users_collection,
         [("email", ASCENDING)],
         unique=True,
         background=True
     )
 
-    orders_collection.create_index(
+    safe_create_index(
+        orders_collection,
         [("order_id", ASCENDING)],
         unique=True,
         background=True
     )
 
-    orders_collection.create_index(
+    safe_create_index(
+        orders_collection,
         [("user_id", ASCENDING)],
         background=True
     )
 
-    orders_collection.create_index(
+    safe_create_index(
+        orders_collection,
         [("created_at", DESCENDING)],
         background=True
     )
 
-    orders_collection.create_index(
+    safe_create_index(
+        orders_collection,
         [("status", ASCENDING), ("created_at", DESCENDING)],
         background=True
     )
 
-    orders_collection.create_index(
+    safe_create_index(
+        orders_collection,
         [("order_type", ASCENDING)],
         background=True
     )
 
-    orders_collection.create_index(
+    safe_create_index(
+        orders_collection,
         [("status", ASCENDING)],
         partialFilterExpression={
             "status": {"$in": ["pending", "paid", "preparing"]}
@@ -123,54 +199,63 @@ def init_indexes():
         background=True
     )
 
-    menu_collection.create_index(
+    safe_create_index(
+        menu_collection,
         [("available", ASCENDING)],
         background=True
     )
 
-    feedback_collection.create_index(
+    safe_create_index(
+        feedback_collection,
         [("created_at", DESCENDING)],
         background=True
     )
 
-    feedback_collection.create_index(
+    safe_create_index(
+        feedback_collection,
         [("order_id", ASCENDING)],
         background=True
     )
 
-    wallet_collection.create_index(
+    safe_create_index(
+        wallet_collection,
         [("user_id", ASCENDING)],
         unique=True,
         background=True
     )
 
-    wallet_txn_collection.create_index(
+    safe_create_index(
+        wallet_txn_collection,
         [("user_id", ASCENDING), ("created_at", DESCENDING)],
         background=True
     )
 
-    wallet_txn_collection.create_index(
+    safe_create_index(
+        wallet_txn_collection,
         [("type", ASCENDING)],
         background=True
     )
 
-    wallet_txn_collection.create_index(
+    safe_create_index(
+        wallet_txn_collection,
         [("source", ASCENDING)],
         background=True
     )
 
-    otp_collection.create_index(
+    safe_create_index(
+        otp_collection,
         [("expires_at", ASCENDING)],
         expireAfterSeconds=0,
         background=True
     )
 
-    otp_collection.create_index(
+    safe_create_index(
+        otp_collection,
         [("email", ASCENDING)],
         background=True
     )
 
-    print("✅ MongoDB indexes initialized")
+    logger.info("✅ MongoDB indexes initialized")
 
 # =========================
 # ORDER ID GENERATOR
