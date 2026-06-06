@@ -127,7 +127,7 @@ export const updateOrderStatus = (orderId, status) =>
   API.put(`/admin/orders/${orderId}/status`, { status });
 
 export const toggleMenuAvailability = (menuId, available) =>
-  API.put(`/admin/menu/${menuId}/availability`, {
+  API.put(`/menu/admin/${menuId}`, {
     available: Boolean(available),
   });
 

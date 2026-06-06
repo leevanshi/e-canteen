@@ -40,7 +40,7 @@ const AdminMenuPage = () => {
 
     try {
 
-      const res = await API.get("/menu");
+      const res = await API.get("/menu/admin");
 
       const data = Array.isArray(res?.data)
         ? res.data
@@ -86,7 +86,7 @@ const AdminMenuPage = () => {
 
     try {
 
-      await toggleMenuAvailability(item._id);
+      await toggleMenuAvailability(item._id, !item.available);
 
       setMenu((prev) =>
         prev.map((i) =>
