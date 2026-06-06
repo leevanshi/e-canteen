@@ -8,6 +8,7 @@ from bson import ObjectId
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from pathlib import Path
+from typing import Optional
 import os
 import logging
 import re
@@ -104,6 +105,11 @@ class VerifyOTPSchema(BaseModel):
         if not re.fullmatch(r"\d{6}", v):
             raise ValueError("OTP must be 6 digits")
         return v
+
+
+class MessageResponse(BaseModel):
+    message: str
+    otp: Optional[str] = None
 
 
 class ResetPasswordSchema(BaseModel):
@@ -240,7 +246,7 @@ def require_admin(current_user=Depends(get_current_user)):
 
 # ================= SEND OTP (Registration) =================
 
-@router.post("/send-otp")
+@router.post("/send-otp", response_model=MessageResponse, summary="Send registration OTP")
 async def send_otp(data: EmailRequest):
 
     email = normalize_email(data.email)
@@ -289,7 +295,7 @@ async def send_otp(data: EmailRequest):
 
 # ================= SEND OTP (Forgot Password — registered users only) =================
 
-@router.post("/send-reset-otp")
+@router.post("/send-reset-otp", response_model=MessageResponse, summary="Send password reset OTP")
 async def send_reset_otp(data: EmailRequest):
 
     email = normalize_email(data.email)
@@ -342,7 +348,7 @@ async def send_reset_otp(data: EmailRequest):
 
 # ================= VERIFY OTP =================
 
-@router.post("/verify-otp")
+@router.post("/verify-otp", response_model=MessageResponse, summary="Verify OTP code")
 def verify_otp(data: VerifyOTPSchema):
 
     email = normalize_email(data.email)
@@ -374,7 +380,7 @@ def verify_otp(data: VerifyOTPSchema):
 
 # ================= REGISTER =================
 
-@router.post("/register")
+@router.post("/register", response_model=MessageResponse, summary="Register a new user after OTP verification")
 async def register_user(data: RegisterSchema):
 
     email = normalize_email(data.email)
