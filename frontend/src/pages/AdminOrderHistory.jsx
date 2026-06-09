@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
 import { getAdminOrders } from "../api";
+import { formatApiError } from "../utils/formatApiError";
 
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -56,6 +57,7 @@ const AdminOrderHistory = () => {
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   /* ================= AUTH GUARD ================= */
 
@@ -81,6 +83,7 @@ const AdminOrderHistory = () => {
     try {
 
       setLoading(true);
+      setFetchError(null);
 
       const res = await getAdminOrders();
 
@@ -112,7 +115,10 @@ const AdminOrderHistory = () => {
     } catch (err) {
 
       console.error(err);
-      toast.error("Failed to load order history");
+      const msg = formatApiError(err?.response?.data?.detail,
+        err?.response ? "Failed to load order history" : "Backend unreachable — check API URL and CORS");
+      setFetchError(msg);
+      toast.error(msg);
 
     } finally {
 
@@ -192,6 +198,13 @@ const AdminOrderHistory = () => {
 
       </div>
 
+      {fetchError && (
+        <Card className="p-4 text-red-700 bg-red-50 border-red-200 flex justify-between items-center">
+          <span className="text-sm">{fetchError}</span>
+          <Button variant="outline" size="sm" onClick={fetchOrders}>Retry</Button>
+        </Card>
+      )}
+
       {orders.length === 0 ? (
 
         <Card className="p-8 text-center text-gray-500">
@@ -217,7 +230,7 @@ const AdminOrderHistory = () => {
                     Order ID:
                     <span className="font-normal">
                       {" "}
-                      #{order.order_id}
+                      {order.order_code || `E-${order.order_id}`}
                     </span>
                   </p>
 

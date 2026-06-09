@@ -47,9 +47,11 @@ logger.info("CORS allowed origins: %s", allowed_origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
@@ -122,7 +124,8 @@ async def orders_ws(websocket: WebSocket):
 
 # ================= DATABASE =================
 
-from database import connect_with_retry, init_indexes, close_mongo_connection
+from database import connect_with_retry, init_indexes, close_mongo_connection, menu_collection
+from services.nutrition_utils import ensure_menu_nutrition_seeded
 
 # ================= EVENT SYSTEM =================
 
@@ -139,6 +142,10 @@ async def startup():
     try:
         connect_with_retry()
         init_indexes()
+
+        seeded = ensure_menu_nutrition_seeded(menu_collection)
+        if seeded:
+            logger.info("Seeded nutrition data for %s menu items", seeded)
 
         subscribe("ORDER_CREATED", handle_wallet_deduction)
         subscribe("ORDER_CREATED", handle_kitchen_log)
@@ -175,6 +182,10 @@ def get_client_ip(request: Request) -> str | None:
 @app.middleware("http")
 async def admin_path_guard(request: Request, call_next):
     path = request.url.path
+
+    # Let CORS preflight through without auth checks
+    if request.method == "OPTIONS":
+        return await call_next(request)
 
     if path.startswith("/admin"):
         auth_header = request.headers.get("authorization")

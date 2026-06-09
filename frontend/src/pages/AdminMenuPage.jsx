@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import API, { toggleMenuAvailability } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { formatApiError } from "../utils/formatApiError";
 
 const AdminMenuPage = () => {
 
@@ -40,7 +41,7 @@ const AdminMenuPage = () => {
 
     try {
 
-      const res = await API.get("/menu");
+      const res = await API.get("/menu/admin");
 
       const data = Array.isArray(res?.data)
         ? res.data
@@ -58,7 +59,7 @@ const AdminMenuPage = () => {
     } catch (err) {
 
       console.error(err);
-      toast.error("Failed to load menu");
+      toast.error(formatApiError(err?.response?.data?.detail, "Failed to load menu"));
 
     } finally {
 
@@ -86,12 +87,13 @@ const AdminMenuPage = () => {
 
     try {
 
-      await toggleMenuAvailability(item._id);
+      const res = await toggleMenuAvailability(item._id);
+      const newAvailable = res?.data?.available ?? !item.available;
 
       setMenu((prev) =>
         prev.map((i) =>
           i._id === item._id
-            ? { ...i, available: !i.available }
+            ? { ...i, available: newAvailable }
             : i
         )
       );
@@ -105,7 +107,7 @@ const AdminMenuPage = () => {
     } catch (err) {
 
       console.error(err);
-      toast.error("Failed to update item");
+      toast.error(formatApiError(err?.response?.data?.detail, "Failed to update item"));
 
     } finally {
 

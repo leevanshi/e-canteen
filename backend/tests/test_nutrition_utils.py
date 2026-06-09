@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 
-from services.nutrition_utils import extract_nutrition, calculate_health_score
+from services.nutrition_utils import extract_nutrition, calculate_health_score, resolve_nutrition_for_item
 
 
 class TestNutritionUtils(unittest.TestCase):
@@ -43,6 +43,13 @@ class TestNutritionUtils(unittest.TestCase):
         nut = extract_nutrition(item)
         self.assertGreater(nut["health_score"], 0)
         self.assertLessEqual(nut["health_score"], 100)
+
+    def test_resolve_from_seed_when_db_empty(self):
+        item = {"name": "Amritsari Kulche & Chole", "price": 100}
+        nut = resolve_nutrition_for_item(item)
+        self.assertGreater(nut["calories"], 0)
+        self.assertGreater(nut["protein"], 0)
+        self.assertGreater(nut["health_score"], 0)
 
 
 if __name__ == "__main__":

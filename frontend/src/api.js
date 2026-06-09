@@ -117,7 +117,7 @@ export const resetPassword = (data) =>
 export const getMenu = () =>
   API.get("/menu");
 export const toggleMenuAvailability = (itemId) =>
-  API.patch(`/menu/${itemId}/toggle`);
+  API.patch(`/menu/${itemId}/toggle`, {});
 /* =========================
    USER ORDERS
 ========================= */
@@ -164,6 +164,9 @@ export const getMyWallet = () =>
 
 export const adminAddMoney = (data) =>
   API.post("/wallet/admin/add-money", data);
+
+export const getWalletHistory = () =>
+  API.get("/admin/wallet-history");
 
 /* =========================
    FEEDBACK

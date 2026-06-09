@@ -1,0 +1,622 @@
+{
+  "Tea": {
+    "calories": 506,
+    "protein": 10,
+    "carbs": 26,
+    "fats": 18,
+    "fiber": 8,
+    "sugar": 15,
+    "sodium": 318,
+    "health_score": 59
+  },
+  "Coffee": {
+    "calories": 568,
+    "protein": 4,
+    "carbs": 44,
+    "fats": 12,
+    "fiber": 4,
+    "sugar": 11,
+    "sodium": 226,
+    "health_score": 54
+  },
+  "Black Coffee": {
+    "calories": 600,
+    "protein": 4,
+    "carbs": 57,
+    "fats": 18,
+    "fiber": 2,
+    "sugar": 2,
+    "sodium": 442,
+    "health_score": 50
+  },
+  "Veg Wrap": {
+    "calories": 549,
+    "protein": 4,
+    "carbs": 32,
+    "fats": 24,
+    "fiber": 1,
+    "sugar": 10,
+    "sodium": 119,
+    "health_score": 55
+  },
+  "Paneer Wrap": {
+    "calories": 223,
+    "protein": 17,
+    "carbs": 26,
+    "fats": 24,
+    "fiber": 4,
+    "sugar": 15,
+    "sodium": 210,
+    "health_score": 79
+  },
+  "Egg Wrap": {
+    "calories": 275,
+    "protein": 21,
+    "carbs": 30,
+    "fats": 27,
+    "fiber": 10,
+    "sugar": 5,
+    "sodium": 752,
+    "health_score": 55
+  },
+  "Plain Maggi": {
+    "calories": 178,
+    "protein": 19,
+    "carbs": 28,
+    "fats": 22,
+    "fiber": 2,
+    "sugar": 9,
+    "sodium": 512,
+    "health_score": 71
+  },
+  "Masala Maggi": {
+    "calories": 200,
+    "protein": 2,
+    "carbs": 24,
+    "fats": 20,
+    "fiber": 6,
+    "sugar": 17,
+    "sodium": 191,
+    "health_score": 43
+  },
+  "Cheese Maggi": {
+    "calories": 249,
+    "protein": 19,
+    "carbs": 44,
+    "fats": 20,
+    "fiber": 5,
+    "sugar": 5,
+    "sodium": 762,
+    "health_score": 44
+  },
+  "Veg Maggi": {
+    "calories": 502,
+    "protein": 14,
+    "carbs": 60,
+    "fats": 25,
+    "fiber": 2,
+    "sugar": 16,
+    "sodium": 329,
+    "health_score": 87
+  },
+  "Chole Kulche": {
+    "calories": 382,
+    "protein": 14,
+    "carbs": 35,
+    "fats": 21,
+    "fiber": 7,
+    "sugar": 5,
+    "sodium": 758,
+    "health_score": 95
+  },
+  "Plain Omelette": {
+    "calories": 261,
+    "protein": 14,
+    "carbs": 21,
+    "fats": 25,
+    "fiber": 8,
+    "sugar": 2,
+    "sodium": 683,
+    "health_score": 41
+  },
+  "Masala Omelette": {
+    "calories": 591,
+    "protein": 6,
+    "carbs": 22,
+    "fats": 10,
+    "fiber": 10,
+    "sugar": 11,
+    "sodium": 745,
+    "health_score": 80
+  },
+  "Vada Pav": {
+    "calories": 502,
+    "protein": 17,
+    "carbs": 46,
+    "fats": 19,
+    "fiber": 3,
+    "sugar": 3,
+    "sodium": 660,
+    "health_score": 89
+  },
+  "Vegetable Sandwich": {
+    "calories": 263,
+    "protein": 25,
+    "carbs": 30,
+    "fats": 12,
+    "fiber": 7,
+    "sugar": 1,
+    "sodium": 486,
+    "health_score": 66
+  },
+  "Cheese Sandwich": {
+    "calories": 311,
+    "protein": 17,
+    "carbs": 37,
+    "fats": 14,
+    "fiber": 3,
+    "sugar": 6,
+    "sodium": 787,
+    "health_score": 45
+  },
+  "Aloo Tikki Burger": {
+    "calories": 561,
+    "protein": 18,
+    "carbs": 21,
+    "fats": 29,
+    "fiber": 4,
+    "sugar": 7,
+    "sodium": 291,
+    "health_score": 75
+  },
+  "Cheese Burger": {
+    "calories": 273,
+    "protein": 2,
+    "carbs": 36,
+    "fats": 17,
+    "fiber": 8,
+    "sugar": 5,
+    "sodium": 570,
+    "health_score": 49
+  },
+  "Masala Dosa": {
+    "calories": 465,
+    "protein": 23,
+    "carbs": 27,
+    "fats": 13,
+    "fiber": 10,
+    "sugar": 11,
+    "sodium": 514,
+    "health_score": 86
+  },
+  "Onion Dosa": {
+    "calories": 260,
+    "protein": 14,
+    "carbs": 32,
+    "fats": 26,
+    "fiber": 8,
+    "sugar": 6,
+    "sodium": 229,
+    "health_score": 88
+  },
+  "Schezwan Masala Dosa": {
+    "calories": 275,
+    "protein": 3,
+    "carbs": 22,
+    "fats": 14,
+    "fiber": 10,
+    "sugar": 16,
+    "sodium": 713,
+    "health_score": 50
+  },
+  "Paneer Masala Dosa": {
+    "calories": 279,
+    "protein": 12,
+    "carbs": 50,
+    "fats": 24,
+    "fiber": 7,
+    "sugar": 8,
+    "sodium": 343,
+    "health_score": 57
+  },
+  "Cheese Masala Dosa": {
+    "calories": 408,
+    "protein": 19,
+    "carbs": 23,
+    "fats": 5,
+    "fiber": 1,
+    "sugar": 0,
+    "sodium": 717,
+    "health_score": 58
+  },
+  "Ghee Dosa": {
+    "calories": 477,
+    "protein": 3,
+    "carbs": 45,
+    "fats": 27,
+    "fiber": 7,
+    "sugar": 10,
+    "sodium": 244,
+    "health_score": 85
+  },
+  "Butter Masala Dosa": {
+    "calories": 594,
+    "protein": 5,
+    "carbs": 44,
+    "fats": 6,
+    "fiber": 10,
+    "sugar": 17,
+    "sodium": 772,
+    "health_score": 60
+  },
+  "Paneer Kulche & Chole": {
+    "calories": 363,
+    "protein": 4,
+    "carbs": 51,
+    "fats": 6,
+    "fiber": 6,
+    "sugar": 20,
+    "sodium": 177,
+    "health_score": 46
+  },
+  "Amritsari Kulche & Chole": {
+    "calories": 227,
+    "protein": 24,
+    "carbs": 59,
+    "fats": 11,
+    "fiber": 9,
+    "sugar": 18,
+    "sodium": 460,
+    "health_score": 47
+  },
+  "Mix Kulche & Chole": {
+    "calories": 349,
+    "protein": 16,
+    "carbs": 48,
+    "fats": 19,
+    "fiber": 5,
+    "sugar": 11,
+    "sodium": 614,
+    "health_score": 77
+  },
+  "Plain Naan": {
+    "calories": 456,
+    "protein": 21,
+    "carbs": 22,
+    "fats": 15,
+    "fiber": 10,
+    "sugar": 2,
+    "sodium": 766,
+    "health_score": 64
+  },
+  "Lacha Parantha": {
+    "calories": 199,
+    "protein": 9,
+    "carbs": 52,
+    "fats": 5,
+    "fiber": 3,
+    "sugar": 11,
+    "sodium": 668,
+    "health_score": 70
+  },
+  "Butter Naan": {
+    "calories": 175,
+    "protein": 3,
+    "carbs": 57,
+    "fats": 16,
+    "fiber": 4,
+    "sugar": 14,
+    "sodium": 414,
+    "health_score": 68
+  },
+  "Garlic Naan": {
+    "calories": 501,
+    "protein": 25,
+    "carbs": 27,
+    "fats": 9,
+    "fiber": 10,
+    "sugar": 6,
+    "sodium": 663,
+    "health_score": 44
+  },
+  "Garlic Bread": {
+    "calories": 347,
+    "protein": 2,
+    "carbs": 30,
+    "fats": 10,
+    "fiber": 2,
+    "sugar": 15,
+    "sodium": 517,
+    "health_score": 77
+  },
+  "Cheese Garlic Bread": {
+    "calories": 267,
+    "protein": 16,
+    "carbs": 41,
+    "fats": 7,
+    "fiber": 3,
+    "sugar": 0,
+    "sodium": 744,
+    "health_score": 75
+  },
+  "White Sauce Pasta": {
+    "calories": 566,
+    "protein": 18,
+    "carbs": 51,
+    "fats": 14,
+    "fiber": 5,
+    "sugar": 9,
+    "sodium": 503,
+    "health_score": 48
+  },
+  "Red Sauce Pasta": {
+    "calories": 528,
+    "protein": 25,
+    "carbs": 41,
+    "fats": 28,
+    "fiber": 2,
+    "sugar": 8,
+    "sodium": 748,
+    "health_score": 67
+  },
+  "Mix Sauce Pasta": {
+    "calories": 446,
+    "protein": 16,
+    "carbs": 32,
+    "fats": 10,
+    "fiber": 5,
+    "sugar": 4,
+    "sodium": 387,
+    "health_score": 51
+  },
+  "French Fries": {
+    "calories": 446,
+    "protein": 19,
+    "carbs": 59,
+    "fats": 6,
+    "fiber": 10,
+    "sugar": 14,
+    "sodium": 100,
+    "health_score": 51
+  },
+  "Cheese French Fries": {
+    "calories": 464,
+    "protein": 6,
+    "carbs": 52,
+    "fats": 11,
+    "fiber": 6,
+    "sugar": 11,
+    "sodium": 669,
+    "health_score": 63
+  },
+  "Peri Peri Fries": {
+    "calories": 371,
+    "protein": 5,
+    "carbs": 38,
+    "fats": 7,
+    "fiber": 8,
+    "sugar": 18,
+    "sodium": 262,
+    "health_score": 68
+  },
+  "Steam Momos": {
+    "calories": 243,
+    "protein": 21,
+    "carbs": 46,
+    "fats": 18,
+    "fiber": 7,
+    "sugar": 14,
+    "sodium": 182,
+    "health_score": 79
+  },
+  "Fried Momos": {
+    "calories": 581,
+    "protein": 2,
+    "carbs": 49,
+    "fats": 12,
+    "fiber": 3,
+    "sugar": 0,
+    "sodium": 689,
+    "health_score": 82
+  },
+  "Spring Roll": {
+    "calories": 413,
+    "protein": 12,
+    "carbs": 37,
+    "fats": 9,
+    "fiber": 5,
+    "sugar": 20,
+    "sodium": 522,
+    "health_score": 41
+  },
+  "Chilly Potato": {
+    "calories": 423,
+    "protein": 20,
+    "carbs": 51,
+    "fats": 19,
+    "fiber": 3,
+    "sugar": 6,
+    "sodium": 478,
+    "health_score": 84
+  },
+  "Honey Chilly Potato": {
+    "calories": 387,
+    "protein": 23,
+    "carbs": 52,
+    "fats": 19,
+    "fiber": 10,
+    "sugar": 11,
+    "sodium": 377,
+    "health_score": 91
+  },
+  "Paneer Chilly": {
+    "calories": 527,
+    "protein": 13,
+    "carbs": 47,
+    "fats": 25,
+    "fiber": 1,
+    "sugar": 8,
+    "sodium": 178,
+    "health_score": 47
+  },
+  "Fried Rice": {
+    "calories": 296,
+    "protein": 17,
+    "carbs": 40,
+    "fats": 14,
+    "fiber": 2,
+    "sugar": 6,
+    "sodium": 153,
+    "health_score": 46
+  },
+  "Egg Fried Rice": {
+    "calories": 245,
+    "protein": 18,
+    "carbs": 30,
+    "fats": 16,
+    "fiber": 3,
+    "sugar": 6,
+    "sodium": 420,
+    "health_score": 66
+  },
+  "Paneer Fried Rice": {
+    "calories": 290,
+    "protein": 11,
+    "carbs": 38,
+    "fats": 20,
+    "fiber": 2,
+    "sugar": 12,
+    "sodium": 544,
+    "health_score": 40
+  },
+  "Manchurian": {
+    "calories": 297,
+    "protein": 19,
+    "carbs": 26,
+    "fats": 13,
+    "fiber": 3,
+    "sugar": 10,
+    "sodium": 524,
+    "health_score": 41
+  },
+  "Tandoori Momos": {
+    "calories": 360,
+    "protein": 22,
+    "carbs": 54,
+    "fats": 9,
+    "fiber": 4,
+    "sugar": 13,
+    "sodium": 503,
+    "health_score": 47
+  },
+  "Fried Rice And Chilli Paneer": {
+    "calories": 367,
+    "protein": 12,
+    "carbs": 33,
+    "fats": 11,
+    "fiber": 4,
+    "sugar": 17,
+    "sodium": 603,
+    "health_score": 80
+  },
+  "Fried Rice And Manchurian": {
+    "calories": 290,
+    "protein": 2,
+    "carbs": 52,
+    "fats": 29,
+    "fiber": 5,
+    "sugar": 2,
+    "sodium": 551,
+    "health_score": 40
+  },
+  "Paneer Bhurji": {
+    "calories": 267,
+    "protein": 14,
+    "carbs": 34,
+    "fats": 15,
+    "fiber": 3,
+    "sugar": 16,
+    "sodium": 174,
+    "health_score": 84
+  },
+  "Mutter Mushroom Masala": {
+    "calories": 326,
+    "protein": 2,
+    "carbs": 27,
+    "fats": 6,
+    "fiber": 10,
+    "sugar": 20,
+    "sodium": 637,
+    "health_score": 41
+  },
+  "Egg Curry": {
+    "calories": 226,
+    "protein": 14,
+    "carbs": 58,
+    "fats": 24,
+    "fiber": 8,
+    "sugar": 4,
+    "sodium": 766,
+    "health_score": 62
+  },
+  "Paneer Tikka Masala": {
+    "calories": 559,
+    "protein": 13,
+    "carbs": 27,
+    "fats": 16,
+    "fiber": 7,
+    "sugar": 16,
+    "sodium": 588,
+    "health_score": 43
+  },
+  "Brownie": {
+    "calories": 284,
+    "protein": 21,
+    "carbs": 39,
+    "fats": 30,
+    "fiber": 8,
+    "sugar": 18,
+    "sodium": 641,
+    "health_score": 65
+  },
+  "Chocolate Muffin": {
+    "calories": 523,
+    "protein": 25,
+    "carbs": 43,
+    "fats": 7,
+    "fiber": 3,
+    "sugar": 16,
+    "sodium": 229,
+    "health_score": 56
+  },
+  "Black Forest Pastry": {
+    "calories": 302,
+    "protein": 19,
+    "carbs": 48,
+    "fats": 20,
+    "fiber": 5,
+    "sugar": 7,
+    "sodium": 488,
+    "health_score": 83
+  },
+  "Pineapple Pastry": {
+    "calories": 575,
+    "protein": 23,
+    "carbs": 28,
+    "fats": 18,
+    "fiber": 5,
+    "sugar": 16,
+    "sodium": 467,
+    "health_score": 53
+  },
+  "Vanilla muffin": {
+    "calories": 572,
+    "protein": 16,
+    "carbs": 25,
+    "fats": 14,
+    "fiber": 5,
+    "sugar": 12,
+    "sodium": 278,
+    "health_score": 89
+  }
+}

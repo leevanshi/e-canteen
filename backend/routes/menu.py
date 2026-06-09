@@ -99,7 +99,12 @@ def get_menu():
     # #region agent log
     if result:
         sample = next((r for r in result if "Amritsari" in (r.get("name") or "")), result[0])
-        _agent_log("menu.py:get_menu", "menu_nutrition_sample", {"name": sample.get("name"), "nutrition": sample.get("nutrition"), "count": len(result)}, "H4")
+        _agent_log("menu.py:get_menu", "menu_nutrition_sample", {
+            "name": sample.get("name"),
+            "nutrition": sample.get("nutrition"),
+            "count": len(result),
+            "calories_gt_zero": sample.get("nutrition", {}).get("calories", 0) > 0,
+        }, "H4")
     # #endregion
 
     return result
@@ -242,3 +247,33 @@ def delete_menu_item(
         raise HTTPException(404, "Menu item not found")
 
     return {"message": "Menu item disabled"}
+
+
+# ================= TOGGLE AVAILABILITY (ADMIN) =================
+
+@router.patch("/{item_id}/toggle")
+def toggle_menu_availability(
+    item_id: str,
+    current_user=Depends(get_current_user),
+):
+    if current_user.get("role") != "admin":
+        raise HTTPException(403, "Admin only")
+
+    if not ObjectId.is_valid(item_id):
+        raise HTTPException(400, "Invalid menu ID")
+
+    item = menu_collection.find_one({"_id": ObjectId(item_id)})
+    if not item:
+        raise HTTPException(404, "Menu item not found")
+
+    new_available = not item.get("available", True)
+
+    menu_collection.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$set": {"available": new_available, "updated_at": datetime.now(IST)}},
+    )
+
+    return {
+        "message": f"Item marked as {'available' if new_available else 'unavailable'}",
+        "available": new_available,
+    }

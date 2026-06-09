@@ -7,7 +7,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } 
 
 import API from "../api";
 import { useCart } from "../context/CartContext";
-import { hasNutritionData } from "../utils/formatApiError";
 
 const fallbackImage = "https://images.unsplash.com/photo-1604908554165-3a7c22e0b9c6?q=80&w=600";
 
@@ -89,12 +88,12 @@ const MenuPage = () => {
         const normalized = (Array.isArray(res.data) ? res.data : []).map(item => ({
           ...item,
           _id: item._id || item.id,
-          nutrition: item.nutrition || null,
+          nutrition: item.nutrition || {},
         }));
 
         // #region agent log
         const sample = normalized.find((i) => (i.name || "").includes("Amritsari")) || normalized[0];
-        fetch('http://127.0.0.1:7559/ingest/ac98a93e-e671-495f-a3ce-59b4abacbf8f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3e7df7'},body:JSON.stringify({sessionId:'3e7df7',location:'MenuPage.js:fetchMenu',message:'menu_api_nutrition',data:{count:normalized.length,sampleName:sample?.name,sampleNutrition:sample?.nutrition,hasData:hasNutritionData(sample?.nutrition)},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7559/ingest/ac98a93e-e671-495f-a3ce-59b4abacbf8f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3e7df7'},body:JSON.stringify({sessionId:'3e7df7',location:'MenuPage.js:fetchMenu',message:'menu_api_nutrition',data:{count:normalized.length,sampleName:sample?.name,sampleNutrition:sample?.nutrition,calories:sample?.nutrition?.calories,protein:sample?.nutrition?.protein,sortBy},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
         // #endregion
         
         if (normalized.length === 0) throw new Error("Empty menu");
@@ -1176,26 +1175,28 @@ const MenuPage = () => {
       return matchSearch && matchCategory;
     });
 
-    const sortKey = (item, key, missing = -1) =>
-      hasNutritionData(item.nutrition) ? (item.nutrition[key] ?? 0) : missing;
+    const num = (item, key) => Number(item?.nutrition?.[key] ?? 0);
 
     switch (sortBy) {
       case "protein":
-        result.sort((a, b) => sortKey(b, "protein") - sortKey(a, "protein"));
+        result.sort((a, b) => num(b, "protein") - num(a, "protein"));
         break;
       case "calories":
-        result.sort((a, b) => {
-          const aCal = hasNutritionData(a.nutrition) ? a.nutrition.calories : Infinity;
-          const bCal = hasNutritionData(b.nutrition) ? b.nutrition.calories : Infinity;
-          return aCal - bCal;
-        });
+        result.sort((a, b) => num(a, "calories") - num(b, "calories"));
         break;
       case "health":
-        result.sort((a, b) => sortKey(b, "health_score") - sortKey(a, "health_score"));
+        result.sort((a, b) => num(b, "health_score") - num(a, "health_score"));
         break;
       default:
         break;
     }
+
+    // #region agent log
+    if (sortBy !== "recommended" && result.length >= 3) {
+      fetch('http://127.0.0.1:7559/ingest/ac98a93e-e671-495f-a3ce-59b4abacbf8f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3e7df7'},body:JSON.stringify({sessionId:'3e7df7',location:'MenuPage.js:filteredAndSortedMenu',message:'sort_applied',data:{sortBy,top3:result.slice(0,3).map(i=>({name:i.name,protein:i.nutrition?.protein,calories:i.nutrition?.calories,health:i.nutrition?.health_score}))},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+    }
+    // #endregion
+
     return result;
   }, [menu, search, category, sortBy]);
 
@@ -1279,9 +1280,8 @@ const MenuPage = () => {
           {filteredAndSortedMenu.map((item) => {
             const id = item._id;
             const quantity = cartMap[id]?.quantity || 0;
-            const nut = item.nutrition;
-            const showNutrition = hasNutritionData(nut);
-            const scoreClass = getScoreColor(nut?.health_score ?? 0);
+            const nut = item.nutrition || {};
+            const scoreClass = getScoreColor(nut.health_score ?? 0);
 
             return (
               <motion.div
@@ -1309,11 +1309,9 @@ const MenuPage = () => {
                   
                   {/* Top Badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    {showNutrition && (
-                      <div className={`px-2.5 py-1 rounded-lg border backdrop-blur-md text-xs font-bold flex items-center gap-1 shadow-sm ${scoreClass}`}>
-                        <Activity size={12} /> {nut.health_score}
-                      </div>
-                    )}
+                    <div className={`px-2.5 py-1 rounded-lg border backdrop-blur-md text-xs font-bold flex items-center gap-1 shadow-sm ${scoreClass}`}>
+                      <Activity size={12} /> {nut.health_score ?? 0}
+                    </div>
                   </div>
                   <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-md text-gray-400 flex items-center justify-center hover:text-red-500 hover:bg-white shadow-sm transition-colors">
                     <Heart size={16} />
@@ -1326,28 +1324,22 @@ const MenuPage = () => {
                   </div>
                   <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
                   
-                  {showNutrition ? (
-                    <div className="mt-4 flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100">
-                      <div className="text-center">
-                        <div className="text-xs font-bold text-orange-500 flex items-center gap-0.5 justify-center"><Flame size={12}/>{nut.calories}</div>
-                        <div className="text-[9px] text-gray-400 uppercase tracking-wide">Kcal</div>
-                      </div>
-                      <div className="w-px h-6 bg-gray-200"></div>
-                      <div className="text-center">
-                        <div className="text-xs font-bold text-blue-500">{nut.protein}g</div>
-                        <div className="text-[9px] text-gray-400 uppercase tracking-wide">Protein</div>
-                      </div>
-                      <div className="w-px h-6 bg-gray-200"></div>
-                      <div className="text-center">
-                        <div className="text-xs font-bold text-emerald-500">{nut.carbs}g</div>
-                        <div className="text-[9px] text-gray-400 uppercase tracking-wide">Carbs</div>
-                      </div>
+                  <div className="mt-4 flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="text-center">
+                      <div className="text-xs font-bold text-orange-500 flex items-center gap-0.5 justify-center"><Flame size={12}/>{nut.calories ?? 0}</div>
+                      <div className="text-[9px] text-gray-400 uppercase tracking-wide">Kcal</div>
                     </div>
-                  ) : (
-                    <p className="mt-4 text-xs text-gray-400 text-center py-2 bg-gray-50 rounded-xl border border-gray-100">
-                      Nutrition information unavailable
-                    </p>
-                  )}
+                    <div className="w-px h-6 bg-gray-200"></div>
+                    <div className="text-center">
+                      <div className="text-xs font-bold text-blue-500">{nut.protein ?? 0}g</div>
+                      <div className="text-[9px] text-gray-400 uppercase tracking-wide">Protein</div>
+                    </div>
+                    <div className="w-px h-6 bg-gray-200"></div>
+                    <div className="text-center">
+                      <div className="text-xs font-bold text-emerald-500">{nut.carbs ?? 0}g</div>
+                      <div className="text-[9px] text-gray-400 uppercase tracking-wide">Carbs</div>
+                    </div>
+                  </div>
 
                   <div className="mt-auto pt-4 flex items-center justify-between">
                     <div className="font-black text-xl text-gray-900">₹{Number(item.price).toFixed(0)}</div>
@@ -1445,11 +1437,9 @@ const MenuPage = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent"></div>
                   <div className="absolute bottom-6 left-6 pr-6">
                     <div className="flex gap-2 mb-2">
-                      {hasNutritionData(selectedItem.nutrition) && (
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md ${getScoreColor(selectedItem.nutrition?.health_score)}`}>
                         {getScoreLabel(selectedItem.nutrition?.health_score)} ({selectedItem.nutrition?.health_score}/100)
                       </span>
-                      )}
                       {selectedItem.nutrition?.protein > 20 && (
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1"><Dumbbell size={12}/> High Protein</span>
                       )}
@@ -1463,12 +1453,6 @@ const MenuPage = () => {
                   {/* Quick Macros */}
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Nutrition Breakdown</h3>
 
-                  {!hasNutritionData(selectedItem.nutrition) ? (
-                    <div className="mb-8 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-500">
-                      Nutrition information unavailable
-                    </div>
-                  ) : (
-                  <>
                   <div className="grid grid-cols-4 gap-4 mb-8">
                     <div className="bg-orange-50 rounded-2xl p-4 text-center border border-orange-100">
                       <Flame className="mx-auto text-orange-500 mb-2" size={24}/>
@@ -1543,8 +1527,6 @@ const MenuPage = () => {
                        </div>
                     </div>
                   </div>
-                  </>
-                  )}
 
                 </div>
 

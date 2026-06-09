@@ -12,9 +12,10 @@ from database import (
     wallet_collection,
     wallet_txn_collection,
     menu_collection,
-    counters_collection,
-    client
+    client,
 )
+from services.order_id_service import next_online_order, format_order_code
+from services.dashboard_service import get_admin_dashboard_stats
 
 from routes.auth import get_current_user
 from server import manager
@@ -29,21 +30,6 @@ router = APIRouter(prefix="/api/orders", tags=["Orders"])
 order_attempts = defaultdict(list)
 ORDER_LIMIT = 5
 ORDER_WINDOW = 10
-
-
-# ================= ORDER COUNTER =================
-
-def get_next_order_id(session=None):
-
-    counter = counters_collection.find_one_and_update(
-        {"_id": "order_id"},
-        {"$inc": {"seq": 1}, "$setOnInsert": {"seq": 99}},
-        upsert=True,
-        return_document=ReturnDocument.AFTER,
-        session=session
-    )
-
-    return counter["seq"]
 
 
 # ================= SCHEMAS =================
@@ -133,7 +119,7 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
     with client.start_session() as session:
         with session.start_transaction():
 
-            order_id = get_next_order_id(session)
+            order_id, order_code = next_online_order(session=session)
 
             if data.payment_method == "wallet":
 
@@ -165,6 +151,7 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 
             order_doc = {
                 "order_id": order_id,
+                "order_code": order_code,
                 "order_type": "online",
                 "user_id": ObjectId(user_id),
                 "user_name": current_user["name"],
@@ -227,8 +214,20 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 
     return {
         "message": "Order placed successfully",
-        "order_id": order_doc["order_id"]
+        "order_id": order_doc["order_id"],
+        "order_code": order_doc["order_code"],
     }
+
+
+# ================= ADMIN DASHBOARD =================
+
+@router.get("/admin/dashboard")
+def admin_dashboard(current_user=Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(403, "Admin only")
+    return get_admin_dashboard_stats()
+
+
 # ================= GET MY ORDERS =================
 
 @router.get("/")
@@ -247,9 +246,10 @@ def get_my_orders(current_user=Depends(get_current_user)):
         result.append({
             "_id": str(o["_id"]),
             "order_id": o.get("order_id"),
+            "order_code": format_order_code(o),
             "total_amount": o.get("total_amount"),
             "status": o.get("status"),
-            "created_at": created.isoformat() if created else None
+            "created_at": created.isoformat() if created else None,
         })
 
     return result
@@ -273,11 +273,14 @@ def get_all_orders(current_user=Depends(get_current_user)):
         result.append({
             "_id": str(o["_id"]),
             "order_id": o.get("order_id"),
+            "order_code": format_order_code(o),
             "user_name": o.get("user_name"),
+            "order_type": o.get("order_type"),
             "items": o.get("items"),
             "total_amount": o.get("total_amount"),
             "status": o.get("status"),
-            "created_at": created.isoformat() if created else None
+            "status_history": o.get("status_history", []),
+            "created_at": created.isoformat() if created else None,
         })
 
     return result

@@ -18,6 +18,16 @@ Optional variables:
 - `SMTP_DEBUG`: `True` or `False` (extra logging; may echo OTP in API response for testing — does **not** block delivery)
 - `SMTP_SUPPRESS_SEND`: `True` or `False` (skip actual send — use only for local dev without a mail provider; must be `False` in production)
 - `CORS_ALLOWED_ORIGINS`: comma-separated frontend URLs
+
+### Menu nutrition seeding
+
+On startup, the backend auto-populates missing nutrition fields from `data/menu_nutrition_seed.json`.
+To manually seed:
+
+```bash
+cd backend
+python scripts/seed_menu_nutrition.py
+```
 - `ADMIN_NOTIFICATION_EMAILS`: comma-separated admins to notify for order events
 
 Legacy `MAIL_*` values are still accepted for backward compatibility, but new deployments should use `SMTP_*` and `EMAIL_FROM`.

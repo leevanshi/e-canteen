@@ -1,1 +1,1 @@
-{"sessionId": "3e7df7", "timestamp": 1781002816012, "location": "email_service.py:_send_message", "message": "smtp_send_branch", "data": {"suppress": false, "debug": true}, "hypothesisId": "H1"}
+{"sessionId": "3e7df7", "timestamp": 1781004254667, "location": "auth.py:verify_otp", "message": "verify_otp_request", "data": {"email_domain": "gmail.com", "otp_len": 6}, "hypothesisId": "H2"}

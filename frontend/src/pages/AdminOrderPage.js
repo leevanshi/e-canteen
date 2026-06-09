@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import API from "../api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { formatApiError } from "../utils/formatApiError";
 
 /* ================= TIME ================= */
 
@@ -50,7 +51,7 @@ eCanteen Receipt
 Student Food Ordering Platform
 --------------------------------
 
-Order No : ${order.order_id || order._id}
+Order No : ${order.order_code || `E-${order.order_id}` || order._id}
 Date     : ${new Date(order.created_at).toLocaleDateString("en-IN")}
 Time     : ${new Date(order.created_at).toLocaleTimeString("en-IN")}
 Order Type: Counter
@@ -144,39 +145,8 @@ const AdminOrdersPage = () => {
     } catch (err) {
 
       console.error(err);
-      toast.info("Database offline — Showing preview orders");
-      setOrders([
-        {
-          _id: "order-1",
-          order_id: "ORD-9281A",
-          user_name: "Leevanshi Sharma",
-          order_type: "online",
-          status: "pending",
-          total_amount: 320,
-          created_at: new Date(Date.now() - 600000).toISOString(),
-          items: [{ name: "Brownie", quantity: 2, price: 30 }, { name: "Cheese Burger", quantity: 1, price: 95 }]
-        },
-        {
-          _id: "order-2",
-          order_id: "ORD-4412B",
-          user_name: "John Doe",
-          order_type: "walk-in",
-          status: "preparing",
-          total_amount: 140,
-          created_at: new Date(Date.now() - 1200000).toISOString(),
-          items: [{ name: "Masala Dosa", quantity: 2, price: 70 }]
-        },
-        {
-          _id: "order-3",
-          order_id: "ORD-7731C",
-          user_name: "Jane Smith",
-          order_type: "online",
-          status: "completed",
-          total_amount: 110,
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          items: [{ name: "White Sauce Pasta", quantity: 1, price: 110 }]
-        }
-      ]);
+      toast.error(formatApiError(err?.response?.data?.detail,
+        err?.response ? "Failed to load orders" : "Backend unreachable"));
 
     } finally {
 
@@ -194,9 +164,9 @@ const AdminOrdersPage = () => {
 
   useEffect(() => {
 
-    const ws = new WebSocket(
-      "wss://e-canteen-7.onrender.com/ws/orders"
-    );
+    const apiBase = API.defaults.baseURL || "";
+    const wsBase = apiBase.replace(/^http/, "ws");
+    const ws = new WebSocket(`${wsBase}/ws/orders`);
 
     ws.onmessage = (event) => {
 
@@ -323,7 +293,7 @@ const AdminOrdersPage = () => {
             <div className="flex justify-between">
 
               <h2 className="font-semibold">
-                Order #{order.order_id}
+                {order.order_code || `E-${order.order_id}`}
               </h2>
 
               <span

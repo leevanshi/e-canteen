@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 import { getUsers, adminAddMoney } from "../api";
+import { formatApiError } from "../utils/formatApiError";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
@@ -19,6 +20,7 @@ const AdminWalletPage = () => {
   const [amounts, setAmounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [updatingUser, setUpdatingUser] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
   /* ================= AUTH GUARD ================= */
 
@@ -44,9 +46,10 @@ const AdminWalletPage = () => {
     try {
 
       setLoading(true);
+      setFetchError(null);
 
       const res = await getUsers();
-      const data = res?.data?.users || res?.data || [];
+      const data = Array.isArray(res?.data) ? res.data : (res?.data?.users || []);
 
       const safeUsers = data.map((u, idx) => ({
         _id: u?._id || u?.id || `user-${idx}`,
@@ -61,7 +64,10 @@ const AdminWalletPage = () => {
     } catch (err) {
 
       console.error("User fetch error:", err);
-      toast.error("Failed to load users");
+      const msg = formatApiError(err?.response?.data?.detail,
+        err?.response ? "Failed to load users" : "Backend unreachable — check API URL and CORS");
+      setFetchError(msg);
+      toast.error(msg);
 
     } finally {
 
@@ -148,10 +154,7 @@ const AdminWalletPage = () => {
 
       console.error("Add money error:", err);
 
-      toast.error(
-        err?.response?.data?.detail ||
-        "Failed to add money"
-      );
+      toast.error(formatApiError(err?.response?.data?.detail, "Failed to add money"));
 
     } finally {
 
@@ -204,6 +207,13 @@ const AdminWalletPage = () => {
         </Button>
 
       </div>
+
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 flex justify-between items-center">
+          <span className="text-sm">{fetchError}</span>
+          <Button variant="outline" size="sm" onClick={fetchUsers}>Retry</Button>
+        </div>
+      )}
 
       <input
         type="text"

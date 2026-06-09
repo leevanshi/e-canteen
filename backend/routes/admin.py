@@ -3,8 +3,6 @@ from pydantic import BaseModel
 from typing import List
 from bson import ObjectId
 from datetime import datetime, timedelta, timezone
-from pymongo import ReturnDocument
-
 IST = timezone(timedelta(hours=5, minutes=30))
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -14,8 +12,8 @@ from database import (
     users_collection,
     wallet_collection,
     wallet_txn_collection,
-    counters_collection
 )
+from services.order_id_service import next_walkin_order, format_order_code
 
 from routes.auth import get_current_user, get_current_user_optional, hash_password
 import os
@@ -48,6 +46,7 @@ def serialize_order(o):
     return {
         "_id": str(o["_id"]),
         "order_id": o.get("order_id"),
+        "order_code": format_order_code(o),
         "user_name": o.get("user_name"),
         "order_type": o.get("order_type"),
         "payment_method": o.get("payment_method"),
@@ -55,22 +54,9 @@ def serialize_order(o):
         "items": o.get("items", []),
         "total_amount": o.get("total_amount"),
         "status": o.get("status"),
-        "created_at": created.isoformat() if created else None
+        "status_history": o.get("status_history", []),
+        "created_at": created.isoformat() if created else None,
     }
-
-
-# ================= ORDER COUNTER =================
-
-def get_next_order_id():
-
-    counter = counters_collection.find_one_and_update(
-        {"_id": "order_id"},
-        {"$inc": {"seq": 1}, "$setOnInsert": {"seq": 99}},
-        upsert=True,
-        return_document=ReturnDocument.AFTER
-    )
-
-    return counter["seq"]
 
 
 # ================= SCHEMAS =================
@@ -252,21 +238,23 @@ async def place_walkin_order(
 
     now = datetime.now(IST)
 
-    order_id = get_next_order_id()
+    order_id, order_code = next_walkin_order()
 
     order = {
         "order_id": order_id,
+        "order_code": order_code,
         "order_type": "walk-in",
         "user_id": None,
         "user_name": "Walk-in Customer",
-        "items": [i.dict() for i in data.items],
+        "admin_id": ObjectId(current_user["_id"]),
+        "items": [i.model_dump() for i in data.items],
         "total_amount": data.total_amount,
-        "payment_method": "counter",
+        "payment_method": "cash",
         "payment_status": "paid",
         "status": "pending",
         "status_history": [{"status": "pending", "time": now}],
         "created_at": now,
-        "updated_at": now
+        "updated_at": now,
     }
 
     result = orders_collection.insert_one(order)
@@ -286,7 +274,9 @@ async def place_walkin_order(
 
     return {
         "success": True,
-        "order_id": order_id
+        "order_id": order_id,
+        "order_code": order_code,
+        "order": serialize_order(order),
     }
 
 
@@ -312,7 +302,7 @@ def get_users(
     for u in users_cursor:
 
         wallet = wallet_collection.find_one({
-            "user_id": u["_id"]
+            "user_id": ObjectId(str(u["_id"]))
         })
 
         users.append({
