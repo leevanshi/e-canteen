@@ -36,7 +36,12 @@ app = FastAPI(
 
 # ================= CORS =================
 
-allowed_origins = ["https://ecanteen-nmims.vercel.app"]
+_default_origins = "https://ecanteen-nmims.vercel.app,http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173"
+allowed_origins = [
+    origin.strip()
+    for origin in (os.getenv("CORS_ALLOWED_ORIGINS") or _default_origins).split(",")
+    if origin.strip()
+]
 logger.info("CORS allowed origins: %s", allowed_origins)
 
 app.add_middleware(

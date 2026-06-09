@@ -3,12 +3,25 @@ import os
 import asyncio
 import logging
 import smtplib
+import time
 import urllib.request
 import urllib.error
 from email.message import EmailMessage
+from pathlib import Path
 from typing import List, Optional
 
 from dotenv import load_dotenv
+
+# #region agent log
+_DEBUG_LOG = Path(__file__).resolve().parents[2] / "debug-3e7df7.log"
+def _agent_log(location, message, data, hypothesis_id):
+    try:
+        payload = {"sessionId": "3e7df7", "timestamp": int(time.time() * 1000), "location": location, "message": message, "data": data, "hypothesisId": hypothesis_id}
+        with open(_DEBUG_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload) + "\n")
+    except Exception:
+        pass
+# #endregion
 
 load_dotenv()
 
@@ -65,13 +78,16 @@ def _build_message(
 
 
 def _send_message(message: EmailMessage, recipients: List[str]) -> None:
-    if SMTP_SUPPRESS_SEND or SMTP_DEBUG:
+    # #region agent log
+    _agent_log("email_service.py:_send_message", "smtp_send_branch", {"suppress": SMTP_SUPPRESS_SEND, "debug": SMTP_DEBUG}, "H1")
+    # #endregion
+    if SMTP_SUPPRESS_SEND:
         logger.info(
-            "SMTP suppressed delivery (SMTP_SUPPRESS_SEND=%s SMTP_DEBUG=%s)",
-            SMTP_SUPPRESS_SEND,
-            SMTP_DEBUG,
+            "SMTP suppressed delivery (SMTP_SUPPRESS_SEND=True; set to False in production)",
         )
         return
+    if SMTP_DEBUG:
+        logger.info("SMTP_DEBUG=True — delivery will proceed; OTP may be echoed in API response")
 
     if not SMTP_HOST or not SMTP_USER or not SMTP_PASSWORD or not EMAIL_FROM:
         raise RuntimeError(
@@ -97,13 +113,16 @@ def _send_message(message: EmailMessage, recipients: List[str]) -> None:
 
 
 def _send_via_resend(recipients: List[str], subject: str, plain_text: str, html: Optional[str] = None) -> None:
-    if SMTP_SUPPRESS_SEND or SMTP_DEBUG:
+    # #region agent log
+    _agent_log("email_service.py:_send_via_resend", "resend_send_branch", {"suppress": SMTP_SUPPRESS_SEND, "debug": SMTP_DEBUG, "use_resend": USE_RESEND}, "H1")
+    # #endregion
+    if SMTP_SUPPRESS_SEND:
         logger.info(
-            "Resend suppressed delivery (SMTP_SUPPRESS_SEND=%s SMTP_DEBUG=%s)",
-            SMTP_SUPPRESS_SEND,
-            SMTP_DEBUG,
+            "Resend suppressed delivery (SMTP_SUPPRESS_SEND=True; set to False in production)",
         )
         return
+    if SMTP_DEBUG:
+        logger.info("SMTP_DEBUG=True — Resend delivery will proceed")
 
     if not RESEND_API_KEY:
         raise RuntimeError("RESEND_API_KEY is required to send email via Resend API.")

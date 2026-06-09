@@ -6,6 +6,7 @@ import { Coffee, Loader2, Eye, EyeOff, Mail, ShieldCheck, UserPlus, ArrowRight, 
 import API from "../api";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { formatApiError, sanitizeOtp } from "../utils/formatApiError";
 
 /* ================= ANIMATION VARIANTS ================= */
 const container = {
@@ -71,20 +72,21 @@ const RegisterPage = () => {
       }
       setStep(2);
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to send OTP");
+      toast.error(formatApiError(err.response?.data?.detail, "Failed to send OTP"));
     } finally { setLoading(false); }
   };
 
   /* --- Verify OTP --- */
   const handleVerifyOtp = async () => {
-    if (!formData.otp) { toast.error("Enter the OTP"); return; }
+    const cleanedOtp = sanitizeOtp(formData.otp);
+    if (!cleanedOtp) { toast.error("Enter the 6-digit OTP"); return; }
     setLoading(true);
     try {
-      await API.post("/auth/verify-otp", { email: formData.email.trim().toLowerCase(), otp: formData.otp });
+      await API.post("/auth/verify-otp", { email: formData.email.trim().toLowerCase(), otp: cleanedOtp });
       toast.success("Email verified ✅");
       setStep(3);
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Invalid OTP");
+      toast.error(formatApiError(err.response?.data?.detail, "Invalid OTP"));
     } finally { setLoading(false); }
   };
 
@@ -99,7 +101,7 @@ const RegisterPage = () => {
       toast.success("Account created! Welcome on board 🎉");
       navigate("/login", { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Registration failed");
+      toast.error(formatApiError(err.response?.data?.detail, "Registration failed"));
     } finally { setLoading(false); }
   };
 
@@ -178,7 +180,7 @@ const RegisterPage = () => {
                     <Label className="text-gray-700 font-semibold text-sm">6-Digit OTP</Label>
                     <Input
                       value={formData.otp}
-                      onChange={(e) => set("otp", e.target.value)}
+                      onChange={(e) => set("otp", sanitizeOtp(e.target.value))}
                       placeholder="Enter OTP from email"
                       maxLength={6}
                       className="mt-1.5 rounded-xl border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 text-center text-2xl tracking-[0.5em] font-mono transition-all"
@@ -194,7 +196,26 @@ const RegisterPage = () => {
                   >
                     {loading ? <><Loader2 className="animate-spin" size={18} /> Verifying…</> : <><ShieldCheck size={18} /><span>Verify OTP</span></>}
                   </motion.button>
-                  <button onClick={() => setStep(1)} className="w-full py-2 text-sm text-gray-500 hover:text-orange-500 flex items-center justify-center gap-1 transition-colors">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const res = await API.post("/auth/send-otp", { email: formData.email.trim().toLowerCase() });
+                        const code = res?.data?.otp;
+                        if (process.env.NODE_ENV === "development" && code) {
+                          toast.success(`New OTP sent! Use code: ${code}`);
+                        } else {
+                          toast.success("New OTP sent! Check your inbox");
+                        }
+                      } catch (err) {
+                        toast.error(formatApiError(err.response?.data?.detail, "Failed to resend OTP"));
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    className="w-full py-2 text-sm text-gray-500 hover:text-orange-500 flex items-center justify-center gap-1 transition-colors"
+                  >
                     <ArrowLeft size={14} /> Resend OTP
                   </button>
                 </motion.div>

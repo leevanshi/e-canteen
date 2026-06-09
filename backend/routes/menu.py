@@ -1,3 +1,7 @@
+import json
+import time
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from pydantic import BaseModel, Field
@@ -6,6 +10,18 @@ from datetime import datetime, timezone, timedelta
 
 from database import menu_collection
 from routes.auth import get_current_user
+from services.nutrition_utils import extract_nutrition, calculate_health_score
+
+# #region agent log
+_DEBUG_LOG = Path(__file__).resolve().parents[2] / "debug-3e7df7.log"
+def _agent_log(location, message, data, hypothesis_id):
+    try:
+        payload = {"sessionId": "3e7df7", "timestamp": int(time.time() * 1000), "location": location, "message": message, "data": data, "hypothesisId": hypothesis_id}
+        with open(_DEBUG_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload) + "\n")
+    except Exception:
+        pass
+# #endregion
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -68,7 +84,7 @@ def get_menu():
     result = []
 
     for item in items:
-
+        nutrition = extract_nutrition(item)
         result.append({
             "_id": str(item["_id"]),
             "name": item.get("name"),
@@ -77,18 +93,14 @@ def get_menu():
             "category": item.get("category"),
             "image": item.get("image"),
             "available": item.get("available", True),
-            "nutrition": {
-                "calories": item.get("calories", 0),
-                "protein": item.get("protein", 0),
-                "carbs": item.get("carbs", 0),
-                "fats": item.get("fats", 0),
-                "fiber": item.get("fiber", 0),
-                "sugar": item.get("sugar", 0),
-                "sodium": item.get("sodium", 0),
-                "serving_size": item.get("serving_size", "1 portion"),
-                "health_score": item.get("health_score", 0),
-            }
+            "nutrition": nutrition,
         })
+
+    # #region agent log
+    if result:
+        sample = next((r for r in result if "Amritsari" in (r.get("name") or "")), result[0])
+        _agent_log("menu.py:get_menu", "menu_nutrition_sample", {"name": sample.get("name"), "nutrition": sample.get("nutrition"), "count": len(result)}, "H4")
+    # #endregion
 
     return result
 
@@ -127,6 +139,13 @@ def create_menu_item(
 
     name = data.name.strip().title()
 
+    health_score = data.health_score
+    if (not health_score or health_score == 0) and data.calories and data.calories > 0:
+        health_score = calculate_health_score(
+            data.calories, data.protein or 0, data.carbs or 0, data.fats or 0,
+            data.fiber or 0, data.sugar or 0, data.sodium or 0,
+        )
+
     menu_id = menu_collection.insert_one({
         "name": name,
         "description": data.description,
@@ -142,7 +161,7 @@ def create_menu_item(
         "sugar": data.sugar,
         "sodium": data.sodium,
         "serving_size": data.serving_size,
-        "health_score": data.health_score,
+        "health_score": health_score,
         "created_at": now,
         "updated_at": now
     }).inserted_id

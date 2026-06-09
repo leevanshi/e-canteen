@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2, KeyRound, ShieldCheck, Lock, ArrowRight, ArrowLef
 import API from "../api";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { formatApiError, sanitizeOtp } from "../utils/formatApiError";
 
 /* ================= ANIMATION VARIANTS ================= */
 const slideIn = {
@@ -77,20 +78,29 @@ const ForgotPasswordPage = () => {
       }
       setStep(2);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Failed to send OTP");
+      const detail = err?.response?.data?.detail;
+      // #region agent log
+      fetch('http://127.0.0.1:7559/ingest/ac98a93e-e671-495f-a3ce-59b4abacbf8f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3e7df7'},body:JSON.stringify({sessionId:'3e7df7',location:'ForgotPasswordPage.jsx:sendOtp',message:'send_otp_error',data:{status:err?.response?.status,detailType:Array.isArray(detail)?'array':typeof detail},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      toast.error(formatApiError(detail, "Failed to send OTP"));
     } finally { setLoading(false); }
   };
 
   /* --- Verify OTP --- */
   const verifyOtp = async () => {
-    if (!otp) { toast.error("Enter the OTP"); return; }
+    const cleanedOtp = sanitizeOtp(otp);
+    if (!cleanedOtp) { toast.error("Enter the 6-digit OTP"); return; }
     setLoading(true);
     try {
-      await API.post("/auth/verify-otp", { email: email.trim().toLowerCase(), otp });
+      await API.post("/auth/verify-otp", { email: email.trim().toLowerCase(), otp: cleanedOtp });
       toast.success("OTP verified ✅");
       setStep(3);
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Invalid OTP");
+      const detail = err?.response?.data?.detail;
+      // #region agent log
+      fetch('http://127.0.0.1:7559/ingest/ac98a93e-e671-495f-a3ce-59b4abacbf8f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3e7df7'},body:JSON.stringify({sessionId:'3e7df7',location:'ForgotPasswordPage.jsx:verifyOtp',message:'verify_otp_error',data:{status:err?.response?.status,detailType:Array.isArray(detail)?'array':typeof detail,otpLen:cleanedOtp.length},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      toast.error(formatApiError(detail, "Invalid OTP"));
     } finally { setLoading(false); }
   };
 
@@ -105,7 +115,7 @@ const ForgotPasswordPage = () => {
       toast.success("Password reset successfully 🔐");
       navigate("/login");
     } catch (err) {
-      toast.error(err?.response?.data?.detail || "Failed to reset password");
+      toast.error(formatApiError(err?.response?.data?.detail, "Failed to reset password"));
     } finally { setLoading(false); }
   };
 
@@ -184,7 +194,7 @@ const ForgotPasswordPage = () => {
                     <Label className="text-gray-700 font-semibold text-sm">6-Digit OTP</Label>
                     <Input
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
+                      onChange={(e) => setOtp(sanitizeOtp(e.target.value))}
                       placeholder="• • • • • •"
                       maxLength={6}
                       className="mt-1.5 rounded-xl border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20 text-center text-2xl tracking-[0.5em] font-mono transition-all"

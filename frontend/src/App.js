@@ -35,6 +35,7 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import AnimatedPage from "./components/AnimatedPage";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const DEV_BACKEND_URL = "http://localhost:8001";
 const PROD_BACKEND_URL = "https://e-canteen-7.onrender.com";
@@ -73,7 +74,7 @@ const App = () => {
   }, []);
 
   return (
-    <>
+    <ErrorBoundary>
       <Toaster position="top-right" richColors />
       {!hideNavbar && <Navbar />}
       
@@ -264,7 +265,7 @@ const App = () => {
 
         </Routes>
       </AnimatePresence>
-    </>
+    </ErrorBoundary>
   );
 };
 

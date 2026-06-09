@@ -10,11 +10,23 @@ from dotenv import load_dotenv
 from pathlib import Path
 from typing import Optional
 import os
+import json
 import logging
 import re
 import time
 from pymongo.errors import DuplicateKeyError
 from collections import defaultdict
+
+# #region agent log
+_DEBUG_LOG = Path(__file__).resolve().parents[2] / "debug-3e7df7.log"
+def _agent_log(location, message, data, hypothesis_id):
+    try:
+        payload = {"sessionId": "3e7df7", "timestamp": int(time.time() * 1000), "location": location, "message": message, "data": data, "hypothesisId": hypothesis_id}
+        with open(_DEBUG_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload) + "\n")
+    except Exception:
+        pass
+# #endregion
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
@@ -102,9 +114,10 @@ class VerifyOTPSchema(BaseModel):
 
     @field_validator("otp")
     def validate_otp(cls, v):
-        if not re.fullmatch(r"\d{6}", v):
+        cleaned = re.sub(r"\D", "", v or "")
+        if not re.fullmatch(r"\d{6}", cleaned):
             raise ValueError("OTP must be 6 digits")
-        return v
+        return cleaned
 
 
 class MessageResponse(BaseModel):
@@ -137,6 +150,18 @@ def normalize_email(email: str) -> str:
 
 def normalize_role(role: str) -> str:
     return (role or "student").lower().strip()
+
+
+def duplicate_key_message(exc: DuplicateKeyError) -> str:
+    """Map MongoDB duplicate key errors to user-friendly messages."""
+    details = str(exc)
+    if "email" in details.lower():
+        return "Email already registered. Please sign in or use forgot password."
+    if "student_id" in details.lower():
+        return "Student ID already registered."
+    if "username" in details.lower():
+        return "Username already registered."
+    return "An account with these details already exists."
 
 
 def hash_password(password: str) -> str:
@@ -253,6 +278,12 @@ async def send_otp(data: EmailRequest):
 
     logger.info(f"send-otp requested for: {email}")
 
+    existing = users_collection.find_one({"email": email})
+    if existing:
+        raise HTTPException(
+            409,
+            "Email already registered. Please sign in or use forgot password to recover your account.",
+        )
 
     now = time.time()
 
@@ -282,9 +313,10 @@ async def send_otp(data: EmailRequest):
         await send_otp_email(email, otp)
     except Exception as e:
         logger.error(f"OTP email failed: {e}")
-        raise HTTPException(500, f"Failed to send OTP email: {e}")
+        otp_collection.delete_many({"email": email})
+        raise HTTPException(500, f"Failed to send OTP email: {str(e)}")
 
-    logger.info(f"OTP sent to {email} | OTP: {otp}")
+    logger.info(f"OTP sent to {email}")
 
     response = {"message": "OTP sent to email"}
     if SMTP_DEBUG or SMTP_SUPPRESS_SEND:
@@ -335,7 +367,8 @@ async def send_reset_otp(data: EmailRequest):
         await send_otp_email(email, otp)
     except Exception as e:
         logger.error(f"Reset OTP email failed: {e}")
-        raise HTTPException(500, f"Failed to send OTP email: {e}")
+        otp_collection.delete_many({"email": email})
+        raise HTTPException(500, f"Failed to send OTP email: {str(e)}")
 
     logger.info(f"Reset OTP sent to {email}")
 
@@ -352,6 +385,9 @@ async def send_reset_otp(data: EmailRequest):
 def verify_otp(data: VerifyOTPSchema):
 
     email = normalize_email(data.email)
+    # #region agent log
+    _agent_log("auth.py:verify_otp", "verify_otp_request", {"email_domain": email.split("@")[-1] if "@" in email else "?", "otp_len": len(data.otp)}, "H2")
+    # #endregion
 
     record = otp_collection.find_one({
         "email": email,
@@ -405,8 +441,8 @@ async def register_user(data: RegisterSchema):
 
         otp_collection.delete_many({"email": email})
 
-    except DuplicateKeyError:
-        raise HTTPException(409, "User already exists")
+    except DuplicateKeyError as exc:
+        raise HTTPException(409, duplicate_key_message(exc))
 
     # ✉️ Send welcome email (non-blocking – failure won't break registration)
     try:

@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import API from "../api";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { formatApiError } from "../utils/formatApiError";
 
 /* ================= ANIMATION VARIANTS ================= */
 const container = {
@@ -61,7 +62,7 @@ const LoginPage = () => {
       toast.error(
         !err.response
           ? "🚀 Server is starting… please wait and try again"
-          : err.response?.data?.detail || "Invalid email or password"
+          : formatApiError(err.response?.data?.detail, "Invalid email or password")
       );
     } finally {
       setSubmitting(false);
