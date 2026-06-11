@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
@@ -17,10 +17,24 @@ class InventoryItemCreate(BaseModel):
     stock: int = Field(..., ge=0)
     low_stock_threshold: int = Field(default=10, ge=0)
 
+    @field_validator('stock', 'low_stock_threshold')
+    @classmethod
+    def validate_not_nan(cls, v):
+        if v is not None and (v != v):  # NaN check
+            raise ValueError('Value cannot be NaN')
+        return v
+
 
 class InventoryItemUpdate(BaseModel):
     stock: Optional[int] = Field(None, ge=0)
     low_stock_threshold: Optional[int] = Field(None, ge=0)
+
+    @field_validator('stock', 'low_stock_threshold')
+    @classmethod
+    def validate_not_nan(cls, v):
+        if v is not None and (v != v):  # NaN check
+            raise ValueError('Value cannot be NaN')
+        return v
 
 
 @router.get("/")

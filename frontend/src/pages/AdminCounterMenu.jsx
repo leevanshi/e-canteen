@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { formatApiError } from "../utils/formatApiError";
 import { Search, Plus, Minus, Printer, Store } from "lucide-react";
+import OrderReceipt from "../components/OrderReceipt";
 
 const formatCurrency = (num) => `₹${Number(num || 0).toFixed(0)}`;
 
@@ -115,12 +116,14 @@ const AdminCounterMenu = () => {
       const orderCode = res?.data?.order_code || order.order_code || "—";
 
       setLastOrder({
+        order_id: orderCode,
         order_code: orderCode,
         items: cart.map((i) => ({ name: i.name, quantity: i.qty, price: i.price })),
         total_amount: totalAmount,
         created_at: new Date().toISOString(),
         order_type: "walk-in",
         payment_method: "cash",
+        admin_name: user?.name || "Admin",
       });
       setShowReceipt(true);
       setCart([]);
@@ -234,59 +237,11 @@ const AdminCounterMenu = () => {
       </div>
 
       {showReceipt && lastOrder && (
-        <div className="no-print fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div id="walkin-receipt" ref={printRef} className="text-center font-mono text-sm space-y-2 mb-6 border-2 border-gray-300 p-4">
-              <h2 className="text-xl font-bold tracking-widest">NMIMS</h2>
-              <h3 className="text-lg font-bold">E-CANTEEN</h3>
-              <hr className="my-2" />
-              <p className="font-semibold">Order ID: {lastOrder.order_code}</p>
-              <p>{formatIST(lastOrder.created_at)}</p>
-              <p className="font-semibold">Order Type: Walk-In Customer</p>
-              <p className="font-semibold">Payment: Cash</p>
-              <hr className="my-2" />
-              <div className="text-left space-y-1">
-                <p className="font-bold mb-2">ITEM                  QTY        PRICE</p>
-                {lastOrder.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between">
-                    <span className="flex-1">{item.name}</span>
-                    <span className="w-8 text-center">{item.quantity}</span>
-                    <span className="w-16 text-right">₹{item.price * item.quantity}</span>
-                  </div>
-                ))}
-              </div>
-              <hr className="my-2" />
-              <div className="text-left space-y-1">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>₹{lastOrder.total_amount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tax</span>
-                  <span>₹0</span>
-                </div>
-                <div className="flex justify-between font-bold text-base">
-                  <span>TOTAL</span>
-                  <span>₹{lastOrder.total_amount}</span>
-                </div>
-              </div>
-              <hr className="my-2" />
-              <p className="font-semibold">Thank You</p>
-              <p className="text-xs">Please retain this receipt.</p>
-              <p className="text-xs">Powered by NMIMS E-Canteen</p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={handlePrint}
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-2.5 rounded-xl font-semibold">
-                <Printer size={18} /> Print Slip
-              </button>
-              <button onClick={() => setShowReceipt(false)}
-                className="flex-1 bg-gray-100 py-2.5 rounded-xl font-semibold">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <OrderReceipt
+          order={lastOrder}
+          onClose={() => setShowReceipt(false)}
+          onPrint={() => setShowReceipt(false)}
+        />
       )}
     </>
   );

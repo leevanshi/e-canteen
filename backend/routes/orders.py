@@ -61,6 +61,15 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 
     user_id = current_user["_id"]
 
+    print("=" * 50)
+    print("ORDER REQUEST RECEIVED")
+    print(f"User ID: {user_id}")
+    print(f"User Name: {current_user.get('name', 'Unknown')}")
+    print(f"Items Count: {len(data.items)}")
+    print(f"Payment Method: {data.payment_method}")
+    print(f"Pickup Time: {data.pickup_time_slot}")
+    print("=" * 50)
+
     # ===== RATE LIMIT =====
 
     now_ts = time.time()
@@ -125,6 +134,9 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 
             if data.payment_method == "wallet":
 
+                print(f"WALLET BALANCE BEFORE DEDUCTION: Checking user {user_id}")
+                print(f"TOTAL AMOUNT TO DEDUCT: ₹{total}")
+
                 wallet = wallet_collection.find_one_and_update(
                     {
                         "user_id": ObjectId(user_id),
@@ -139,7 +151,10 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
                 )
 
                 if not wallet:
+                    print("ERROR: Insufficient wallet balance")
                     raise HTTPException(400, "Insufficient wallet balance")
+
+                print(f"WALLET BALANCE AFTER DEDUCTION: ₹{wallet['balance']}")
 
                 wallet_txn_collection.insert_one({
                     "user_id": ObjectId(user_id),
@@ -147,6 +162,7 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
                     "type": "debit",
                     "source": "order",
                     "order_id": order_id,
+                    "description": f"Order payment for {order_code}",
                     "balance_after": wallet["balance"],
                     "created_at": now
                 }, session=session)
@@ -170,6 +186,9 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 
 
             result = orders_collection.insert_one(order_doc, session=session)
+
+            print(f"ORDER INSERTED: Order ID {order_id}, Order Code {order_code}")
+            print(f"ORDER DETAILS: Total ₹{total}, Status: pending, Payment: {payment_status}")
 
             # Save status history to separate collection
             order_status_history_collection.insert_one({

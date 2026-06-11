@@ -31,6 +31,22 @@
   --color-surface-weak: #f3f4f6;
 }
 
+.dark {
+  color-scheme: dark;
+
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-border: #334155;
+  --color-muted: #94a3b8;
+  --color-text: #f1f5f9;
+  --color-secondary-muted: #7c2d12;
+  --color-surface-weak: #1e293b;
+
+  --shadow-card: 0 24px 64px rgba(0, 0, 0, 0.3);
+  --shadow-soft: 0 12px 34px rgba(0, 0, 0, 0.2);
+  --shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.25);
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

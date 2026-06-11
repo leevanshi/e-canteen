@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from database import (
     wallet_collection,
+    wallet_txn_collection,
     users_collection
 )
 
@@ -70,7 +71,8 @@ def admin_add_money(
         data.user_id,
         data.amount,
         current_user["_id"],
-        now
+        now,
+        description=f"Wallet top-up by {current_user.get('name', 'Admin')}"
     )
 
     return {
@@ -79,3 +81,36 @@ def admin_add_money(
         "amount_added": data.amount,
         "new_balance": new_balance
     }
+
+
+# ================= WALLET HISTORY =================
+
+@router.get("/admin/wallet-history")
+def get_wallet_history(current_user=Depends(get_current_user)):
+    # ROLE CHECK
+    if current_user.get("role") != "admin":
+        raise HTTPException(403, "Admin only")
+
+    # FETCH ALL TRANSACTIONS, SORTED NEWEST FIRST
+    transactions = list(
+        wallet_txn_collection.find()
+        .sort("created_at", -1)
+        .limit(100)
+    )
+
+    # FORMAT RESPONSE
+    result = []
+    for txn in transactions:
+        user = users_collection.find_one({"_id": ObjectId(txn["user_id"])})
+        result.append({
+            "_id": str(txn["_id"]),
+            "user_id": txn["user_id"],
+            "user_name": user.get("name", "Unknown") if user else "Unknown",
+            "amount": txn["amount"],
+            "type": txn["type"],
+            "description": txn.get("description", ""),
+            "order_id": txn.get("order_id"),
+            "created_at": txn.get("created_at"),
+        })
+
+    return result

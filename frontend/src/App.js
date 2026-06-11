@@ -28,6 +28,7 @@ import AdminOrderPage from "./pages/AdminOrderPage";
 import AdminOrderHistory from "./pages/AdminOrderHistory";
 import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import AdminWalletPage from "./pages/AdminWalletPage";
+import AdminWalletHistory from "./pages/AdminWalletHistory";
 import AdminMenuPage from "./pages/AdminMenuPage";
 import AdminCounterMenu from "./pages/AdminCounterMenu";
 import AdminAnalytics from "./pages/AdminAnalytics";
@@ -231,6 +232,15 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AnimatedPage><AdminWalletPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/wallet-history"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminWalletHistory /></AnimatedPage>
               </ProtectedRoute>
             }
           />

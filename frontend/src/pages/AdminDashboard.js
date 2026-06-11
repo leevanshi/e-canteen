@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   Activity, Wallet, Utensils, History, ShoppingBag, ArrowUpRight,
-  TrendingUp, CheckCircle2, Store, Globe, FileText, Package,
+  TrendingUp, CheckCircle2, Store, Globe, FileText, Package, AlertTriangle,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 
 import { useAuth } from "../context/AuthContext";
 import { getAdminDashboard } from "../api";
 import { formatApiError } from "../utils/formatApiError";
+import API from "../api";
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -41,6 +42,7 @@ const AdminDashboard = () => {
 
   const [orders, setOrders] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [lowStockItems, setLowStockItems] = useState([]);
   const [stats, setStats] = useState({
     total: 0, active: 0, completed: 0, revenue: 0,
     onlineToday: 0, walkinToday: 0, revenueToday: 0, revenueMonth: 0,
@@ -48,7 +50,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     try {
       setError(null);
       const res = await getAdminDashboard();
@@ -66,6 +68,15 @@ const AdminDashboard = () => {
       });
       setOrders(data.recent_orders || []);
       setChartData(data.chart_data || []);
+
+      // Fetch low stock items
+      try {
+        const inventoryRes = await API.get("/inventory/alerts");
+        setLowStockItems(inventoryRes?.data || []);
+      } catch (inventoryErr) {
+        console.error("Failed to fetch low stock items:", inventoryErr);
+        setLowStockItems([]);
+      }
     } catch (err) {
       const msg = formatApiError(err?.response?.data?.detail, "Failed to load dashboard");
       setError(msg);
@@ -73,7 +84,7 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user?.role === "admin") {
@@ -81,7 +92,7 @@ const AdminDashboard = () => {
       const interval = setInterval(fetchDashboard, 30000);
       return () => clearInterval(interval);
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, fetchDashboard]);
 
   if (loading) {
     return (
@@ -246,7 +257,7 @@ const AdminDashboard = () => {
             <motion.div variants={cardVariant} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 mb-6">Revenue (7 Days)</h2>
               <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minHeight={200}>
                   <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -260,6 +271,45 @@ const AdminDashboard = () => {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </motion.div>
+
+            <motion.div variants={cardVariant} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <AlertTriangle size={20} className="text-amber-500" />
+                  Low Stock Alerts
+                </h2>
+                <button onClick={() => navigate("/admin/inventory")} className="text-sm font-bold text-amber-600 hover:text-amber-700">
+                  Manage Inventory
+                </button>
+              </div>
+              {lowStockItems.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <CheckCircle2 size={48} className="mx-auto mb-3 text-emerald-500" />
+                  <p className="font-medium">All items are in stock</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[250px] overflow-y-auto">
+                  {lowStockItems.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle size={18} className="text-amber-600" />
+                        <div>
+                          <p className="font-semibold text-gray-900">{item.menu_item_name}</p>
+                          <p className="text-sm text-gray-600">
+                            {item.type === "out_of_stock" ? "Out of stock" : `Stock: ${item.stock} / Threshold: ${item.threshold}`}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        item.type === "out_of_stock" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+                      }`}>
+                        {item.type === "out_of_stock" ? "Empty" : "Low"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           </div>
 
@@ -294,4 +344,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default memo(AdminDashboard);

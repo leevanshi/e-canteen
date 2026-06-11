@@ -119,7 +119,7 @@ const AdminAnalytics = () => {
             Revenue Trend (30 Days)
           </h2>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <LineChart data={analytics?.revenue_trend || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
@@ -139,7 +139,7 @@ const AdminAnalytics = () => {
             Orders Trend (30 Days)
           </h2>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <LineChart data={analytics?.orders_trend || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
@@ -159,7 +159,7 @@ const AdminAnalytics = () => {
             Peak Order Hours (Last 7 Days)
           </h2>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <BarChart data={analytics?.peak_hours || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="hour" tick={{ fontSize: 12 }} />
@@ -179,7 +179,7 @@ const AdminAnalytics = () => {
             Daily Revenue (7 Days)
           </h2>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <BarChart data={analytics?.daily_revenue || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} />
@@ -199,7 +199,7 @@ const AdminAnalytics = () => {
             Monthly Revenue (6 Months)
           </h2>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
               <BarChart data={analytics?.monthly_revenue || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />

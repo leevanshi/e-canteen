@@ -36,18 +36,15 @@ app = FastAPI(
 
 # ================= CORS =================
 
-_default_origins = "https://ecanteen-nmims.vercel.app,http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,https://e-canteen-7.onrender.com"
-allowed_origins = [
-    origin.strip()
-    for origin in (os.getenv("CORS_ALLOWED_ORIGINS") or _default_origins).split(",")
-    if origin.strip()
-]
+# TEMPORARY: Allow all origins for testing to fix CORS issues
+# TODO: Restrict to specific origins in production
+allowed_origins = ["*"]
+
 logger.info("CORS allowed origins: %s", allowed_origins)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],

@@ -1504,7 +1504,7 @@ const MenuPage = () => {
                     {/* Chart */}
                     <div className="bg-gray-50 rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-100">
                        <div className="h-40 w-full relative">
-                          <ResponsiveContainer width="100%" height="100%">
+                          <ResponsiveContainer width="100%" height="100%" minHeight={150}>
                             <PieChart>
                               <Pie
                                 data={[
