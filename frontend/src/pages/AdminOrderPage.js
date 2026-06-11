@@ -23,36 +23,21 @@ const formatIST = (date) => {
 
 const statusBadge = (status = "") => {
   switch (status.toLowerCase()) {
-    case "completed":
-      return "bg-green-100 text-green-700";
-    case "ready":
+    case "ready_for_pickup":
       return "bg-emerald-100 text-emerald-700";
-    case "packaging":
-      return "bg-indigo-100 text-indigo-700";
-    case "cooking":
-      return "bg-pink-100 text-pink-700";
     case "preparing":
       return "bg-purple-100 text-purple-700";
     case "confirmed":
       return "bg-blue-100 text-blue-700";
-    case "pending":
-      return "bg-orange-100 text-orange-700";
-    case "cancelled":
-      return "bg-red-100 text-red-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
 };
 
 const STATUS_PRIORITY = {
-  pending: 1,
-  confirmed: 2,
-  preparing: 3,
-  cooking: 4,
-  packaging: 5,
-  ready: 6,
-  completed: 7,
-  cancelled: 8,
+  confirmed: 1,
+  preparing: 2,
+  ready_for_pickup: 3,
 };
 
 /* ================= RECEIPT ================= */
@@ -341,15 +326,19 @@ const AdminOrdersPage = () => {
 
             <div className="flex gap-2 mt-3 flex-wrap">
 
-              {["pending","confirmed","preparing","cooking","packaging","ready","completed","cancelled"].map((s) => (
+              {["confirmed", "preparing", "ready_for_pickup"].map((s) => (
 
                 <button
                   key={s}
-                  disabled={updatingId === mongoId}
+                  disabled={updatingId === mongoId || status === s}
                   onClick={() => updateStatus(mongoId, s)}
-                  className="border px-3 py-1 rounded"
+                  className={`border px-3 py-1 rounded ${
+                    status === s
+                      ? "bg-gray-800 text-white"
+                      : "hover:bg-gray-100"
+                  }`}
                 >
-                  {s}
+                  {s.replace("_", " ").toUpperCase()}
                 </button>
 
               ))}

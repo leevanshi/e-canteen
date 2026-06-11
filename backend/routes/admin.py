@@ -158,16 +158,17 @@ async def update_order_status(
 
     status = data.status.lower()
 
+    # NEW 3-STATUS SYSTEM
     allowed_transitions = {
-        "pending": ["confirmed", "cancelled"],
-        "confirmed": ["preparing", "cancelled"],
-        "preparing": ["cooking", "cancelled"],
-        "cooking": ["packaging", "cancelled"],
-        "packaging": ["ready", "cancelled"],
-        "ready": ["completed"],
-        "completed": [],
-        "cancelled": []
+        "confirmed": ["preparing"],
+        "preparing": ["ready_for_pickup"],
+        "ready_for_pickup": [],
     }
+
+    # Validate status is one of the 3 allowed statuses
+    valid_statuses = ["confirmed", "preparing", "ready_for_pickup"]
+    if status not in valid_statuses:
+        raise HTTPException(400, f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
 
     if order_id.isdigit():
         query = {"order_id": int(order_id)}

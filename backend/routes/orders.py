@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional
 from pymongo import ReturnDocument
 from collections import defaultdict
+from enum import Enum
 import time
 from email_service import send_order_email, send_admin_notification
 from database import (
@@ -24,6 +25,26 @@ from server import manager
 IST = timezone(timedelta(hours=5, minutes=30))
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
+
+
+# ================= ORDER STATUS ENUM =================
+
+class OrderStatus(str, Enum):
+    CONFIRMED = "confirmed"
+    PREPARING = "preparing"
+    READY_FOR_PICKUP = "ready_for_pickup"
+
+    @classmethod
+    def valid_statuses(cls):
+        return [status.value for status in cls]
+
+    @classmethod
+    def get_allowed_transitions(cls):
+        return {
+            OrderStatus.CONFIRMED: [OrderStatus.PREPARING],
+            OrderStatus.PREPARING: [OrderStatus.READY_FOR_PICKUP],
+            OrderStatus.READY_FOR_PICKUP: [],
+        }
 
 
 # ================= ORDER RATE LIMIT =================
@@ -53,7 +74,6 @@ class AddMoneyRequest(BaseModel):
 
 # ================= PLACE ORDER =================
 
-@router.post("")
 @router.post("/")
 async def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
@@ -179,7 +199,7 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
                 "pickup_time": data.pickup_time,
                 "payment_method": data.payment_method,
                 "payment_status": payment_status,
-                "status": "pending",
+                "status": OrderStatus.CONFIRMED.value,
                 "created_at": now,
                 "updated_at": now
             }
@@ -188,12 +208,12 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
             result = orders_collection.insert_one(order_doc, session=session)
 
             print(f"ORDER INSERTED: Order ID {order_id}, Order Code {order_code}")
-            print(f"ORDER DETAILS: Total ₹{total}, Status: pending, Payment: {payment_status}")
+            print(f"ORDER DETAILS: Total ₹{total}, Status: {OrderStatus.CONFIRMED.value}, Payment: {payment_status}")
 
             # Save status history to separate collection
             order_status_history_collection.insert_one({
                 "order_id": order_id,
-                "status": "pending",
+                "status": OrderStatus.CONFIRMED.value,
                 "updated_by": str(user_id),
                 "timestamp": now
             }, session=session)

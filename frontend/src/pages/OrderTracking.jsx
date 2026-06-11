@@ -8,13 +8,9 @@ import { useAuth } from "../context/AuthContext";
 import { getUserOrders } from "../api";
 
 const ORDER_STATUSES = [
-  { key: "pending", label: "Order Received", icon: Clock, color: "text-orange-500", bg: "bg-orange-100" },
-  { key: "confirmed", label: "Confirmed", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-100" },
+  { key: "confirmed", label: "Order Confirmed", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-100" },
   { key: "preparing", label: "Preparing Food", icon: ChefHat, color: "text-purple-500", bg: "bg-purple-100" },
-  { key: "cooking", label: "Cooking", icon: Flame, color: "text-pink-500", bg: "bg-pink-100" },
-  { key: "packaging", label: "Packaging", icon: Box, color: "text-indigo-500", bg: "bg-indigo-100" },
-  { key: "ready", label: "Ready for Pickup", icon: CheckCircle, color: "text-green-500", bg: "bg-green-100" },
-  { key: "completed", label: "Completed", icon: CheckCircle, color: "text-gray-500", bg: "bg-gray-100" },
+  { key: "ready_for_pickup", label: "Ready for Pickup", icon: Package, color: "text-emerald-500", bg: "bg-emerald-100" },
 ];
 
 const OrderTracking = () => {
@@ -38,10 +34,7 @@ const OrderTracking = () => {
           const statusMessages = {
             confirmed: "Order Confirmed! 🎉",
             preparing: "Food Being Prepared 👨‍🍳",
-            cooking: "Cooking in Progress 🔥",
-            packaging: "Packaging Your Order 📦",
-            ready: "Food Ready for Pickup! 🍽️",
-            completed: "Order Completed ✅",
+            ready_for_pickup: "Food Ready for Pickup! 🍽️",
           };
           const message = statusMessages[foundOrder.status] || `Order status updated to ${foundOrder.status}`;
           toast.success(message);
