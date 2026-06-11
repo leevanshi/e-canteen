@@ -326,22 +326,25 @@ const AdminOrdersPage = () => {
 
             <div className="flex gap-2 mt-3 flex-wrap">
 
-              {["confirmed", "preparing", "ready_for_pickup"].map((s) => (
-
+              {status === "confirmed" || status === "preparing" ? (
                 <button
-                  key={s}
-                  disabled={updatingId === mongoId || status === s}
-                  onClick={() => updateStatus(mongoId, s)}
-                  className={`border px-3 py-1 rounded ${
-                    status === s
-                      ? "bg-gray-800 text-white"
-                      : "hover:bg-gray-100"
-                  }`}
+                  disabled={updatingId === mongoId}
+                  onClick={() => updateStatus(mongoId, "ready_for_pickup")}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-semibold"
                 >
-                  {s.replace("_", " ").toUpperCase()}
+                  Mark Ready For Pickup
                 </button>
-
-              ))}
+              ) : status === "ready_for_pickup" ? (
+                <button
+                  disabled={updatingId === mongoId}
+                  onClick={() => updateStatus(mongoId, "picked_up")}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-semibold"
+                >
+                  Mark Picked Up
+                </button>
+              ) : (
+                <span className="text-gray-500 text-sm">Order completed</span>
+              )}
 
             </div>
 

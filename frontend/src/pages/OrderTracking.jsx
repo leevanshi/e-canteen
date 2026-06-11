@@ -11,6 +11,7 @@ const ORDER_STATUSES = [
   { key: "confirmed", label: "Order Confirmed", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-100" },
   { key: "preparing", label: "Preparing Food", icon: ChefHat, color: "text-purple-500", bg: "bg-purple-100" },
   { key: "ready_for_pickup", label: "Ready for Pickup", icon: Package, color: "text-emerald-500", bg: "bg-emerald-100" },
+  { key: "picked_up", label: "Picked Up", icon: CheckCircle, color: "text-green-500", bg: "bg-green-100" },
 ];
 
 const OrderTracking = () => {
@@ -35,6 +36,7 @@ const OrderTracking = () => {
             confirmed: "Order Confirmed! 🎉",
             preparing: "Food Being Prepared 👨‍🍳",
             ready_for_pickup: "Food Ready for Pickup! 🍽️",
+            picked_up: "Order Picked Up! ✅",
           };
           const message = statusMessages[foundOrder.status] || `Order status updated to ${foundOrder.status}`;
           toast.success(message);

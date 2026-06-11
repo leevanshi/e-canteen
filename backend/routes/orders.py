@@ -33,6 +33,7 @@ class OrderStatus(str, Enum):
     CONFIRMED = "confirmed"
     PREPARING = "preparing"
     READY_FOR_PICKUP = "ready_for_pickup"
+    PICKED_UP = "picked_up"
 
     @classmethod
     def valid_statuses(cls):
@@ -41,9 +42,10 @@ class OrderStatus(str, Enum):
     @classmethod
     def get_allowed_transitions(cls):
         return {
-            OrderStatus.CONFIRMED: [OrderStatus.PREPARING],
+            OrderStatus.CONFIRMED: [OrderStatus.PREPARING, OrderStatus.READY_FOR_PICKUP],
             OrderStatus.PREPARING: [OrderStatus.READY_FOR_PICKUP],
-            OrderStatus.READY_FOR_PICKUP: [],
+            OrderStatus.READY_FOR_PICKUP: [OrderStatus.PICKED_UP],
+            OrderStatus.PICKED_UP: [],
         }
 
 
@@ -149,79 +151,113 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 
         payment_status = "paid" if data.payment_method == "wallet" else "pending"
 
-        with client.start_session() as session:
-            with session.start_transaction():
+        # ===== VALIDATE WALLET BALANCE BEFORE TRANSACTION =====
+        if data.payment_method == "wallet":
+            print(f"VALIDATING WALLET BALANCE: User {user_id}, Amount ₹{total}")
+            wallet = wallet_collection.find_one({"user_id": ObjectId(user_id)})
+            if not wallet:
+                print("ERROR: Wallet not found")
+                raise HTTPException(400, "Wallet not found")
+            if wallet["balance"] < total:
+                print(f"ERROR: Insufficient balance. Current: ₹{wallet['balance']}, Required: ₹{total}")
+                raise HTTPException(400, "Insufficient wallet balance")
+            print(f"WALLET VALIDATION PASSED: Balance ₹{wallet['balance']}")
 
-                order_id, order_code = next_online_order(session=session)
+        # ===== ATOMIC ORDER CREATION =====
+        try:
+            with client.start_session() as session:
+                with session.start_transaction():
 
-                if data.payment_method == "wallet":
+                    print("TRANSACTION STARTED")
 
-                    print(f"WALLET BALANCE BEFORE DEDUCTION: Checking user {user_id}")
-                    print(f"TOTAL AMOUNT TO DEDUCT: ₹{total}")
+                    # STEP 1: Generate order ID
+                    order_id, order_code = next_online_order(session=session)
+                    print(f"ORDER ID GENERATED: {order_id}, Code: {order_code}")
 
-                    wallet = wallet_collection.find_one_and_update(
-                        {
-                            "user_id": ObjectId(user_id),
-                            "balance": {"$gte": total}
-                        },
-                        {
-                            "$inc": {"balance": -total},
-                            "$set": {"updated_at": now}
-                        },
-                        return_document=ReturnDocument.AFTER,
-                        session=session
-                    )
-
-                    if not wallet:
-                        print("ERROR: Insufficient wallet balance")
-                        raise HTTPException(400, "Insufficient wallet balance")
-
-                    print(f"WALLET BALANCE AFTER DEDUCTION: ₹{wallet['balance']}")
-
-                    wallet_txn_collection.insert_one({
-                        "user_id": ObjectId(user_id),
-                        "amount": total,
-                        "type": "debit",
-                        "source": "order",
+                    # STEP 2: Create order document
+                    order_doc = {
                         "order_id": order_id,
-                        "description": f"Order payment for {order_code}",
-                        "balance_after": wallet["balance"],
-                        "created_at": now
+                        "order_code": order_code,
+                        "order_type": "online",
+                        "user_id": ObjectId(user_id),
+                        "user_name": current_user["name"],
+                        "user_email": current_user["email"],
+                        "items": clean_items,
+                        "total_amount": total,
+                        "pickup_time": data.pickup_time,
+                        "payment_method": data.payment_method,
+                        "payment_status": payment_status,
+                        "status": OrderStatus.CONFIRMED.value,
+                        "created_at": now,
+                        "updated_at": now
+                    }
+
+                    # STEP 3: Insert order
+                    result = orders_collection.insert_one(order_doc, session=session)
+                    print(f"ORDER INSERTED SUCCESSFULLY: MongoDB ID {result.inserted_id}")
+                    print(f"ORDER DETAILS: Total ₹{total}, Status: {OrderStatus.CONFIRMED.value}, Payment: {payment_status}")
+
+                    # STEP 4: Insert status history
+                    order_status_history_collection.insert_one({
+                        "order_id": order_id,
+                        "status": OrderStatus.CONFIRMED.value,
+                        "updated_by": str(user_id),
+                        "timestamp": now
                     }, session=session)
+                    print("STATUS HISTORY INSERTED")
 
-                order_doc = {
-                    "order_id": order_id,
-                    "order_code": order_code,
-                    "order_type": "online",
-                    "user_id": ObjectId(user_id),
-                    "user_name": current_user["name"],
-                    "user_email": current_user["email"],
-                    "items": clean_items,
-                    "total_amount": total,
-                    "pickup_time": data.pickup_time,
-                    "payment_method": data.payment_method,
-                    "payment_status": payment_status,
-                    "status": OrderStatus.CONFIRMED.value,
-                    "created_at": now,
-                    "updated_at": now
-                }
+                    # STEP 5: Deduct wallet balance (ONLY AFTER ORDER IS SAVED)
+                    if data.payment_method == "wallet":
+                        print(f"DEDUCTING WALLET: User {user_id}, Amount ₹{total}")
+                        wallet = wallet_collection.find_one_and_update(
+                            {
+                                "user_id": ObjectId(user_id),
+                                "balance": {"$gte": total}
+                            },
+                            {
+                                "$inc": {"balance": -total},
+                                "$set": {"updated_at": now}
+                            },
+                            return_document=ReturnDocument.AFTER,
+                            session=session
+                        )
 
+                        if not wallet:
+                            print("ERROR: Wallet deduction failed - insufficient balance")
+                            raise HTTPException(400, "Insufficient wallet balance during transaction")
 
-                result = orders_collection.insert_one(order_doc, session=session)
+                        print(f"WALLET DEDUCTED SUCCESSFULLY: New Balance ₹{wallet['balance']}")
 
-                print(f"ORDER INSERTED: Order ID {order_id}, Order Code {order_code}")
-                print(f"ORDER DETAILS: Total ₹{total}, Status: {OrderStatus.CONFIRMED.value}, Payment: {payment_status}")
+                        # STEP 6: Create wallet transaction record
+                        wallet_txn_collection.insert_one({
+                            "user_id": ObjectId(user_id),
+                            "amount": total,
+                            "type": "debit",
+                            "source": "order",
+                            "order_id": order_id,
+                            "description": f"Order payment for {order_code}",
+                            "balance_after": wallet["balance"],
+                            "created_at": now
+                        }, session=session)
+                        print("WALLET TRANSACTION RECORDED")
 
-                # Save status history to separate collection
-                order_status_history_collection.insert_one({
-                    "order_id": order_id,
-                    "status": OrderStatus.CONFIRMED.value,
-                    "updated_by": str(user_id),
-                    "timestamp": now
-                }, session=session)
+                    print("TRANSACTION COMMITTING")
+                    # Transaction commits automatically on success
+
+        except Exception as transaction_error:
+            print(f"TRANSACTION FAILED: {str(transaction_error)}")
+            print("ROLLING BACK ALL CHANGES")
+            raise HTTPException(500, f"Order creation failed: {str(transaction_error)}")
 
         # ===== AFTER SUCCESS =====
         order_doc["_id"] = str(result.inserted_id)
+
+        print("=" * 50)
+        print("ORDER PLACED SUCCESSFULLY")
+        print(f"Order ID: {order_doc['order_id']}")
+        print(f"Order Code: {order_doc['order_code']}")
+        print(f"MongoDB ID: {order_doc['_id']}")
+        print("=" * 50)
 
         # ================= SEND EMAIL =================
         try:
@@ -268,8 +304,12 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
             "order_code": order_doc["order_code"],
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         print("ORDER ERROR:", str(e))
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

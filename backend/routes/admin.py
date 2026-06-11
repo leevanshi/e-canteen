@@ -158,15 +158,16 @@ async def update_order_status(
 
     status = data.status.lower()
 
-    # NEW 3-STATUS SYSTEM
+    # NEW 4-STATUS SYSTEM
     allowed_transitions = {
-        "confirmed": ["preparing"],
+        "confirmed": ["preparing", "ready_for_pickup"],
         "preparing": ["ready_for_pickup"],
-        "ready_for_pickup": [],
+        "ready_for_pickup": ["picked_up"],
+        "picked_up": [],
     }
 
-    # Validate status is one of the 3 allowed statuses
-    valid_statuses = ["confirmed", "preparing", "ready_for_pickup"]
+    # Validate status is one of the 4 allowed statuses
+    valid_statuses = ["confirmed", "preparing", "ready_for_pickup", "picked_up"]
     if status not in valid_statuses:
         raise HTTPException(400, f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
 
