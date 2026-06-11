@@ -181,8 +181,8 @@ const CheckoutPage = () => {
 
   /* SUCCESS UI */
   if (orderPlaced) {
-    // Use window.location.href to force a full page reload and ensure auth state is fresh
-    window.location.href = `/order/confirmation?orderId=${orderId}`;
+    // Redirect to order confirmation page with order code
+    navigate(`/order-confirmation/${orderId}`);
     return null;
   }
 

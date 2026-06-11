@@ -240,60 +240,114 @@ async def place_walkin_order(
     current_user=Depends(get_current_user)
 ):
 
-    ensure_admin(current_user)
-
-    if not data.items:
-        raise HTTPException(400, "Order must contain items")
-
-    if data.total_amount <= 0:
-        raise HTTPException(400, "Invalid total amount")
-
-    for item in data.items:
-        if item.quantity <= 0 or item.price <= 0:
-            raise HTTPException(400, "Invalid item data")
-
-    now = datetime.now(IST)
-
-    order_id, order_code = next_walkin_order()
-
-    order = {
-        "order_id": order_id,
-        "order_code": order_code,
-        "order_type": "walk-in",
-        "user_id": None,
-        "user_name": "Walk-in Customer",
-        "admin_id": ObjectId(current_user["_id"]),
-        "items": [i.model_dump() for i in data.items],
-        "total_amount": data.total_amount,
-        "payment_method": "cash",
-        "payment_status": "paid",
-        "status": "pending",
-        "status_history": [{"status": "pending", "time": now}],
-        "created_at": now,
-        "updated_at": now,
-    }
-
-    result = orders_collection.insert_one(order)
-
-    order["_id"] = str(result.inserted_id)
-
-    await manager.broadcast({
-        "type": "new_order",
-        "order": serialize_order(order)
-    })
-
-    # Audit
     try:
-        log_audit("place_walkin_order", user_id=current_user.get("_id"), details={"order_id": order_id, "total": data.total_amount})
-    except Exception:
-        pass
+        print("=" * 50)
+        print("WALK-IN ORDER REQUEST RECEIVED")
+        print(f"Admin ID: {current_user['_id']}")
+        print(f"Items: {len(data.items) if data.items else 0}")
+        print(f"Total Amount: ₹{data.total_amount}")
+        print("=" * 50)
 
-    return {
-        "success": True,
-        "order_id": order_id,
-        "order_code": order_code,
-        "order": serialize_order(order),
-    }
+        ensure_admin(current_user)
+
+        if not data.items:
+            raise HTTPException(400, "Order must contain items")
+
+        if data.total_amount <= 0:
+            raise HTTPException(400, "Invalid total amount")
+
+        for item in data.items:
+            if item.quantity <= 0 or item.price <= 0:
+                raise HTTPException(400, "Invalid item data")
+
+        now = datetime.now(IST)
+
+        # Generate order ID
+        print("GENERATING WALK-IN ORDER ID...")
+        order_id, order_code = next_walkin_order()
+        print(f"ORDER ID GENERATED: {order_id}, Code: {order_code}")
+
+        order = {
+            "order_id": order_id,
+            "order_code": order_code,
+            "order_type": "walk-in",
+            "user_id": None,
+            "user_name": "Walk-in Customer",
+            "admin_id": ObjectId(current_user["_id"]),
+            "items": [i.model_dump() for i in data.items],
+            "total_amount": data.total_amount,
+            "payment_method": "cash",
+            "payment_status": "paid",
+            "status": "confirmed",  # Changed from "pending" to "confirmed"
+            "status_history": [{"status": "confirmed", "time": now}],
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        print("ORDER DOC CREATED:")
+        print(f"  Order ID: {order_id}")
+        print(f"  Order Code: {order_code}")
+        print(f"  Items: {len(order['items'])}")
+        print(f"  Total: ₹{order['total_amount']}")
+        print(f"  Status: {order['status']}")
+
+        # Insert order
+        print("INSERTING ORDER INTO MONGODB...")
+        result = orders_collection.insert_one(order)
+        print(f"ORDER INSERTED SUCCESSFULLY: MongoDB ID {result.inserted_id}")
+
+        order["_id"] = str(result.inserted_id)
+
+        # Insert status history to separate collection
+        print("INSERTING STATUS HISTORY...")
+        order_status_history_collection.insert_one({
+            "order_id": order_id,
+            "status": "confirmed",
+            "updated_by": str(current_user["_id"]),
+            "timestamp": now
+        })
+        print("STATUS HISTORY INSERTED")
+
+        # Broadcast to WebSocket
+        print("BROADCASTING ORDER UPDATE...")
+        await manager.broadcast({
+            "type": "new_order",
+            "order": serialize_order(order)
+        })
+
+        # Audit
+        try:
+            log_audit("place_walkin_order", user_id=current_user.get("_id"), details={"order_id": order_id, "total": data.total_amount})
+        except Exception:
+            pass
+
+        print("=" * 50)
+        print("WALK-IN ORDER PLACED SUCCESSFULLY")
+        print(f"Order ID: {order_id}")
+        print(f"Order Code: {order_code}")
+        print("=" * 50)
+
+        return {
+            "success": True,
+            "order_id": order_id,
+            "order_code": order_code,
+            "status": "confirmed",
+            "order": serialize_order(order),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("=" * 50)
+        print("WALK-IN ORDER ERROR")
+        print(str(e))
+        import traceback
+        print(traceback.format_exc())
+        print("=" * 50)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Walk-in order creation failed: {str(e)}"
+        )
 
 
 # ================= USERS LIST =================

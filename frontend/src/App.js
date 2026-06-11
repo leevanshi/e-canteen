@@ -184,7 +184,7 @@ const App = () => {
           />
 
           <Route
-            path="/order/confirmation"
+            path="/order-confirmation/:orderId"
             element={
               <ProtectedRoute allowedRoles={["student"]}>
                 <AnimatedPage><OrderConfirmation /></AnimatedPage>
