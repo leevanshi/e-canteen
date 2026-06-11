@@ -74,7 +74,7 @@ class MenuItemUpdate(BaseModel):
 
 # ================= GET MENU =================
 
-@router.get("/")
+@router.get("")
 def get_menu():
 
     items = menu_collection.find(

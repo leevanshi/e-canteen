@@ -166,7 +166,7 @@ export const adminAddMoney = (data) =>
   API.post("/wallet/admin/add-money", data);
 
 export const getWalletHistory = () =>
-  API.get("/admin/wallet-history");
+  API.get("/wallet/admin/wallet-history");
 
 /* =========================
    FEEDBACK

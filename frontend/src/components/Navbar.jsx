@@ -40,8 +40,11 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/", { replace: true });
-    setMobileMenuOpen(false);
+    // Small delay to ensure state updates before navigation
+    setTimeout(() => {
+      navigate("/", { replace: true });
+      setMobileMenuOpen(false);
+    }, 100);
   };
 
   const handleLogoClick = () => {

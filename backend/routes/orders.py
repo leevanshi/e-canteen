@@ -74,7 +74,7 @@ class AddMoneyRequest(BaseModel):
 
 # ================= PLACE ORDER =================
 
-@router.post("/")
+@router.post("")
 async def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
     now = datetime.now(IST)
@@ -278,7 +278,7 @@ def admin_dashboard(current_user=Depends(get_current_user)):
 
 # ================= GET MY ORDERS =================
 
-@router.get("/")
+@router.get("")
 def get_my_orders(current_user=Depends(get_current_user)):
 
     orders = orders_collection.find(

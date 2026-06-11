@@ -36,9 +36,14 @@ app = FastAPI(
 
 # ================= CORS =================
 
-# TEMPORARY: Allow all origins for testing to fix CORS issues
-# TODO: Restrict to specific origins in production
-allowed_origins = ["*"]
+# Production CORS configuration
+allowed_origins = [
+    "https://ecanteen-nmims.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
 
 logger.info("CORS allowed origins: %s", allowed_origins)
 
