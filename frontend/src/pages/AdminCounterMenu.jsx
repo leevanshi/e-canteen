@@ -32,6 +32,7 @@ const AdminCounterMenu = () => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [lastOrder, setLastOrder] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
 
@@ -77,9 +78,18 @@ const AdminCounterMenu = () => {
     );
   };
 
+  const categories = useMemo(() => {
+    const cats = new Set(menu.map((i) => i.category || "General"));
+    return ["All", ...Array.from(cats).sort()];
+  }, [menu]);
+
   const filteredMenu = useMemo(() =>
-    menu.filter((i) => i.name?.toLowerCase().includes(search.toLowerCase())),
-  [menu, search]);
+    menu.filter((i) => {
+      const matchesSearch = i.name?.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = selectedCategory === "All" || (i.category || "General") === selectedCategory;
+      return matchesSearch && matchesCategory;
+    }),
+  [menu, search, selectedCategory]);
 
   const totalAmount = useMemo(() =>
     cart.reduce((sum, i) => sum + i.price * i.qty, 0),
@@ -163,6 +173,21 @@ const AdminCounterMenu = () => {
                 className="w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
               />
             </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                    selectedCategory === cat
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
             <div className="grid sm:grid-cols-2 gap-3 max-h-[70vh] overflow-y-auto">
               {filteredMenu.map((item) => (
                 <div key={item._id} className="border rounded-xl p-4 flex justify-between items-center hover:shadow-sm bg-white">
@@ -211,25 +236,44 @@ const AdminCounterMenu = () => {
       {showReceipt && lastOrder && (
         <div className="no-print fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div id="walkin-receipt" ref={printRef} className="text-center font-mono text-sm space-y-2 mb-6">
-              <h2 className="text-lg font-bold">E-CANTEEN</h2>
-              <hr />
-              <p>Order ID: <strong>{lastOrder.order_code}</strong></p>
+            <div id="walkin-receipt" ref={printRef} className="text-center font-mono text-sm space-y-2 mb-6 border-2 border-gray-300 p-4">
+              <h2 className="text-xl font-bold tracking-widest">NMIMS</h2>
+              <h3 className="text-lg font-bold">E-CANTEEN</h3>
+              <hr className="my-2" />
+              <p className="font-semibold">Order ID: {lastOrder.order_code}</p>
               <p>{formatIST(lastOrder.created_at)}</p>
-              <p>Order Type: Walk-In</p>
-              <p>Payment: Cash</p>
-              <hr />
+              <p className="font-semibold">Order Type: Walk-In Customer</p>
+              <p className="font-semibold">Payment: Cash</p>
+              <hr className="my-2" />
               <div className="text-left space-y-1">
+                <p className="font-bold mb-2">ITEM                  QTY        PRICE</p>
                 {lastOrder.items.map((item, idx) => (
                   <div key={idx} className="flex justify-between">
-                    <span>{item.name} x{item.quantity}</span>
-                    <span>₹{item.price * item.quantity}</span>
+                    <span className="flex-1">{item.name}</span>
+                    <span className="w-8 text-center">{item.quantity}</span>
+                    <span className="w-16 text-right">₹{item.price * item.quantity}</span>
                   </div>
                 ))}
               </div>
-              <hr />
-              <p className="font-bold text-base">Total: ₹{lastOrder.total_amount}</p>
-              <p className="pt-2">Thank You</p>
+              <hr className="my-2" />
+              <div className="text-left space-y-1">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>₹{lastOrder.total_amount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax</span>
+                  <span>₹0</span>
+                </div>
+                <div className="flex justify-between font-bold text-base">
+                  <span>TOTAL</span>
+                  <span>₹{lastOrder.total_amount}</span>
+                </div>
+              </div>
+              <hr className="my-2" />
+              <p className="font-semibold">Thank You</p>
+              <p className="text-xs">Please retain this receipt.</p>
+              <p className="text-xs">Powered by NMIMS E-Canteen</p>
             </div>
             <div className="flex gap-3">
               <button onClick={handlePrint}

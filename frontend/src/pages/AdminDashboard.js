@@ -209,6 +209,22 @@ const AdminDashboard = () => {
                   <ArrowUpRight className="absolute top-5 right-5 text-gray-300 group-hover:text-purple-500" size={20}/>
                 </button>
 
+                <button onClick={() => navigate("/admin/analytics")}
+                  className="group relative overflow-hidden bg-gray-50 hover:bg-white border border-gray-100 hover:border-teal-200 rounded-2xl p-5 text-left transition-all hover:shadow-lg">
+                  <div className="w-10 h-10 bg-teal-100 text-teal-600 rounded-xl flex items-center justify-center mb-4"><TrendingUp size={20}/></div>
+                  <h3 className="font-bold text-gray-900">Analytics</h3>
+                  <p className="text-sm text-gray-500 mt-1">View revenue trends and insights.</p>
+                  <ArrowUpRight className="absolute top-5 right-5 text-gray-300 group-hover:text-teal-500" size={20}/>
+                </button>
+
+                <button onClick={() => navigate("/admin/inventory")}
+                  className="group relative overflow-hidden bg-gray-50 hover:bg-white border border-gray-100 hover:border-amber-200 rounded-2xl p-5 text-left transition-all hover:shadow-lg">
+                  <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-4"><Package size={20}/></div>
+                  <h3 className="font-bold text-gray-900">Inventory</h3>
+                  <p className="text-sm text-gray-500 mt-1">Track stock levels and alerts.</p>
+                  <ArrowUpRight className="absolute top-5 right-5 text-gray-300 group-hover:text-amber-500" size={20}/>
+                </button>
+
                 <button onClick={() => navigate("/admin/menu")}
                   className="group relative overflow-hidden bg-gray-50 hover:bg-white border border-gray-100 hover:border-orange-200 rounded-2xl p-5 text-left transition-all hover:shadow-lg sm:col-span-2">
                   <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center mb-4"><Utensils size={20}/></div>

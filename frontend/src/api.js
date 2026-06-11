@@ -178,6 +178,24 @@ export const submitFeedback = (data) =>
 export const getAllFeedback = () =>
   API.get("/feedback/admin");
 
+export const getAnalytics = () =>
+  API.get("/admin/analytics");
+
+export const getInventory = () =>
+  API.get("/inventory");
+
+export const createInventoryItem = (data) =>
+  API.post("/inventory", data);
+
+export const updateInventoryItem = (itemId, data) =>
+  API.put(`/inventory/${itemId}`, data);
+
+export const deleteInventoryItem = (itemId) =>
+  API.delete(`/inventory/${itemId}`);
+
+export const getInventoryAlerts = () =>
+  API.get("/inventory/alerts");
+
 /* =========================
    LOGOUT
 ========================= */

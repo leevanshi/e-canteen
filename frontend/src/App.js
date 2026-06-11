@@ -28,6 +28,8 @@ import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import AdminWalletPage from "./pages/AdminWalletPage";
 import AdminMenuPage from "./pages/AdminMenuPage";
 import AdminCounterMenu from "./pages/AdminCounterMenu";
+import AdminAnalytics from "./pages/AdminAnalytics";
+import AdminInventory from "./pages/AdminInventory";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 
 /* COMPONENTS */
@@ -249,6 +251,24 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AnimatedPage><AdminFeedbackPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/analytics"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminAnalytics /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/inventory"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminInventory /></AnimatedPage>
               </ProtectedRoute>
             }
           />

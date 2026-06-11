@@ -14,6 +14,7 @@ from database import (
     wallet_txn_collection,
 )
 from services.order_id_service import next_walkin_order, format_order_code
+from services.analytics_service import get_analytics_data
 
 from routes.auth import get_current_user, get_current_user_optional, hash_password
 import os
@@ -344,3 +345,11 @@ def wallet_history(
         })
 
     return result
+
+
+# ================= ANALYTICS =================
+
+@router.get("/analytics")
+def get_analytics(current_user=Depends(get_current_user)):
+    ensure_admin(current_user)
+    return get_analytics_data()

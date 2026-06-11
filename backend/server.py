@@ -36,7 +36,7 @@ app = FastAPI(
 
 # ================= CORS =================
 
-_default_origins = "https://ecanteen-nmims.vercel.app,http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173"
+_default_origins = "https://ecanteen-nmims.vercel.app,http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,https://e-canteen-7.onrender.com"
 allowed_origins = [
     origin.strip()
     for origin in (os.getenv("CORS_ALLOWED_ORIGINS") or _default_origins).split(",")
@@ -52,6 +52,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=600,
 )
 
 
@@ -170,6 +171,7 @@ from routes.menu import router as menu_router
 from routes.orders import router as orders_router
 from routes.admin import router as admin_router, ADMIN_REGISTER_SECRET
 from routes.feedback import router as feedback_router
+from routes.inventory import router as inventory_router
 
 
 def get_client_ip(request: Request) -> str | None:
@@ -234,6 +236,7 @@ app.include_router(orders_router)
 app.include_router(admin_router)
 app.include_router(wallet_router)
 app.include_router(feedback_router)
+app.include_router(inventory_router)
 
 
 @app.on_event("startup")
