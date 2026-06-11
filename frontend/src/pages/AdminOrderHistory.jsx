@@ -56,8 +56,10 @@ const AdminOrderHistory = () => {
   const role = (user?.role || "").toLowerCase();
 
   const [orders, setOrders] = useState([]);
+  const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   /* ================= AUTH GUARD ================= */
 
@@ -87,30 +89,17 @@ const AdminOrderHistory = () => {
 
       const res = await getAdminOrders();
 
-      const allOrders = Array.isArray(res?.data)
+      const fetchedOrders = Array.isArray(res?.data)
         ? res.data
         : [];
 
-      const completedOrders = allOrders.filter(
-        (o) =>
-          String(o.status).toLowerCase() === "completed"
-      );
-
-      const sorted = completedOrders.sort((a, b) => {
-
-        const dateA = new Date(
-          getCompletedTime(a) || 0
-        ).getTime();
-
-        const dateB = new Date(
-          getCompletedTime(b) || 0
-        ).getTime();
-
+      const sorted = fetchedOrders.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
         return dateB - dateA;
-
       });
 
-      setOrders(sorted);
+      setAllOrders(sorted);
 
     } catch (err) {
 
@@ -127,6 +116,21 @@ const AdminOrderHistory = () => {
     }
 
   };
+
+  /* ================= FILTER ORDERS ================= */
+
+  const filteredOrders = useMemo(() => {
+    if (statusFilter === "all") {
+      return allOrders;
+    }
+    return allOrders.filter(
+      (o) => String(o.status).toLowerCase() === statusFilter.toLowerCase()
+    );
+  }, [allOrders, statusFilter]);
+
+  useEffect(() => {
+    setOrders(filteredOrders);
+  }, [filteredOrders]);
 
   useEffect(() => {
 
@@ -198,6 +202,26 @@ const AdminOrderHistory = () => {
 
       </div>
 
+      {/* FILTER TABS */}
+
+      <div className="flex flex-wrap gap-2 border-b pb-4">
+
+        {["all", "confirmed", "preparing", "ready_for_pickup", "picked_up"].map((filter) => (
+          <button
+            key={filter}
+            onClick={() => setStatusFilter(filter)}
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+              statusFilter === filter
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            {filter === "all" ? "All" : filter.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+          </button>
+        ))}
+
+      </div>
+
       {fetchError && (
         <Card className="p-4 text-red-700 bg-red-50 border-red-200 flex justify-between items-center">
           <span className="text-sm">{fetchError}</span>
@@ -208,7 +232,7 @@ const AdminOrderHistory = () => {
       {orders.length === 0 ? (
 
         <Card className="p-8 text-center text-gray-500">
-          No completed orders yet
+          No orders found for this filter
         </Card>
 
       ) : (
@@ -227,7 +251,7 @@ const AdminOrderHistory = () => {
                 <div className="space-y-2">
 
                   <p className="font-semibold">
-                    Order ID:
+                    Order Code:
                     <span className="font-normal">
                       {" "}
                       {order.order_code || `E-${order.order_id}`}
@@ -235,7 +259,7 @@ const AdminOrderHistory = () => {
                   </p>
 
                   <p>
-                    User:
+                    Customer:
                     <span className="font-medium">
                       {" "}
                       {order.user_name ||
@@ -248,18 +272,22 @@ const AdminOrderHistory = () => {
                   </p>
 
                   <p className="text-sm text-gray-500">
-                    Completed at:{" "}
-                    {formatIST(
-                      getCompletedTime(order)
-                    )}
+                    Created at:{" "}
+                    {formatIST(order.created_at)}
                   </p>
 
                 </div>
 
                 <div className="flex items-center">
 
-                  <span className="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-700">
-                    Completed
+                  <span className={`px-3 py-1 text-sm font-semibold rounded-full capitalize ${
+                    order.status === "confirmed" ? "bg-blue-100 text-blue-700" :
+                    order.status === "preparing" ? "bg-purple-100 text-purple-700" :
+                    order.status === "ready_for_pickup" ? "bg-emerald-100 text-emerald-700" :
+                    order.status === "picked_up" ? "bg-green-100 text-green-700" :
+                    "bg-gray-100 text-gray-700"
+                  }`}>
+                    {order.status?.replace("_", " ")}
                   </span>
 
                 </div>
