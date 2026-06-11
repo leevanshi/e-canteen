@@ -265,12 +265,14 @@ def init_indexes():
 
 def get_next_order_id() -> int:
 
+    # Initialize counter if it doesn't exist
+    existing = counters_collection.find_one({"_id": "order_id"})
+    if not existing:
+        counters_collection.insert_one({"_id": "order_id", "seq": 99})
+    
     counter = counters_collection.find_one_and_update(
         {"_id": "order_id"},
-        {
-            "$inc": {"seq": 1},
-            "$setOnInsert": {"seq": 100}
-        },
+        {"$inc": {"seq": 1}},
         upsert=True,
         return_document=ReturnDocument.AFTER
     )

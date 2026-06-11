@@ -1380,14 +1380,14 @@ const MenuPage = () => {
         )}
       </div>
 
-      {/* ================= FLOATING CART ================= */}
+      {/* ================= FLOATING CART - DESKTOP ONLY ================= */}
       <AnimatePresence>
         {totalItems > 0 && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-gray-900/95 backdrop-blur-xl border border-white/10 p-3 rounded-2xl shadow-2xl flex items-center justify-between z-40"
+            className="hidden md:block fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-gray-900/95 backdrop-blur-xl border border-white/10 p-3 rounded-2xl shadow-2xl flex items-center justify-between z-40"
           >
             <div className="flex items-center gap-3 ml-2">
               <div className="w-10 h-10 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center font-bold">

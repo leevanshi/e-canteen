@@ -41,6 +41,7 @@ import PublicOrderDisplay from "./pages/PublicOrderDisplay";
 
 /* COMPONENTS */
 import Navbar from "./components/Navbar";
+import MobileCartBar from "./components/MobileCartBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import AnimatedPage from "./components/AnimatedPage";
@@ -87,6 +88,7 @@ const App = () => {
     <ErrorBoundary>
       <Toaster position="top-right" richColors />
       {!hideNavbar && <Navbar />}
+      <MobileCartBar />
       
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
