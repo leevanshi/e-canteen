@@ -25,10 +25,20 @@ const statusBadge = (status = "") => {
   switch (status.toLowerCase()) {
     case "completed":
       return "bg-green-100 text-green-700";
+    case "ready":
+      return "bg-emerald-100 text-emerald-700";
+    case "packaging":
+      return "bg-indigo-100 text-indigo-700";
+    case "cooking":
+      return "bg-pink-100 text-pink-700";
     case "preparing":
-      return "bg-orange-100 text-orange-700";
-    case "pending":
+      return "bg-purple-100 text-purple-700";
+    case "confirmed":
       return "bg-blue-100 text-blue-700";
+    case "pending":
+      return "bg-orange-100 text-orange-700";
+    case "cancelled":
+      return "bg-red-100 text-red-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
@@ -36,8 +46,13 @@ const statusBadge = (status = "") => {
 
 const STATUS_PRIORITY = {
   pending: 1,
-  preparing: 2,
-  completed: 3,
+  confirmed: 2,
+  preparing: 3,
+  cooking: 4,
+  packaging: 5,
+  ready: 6,
+  completed: 7,
+  cancelled: 8,
 };
 
 /* ================= RECEIPT ================= */
@@ -324,9 +339,9 @@ const AdminOrdersPage = () => {
 
             </ul>
 
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3 flex-wrap">
 
-              {["pending","preparing","completed"].map((s) => (
+              {["pending","confirmed","preparing","cooking","packaging","ready","completed","cancelled"].map((s) => (
 
                 <button
                   key={s}

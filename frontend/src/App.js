@@ -18,6 +18,8 @@ import CheckoutPage from "./pages/CheckoutPage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import OrderDetails from "./pages/OrderDetails";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import OrderTracking from "./pages/OrderTracking";
 
 /* ADMIN */
 import AdminMonthlyMenu from "./pages/AdminMonthlyMenu";
@@ -30,7 +32,11 @@ import AdminMenuPage from "./pages/AdminMenuPage";
 import AdminCounterMenu from "./pages/AdminCounterMenu";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminInventory from "./pages/AdminInventory";
+import AdminReports from "./pages/AdminReports";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+
+/* PUBLIC */
+import PublicOrderDisplay from "./pages/PublicOrderDisplay";
 
 /* COMPONENTS */
 import Navbar from "./components/Navbar";
@@ -38,6 +44,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import AnimatedPage from "./components/AnimatedPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import GlobalErrorBoundary from "./components/GlobalErrorBoundary";
 
 const DEV_BACKEND_URL = "http://localhost:8001";
 const PROD_BACKEND_URL = "https://e-canteen-7.onrender.com";
@@ -174,10 +181,19 @@ const App = () => {
           />
 
           <Route
+            path="/order/confirmation"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><OrderConfirmation /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/orders/:orderId"
             element={
               <ProtectedRoute allowedRoles={["student"]}>
-                <AnimatedPage><OrderDetails /></AnimatedPage>
+                <AnimatedPage><OrderTracking /></AnimatedPage>
               </ProtectedRoute>
             }
           />
@@ -274,9 +290,25 @@ const App = () => {
           />
 
           <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnimatedPage><AdminReports /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/unauthorized"
             element={
               <AnimatedPage><UnauthorizedPage /></AnimatedPage>
+            }
+          />
+
+          <Route
+            path="/public/orders"
+            element={
+              <AnimatedPage><PublicOrderDisplay /></AnimatedPage>
             }
           />
 

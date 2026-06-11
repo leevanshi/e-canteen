@@ -13,6 +13,7 @@ from database import (
     wallet_txn_collection,
     menu_collection,
     client,
+    order_status_history_collection,
 )
 from services.order_id_service import next_online_order, format_order_code
 from services.dashboard_service import get_admin_dashboard_stats
@@ -52,6 +53,7 @@ class AddMoneyRequest(BaseModel):
 
 # ================= PLACE ORDER =================
 
+@router.post("")
 @router.post("/")
 async def place_order(data: CreateOrder, current_user=Depends(get_current_user)):
 
@@ -162,13 +164,20 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
                 "payment_method": data.payment_method,
                 "payment_status": payment_status,
                 "status": "pending",
-                "status_history": [{"status": "pending", "time": now}],
                 "created_at": now,
                 "updated_at": now
             }
 
 
             result = orders_collection.insert_one(order_doc, session=session)
+
+            # Save status history to separate collection
+            order_status_history_collection.insert_one({
+                "order_id": order_id,
+                "status": "pending",
+                "updated_by": str(user_id),
+                "timestamp": now
+            }, session=session)
 
     # ===== AFTER SUCCESS =====
     order_doc["_id"] = str(result.inserted_id)

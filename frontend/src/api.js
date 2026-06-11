@@ -196,6 +196,9 @@ export const deleteInventoryItem = (itemId) =>
 export const getInventoryAlerts = () =>
   API.get("/inventory/alerts");
 
+export const getReport = (reportType) =>
+  API.get(`/admin/reports/${reportType}`);
+
 /* =========================
    LOGOUT
 ========================= */

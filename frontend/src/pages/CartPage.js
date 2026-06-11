@@ -17,7 +17,7 @@ const CartPage = () => {
 
   if (safeCart.length === 0) {
     return (
-      <div className="p-10 text-center">
+      <div className="p-6 sm:p-10 text-center">
         <Button
           variant="outline"
           onClick={() => navigate("/menu")}
@@ -38,7 +38,7 @@ const CartPage = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <Button
         variant="outline"
         onClick={() => navigate("/menu")}
@@ -47,7 +47,7 @@ const CartPage = () => {
         ← Back
       </Button>
 
-      <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6">Your Cart</h1>
 
       <div className="space-y-4">
         {safeCart.map((item, index) => {
@@ -57,17 +57,17 @@ const CartPage = () => {
 
           return (
             <Card key={id}>
-              <CardContent className="flex items-center justify-between gap-4 p-4">
+              <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4">
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
                   <img
                     src={item?.image || "/placeholder.png"}
                     alt={item?.name || "item"}
-                    className="w-20 h-20 object-cover rounded-lg border"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border"
                   />
 
-                  <div>
-                    <h3 className="font-semibold text-lg">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-base sm:text-lg">
                       {item?.name || "Item"}
                     </h3>
                     <p className="text-sm text-gray-500">
@@ -76,7 +76,7 @@ const CartPage = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
                   <Button
                     variant="outline"
                     size="sm"
@@ -86,7 +86,7 @@ const CartPage = () => {
                     −
                   </Button>
 
-                  <span className="font-semibold">
+                  <span className="font-semibold w-8 text-center">
                     {quantity}
                   </span>
 
@@ -108,14 +108,14 @@ const CartPage = () => {
         })}
       </div>
 
-      <div className="flex justify-between items-center mt-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
         <h2 className="text-2xl font-bold">
           Total: ₹{totalAmount}
         </h2>
 
         <Button
           onClick={() => navigate("/checkout")}
-          className="px-6 bg-orange-500 hover:bg-orange-600"
+          className="w-full sm:w-auto px-6 bg-orange-500 hover:bg-orange-600"
         >
           Proceed to Checkout
         </Button>

@@ -1,17 +1,21 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "./ui/button";
-import { ShoppingCart, LogOut } from "lucide-react";
+import { ShoppingCart, LogOut, Moon, Sun, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import { useTheme } from "../context/ThemeContext";
 
 const Navbar = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { user, logout, loading, isAuthenticated } = useAuth();
   const { cart } = useCart();
+  const { darkMode, toggleDarkMode } = useTheme();
 
   if (loading) return null;
 
@@ -37,10 +41,11 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     navigate("/", { replace: true });
+    setMobileMenuOpen(false);
   };
 
   const handleLogoClick = () => {
-
+    setMobileMenuOpen(false);
     if (isStudent) {
       navigate("/menu");
       return;
@@ -54,112 +59,215 @@ const Navbar = () => {
     navigate("/");
   };
 
+  const handleMobileNav = (path) => {
+    navigate(path);
+    setMobileMenuOpen(false);
+  };
+
   return (
+    <>
+      <nav className="w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-50">
 
-    <nav className="w-full bg-surface border-b border-border shadow-soft px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+        <button
+          onClick={handleLogoClick}
+          className="text-2xl font-bold text-orange-600 dark:text-orange-400"
+        >
+          ☕ E-Canteen
+        </button>
 
-      <button
-        onClick={handleLogoClick}
-        className="text-2xl font-semibold text-primary"
-      >
-        ☕ E-Canteen
-      </button>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-6">
 
-      {/* STUDENT LINKS */}
+          {isStudent && (
+            <>
+              <Link to="/menu" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors">
+                Menu
+              </Link>
 
-      {isStudent && (
-        <div className="flex items-center gap-6 text-sm font-medium">
+              <Link to="/monthly-menu" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors">
+                Monthly Menu
+              </Link>
 
-          <Link to="/menu" className="text-sm font-medium text-text hover:text-primary transition-colors duration-200">
-            Menu
-          </Link>
+              <Link to="/orders" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors">
+                My Orders
+              </Link>
+            </>
+          )}
 
-          <Link to="/monthly-menu" className="text-sm font-medium text-text hover:text-primary transition-colors duration-200">
-            Monthly Menu
-          </Link>
+          {isFaculty && (
+            <>
+              <Link to="/faculty/dashboard" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors">
+                Dashboard
+              </Link>
 
-          <Link to="/orders" className="text-sm font-medium text-text hover:text-primary transition-colors duration-200">
-            My Orders
-          </Link>
+              <Link to="/faculty/orders" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors">
+                Orders
+              </Link>
+            </>
+          )}
 
-        </div>
-      )}
-
-      {/* FACULTY LINKS */}
-
-      {isFaculty && (
-        <div className="flex items-center gap-6 text-sm font-medium">
-
-          <Link
-            to="/faculty/dashboard"
-            className="hover:text-orange-500"
-          >
-            Dashboard
-          </Link>
-
-          <Link
-            to="/faculty/orders"
-            className="hover:text-orange-500"
-          >
-            Orders
-          </Link>
-
-        </div>
-      )}
-
-      {/* RIGHT SIDE */}
-
-      <div className="flex items-center gap-4">
-
-        {isStudent && (
-          <Link to="/cart" className="relative">
-
-            <ShoppingCart className="w-6 h-6 text-gray-700" />
-
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                {cartCount}
-              </span>
-            )}
-
-          </Link>
-        )}
-
-        {!isAuthenticated && !hideAuthButtons && (
-          <>
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="border-border text-text hover:border-primary hover:text-primary"
-              onClick={() => navigate("/login")}
+              size="sm"
+              onClick={toggleDarkMode}
+              className="flex items-center gap-2"
             >
-              Login
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
 
-            <Button
-              variant="default"
-              onClick={() => navigate("/join")}
-            >
-              Register
-            </Button>
-          </>
-        )}
+            {isStudent && (
+              <Link to="/cart" className="relative">
+                <ShoppingCart className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
 
-        {isAuthenticated && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </Button>
-        )}
+            {!isAuthenticated && !hideAuthButtons && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/login")}
+                  className="border-gray-300 dark:border-gray-700"
+                >
+                  Login
+                </Button>
 
-      </div>
+                <Button
+                  onClick={() => navigate("/join")}
+                  className="bg-orange-500 hover:bg-orange-600"
+                >
+                  Register
+                </Button>
+              </>
+            )}
 
-    </nav>
+            {isAuthenticated && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
+            )}
+          </div>
+        </div>
 
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2"
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </nav>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 top-16 bg-white dark:bg-gray-900 z-40 p-6 overflow-y-auto">
+          <div className="flex flex-col gap-4">
+            {isStudent && (
+              <>
+                <button
+                  onClick={() => handleMobileNav("/menu")}
+                  className="text-left text-lg font-medium text-gray-700 dark:text-gray-300 py-3 border-b border-gray-200 dark:border-gray-800"
+                >
+                  Menu
+                </button>
+
+                <button
+                  onClick={() => handleMobileNav("/monthly-menu")}
+                  className="text-left text-lg font-medium text-gray-700 dark:text-gray-300 py-3 border-b border-gray-200 dark:border-gray-800"
+                >
+                  Monthly Menu
+                </button>
+
+                <button
+                  onClick={() => handleMobileNav("/orders")}
+                  className="text-left text-lg font-medium text-gray-700 dark:text-gray-300 py-3 border-b border-gray-200 dark:border-gray-800"
+                >
+                  My Orders
+                </button>
+
+                <button
+                  onClick={() => handleMobileNav("/cart")}
+                  className="text-left text-lg font-medium text-gray-700 dark:text-gray-300 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3"
+                >
+                  <ShoppingCart size={20} />
+                  Cart {cartCount > 0 && `(${cartCount})`}
+                </button>
+              </>
+            )}
+
+            {isFaculty && (
+              <>
+                <button
+                  onClick={() => handleMobileNav("/faculty/dashboard")}
+                  className="text-left text-lg font-medium text-gray-700 dark:text-gray-300 py-3 border-b border-gray-200 dark:border-gray-800"
+                >
+                  Dashboard
+                </button>
+
+                <button
+                  onClick={() => handleMobileNav("/faculty/orders")}
+                  className="text-left text-lg font-medium text-gray-700 dark:text-gray-300 py-3 border-b border-gray-200 dark:border-gray-800"
+                >
+                  Orders
+                </button>
+              </>
+            )}
+
+            <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+              <Button
+                variant="outline"
+                onClick={toggleDarkMode}
+                className="w-full flex items-center justify-center gap-2 mb-3"
+              >
+                {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {darkMode ? "Light Mode" : "Dark Mode"}
+              </Button>
+
+              {!isAuthenticated && !hideAuthButtons && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleMobileNav("/login")}
+                    className="w-full mb-3"
+                  >
+                    Login
+                  </Button>
+
+                  <Button
+                    onClick={() => handleMobileNav("/join")}
+                    className="w-full bg-orange-500 hover:bg-orange-600"
+                  >
+                    Register
+                  </Button>
+                </>
+              )}
+
+              {isAuthenticated && (
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 
 };

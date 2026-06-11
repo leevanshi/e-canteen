@@ -65,6 +65,7 @@ counters_collection = db["counters"]
 otp_collection = db["otp_verifications"]
 audit_collection = db["audit_logs"]
 inventory_collection = db["inventory"]
+order_status_history_collection = db["order_status_history"]
 
 # =========================
 # CONNECTION CHECK

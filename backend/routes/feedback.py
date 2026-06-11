@@ -18,6 +18,10 @@ router = APIRouter(tags=["Feedback"])
 class FeedbackCreate(BaseModel):
     order_id: str
     rating: int = Field(..., ge=1, le=5)
+    food_quality: int = Field(..., ge=1, le=5)
+    taste: int = Field(..., ge=1, le=5)
+    packaging: int = Field(..., ge=1, le=5)
+    service: int = Field(..., ge=1, le=5)
     comment: str | None = None
 
 
@@ -61,6 +65,10 @@ def submit_feedback(
         "order_id": ObjectId(payload.order_id),
         "user_id": ObjectId(current_user["_id"]),
         "rating": payload.rating,
+        "food_quality": payload.food_quality,
+        "taste": payload.taste,
+        "packaging": payload.packaging,
+        "service": payload.service,
         "comment": payload.comment,
         "created_at": datetime.now(IST)
     })
@@ -96,6 +104,10 @@ def get_all_feedback(current_user=Depends(get_current_user)):
             "_id": str(f["_id"]),
             "order_id": str(f["order_id"]),
             "rating": f["rating"],
+            "food_quality": f.get("food_quality"),
+            "taste": f.get("taste"),
+            "packaging": f.get("packaging"),
+            "service": f.get("service"),
             "comment": f.get("comment"),
             "created_at": f["created_at"].isoformat()
             if f.get("created_at") else None,

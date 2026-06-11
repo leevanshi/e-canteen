@@ -15,6 +15,8 @@ from database import (
 )
 from services.order_id_service import next_walkin_order, format_order_code
 from services.analytics_service import get_analytics_data
+from services.reports_service import generate_report
+from database import order_status_history_collection
 
 from routes.auth import get_current_user, get_current_user_optional, hash_password
 import os
@@ -157,8 +159,12 @@ async def update_order_status(
     status = data.status.lower()
 
     allowed_transitions = {
-        "pending": ["preparing", "cancelled"],
-        "preparing": ["completed", "cancelled"],
+        "pending": ["confirmed", "cancelled"],
+        "confirmed": ["preparing", "cancelled"],
+        "preparing": ["cooking", "cancelled"],
+        "cooking": ["packaging", "cancelled"],
+        "packaging": ["ready", "cancelled"],
+        "ready": ["completed"],
         "completed": [],
         "cancelled": []
     }
@@ -186,10 +192,17 @@ async def update_order_status(
         query,
         {
             "$set": {"status": status, "updated_at": now},
-            "$push": {"status_history": {"status": status, "time": now}}
         },
         return_document=ReturnDocument.AFTER
     )
+
+    # Save status history to separate collection
+    order_status_history_collection.insert_one({
+        "order_id": str(updated.get("order_id") or updated.get("_id")),
+        "status": status,
+        "updated_by": str(current_user["_id"]),
+        "timestamp": now
+    })
 
     # REALTIME UPDATE
     await manager.broadcast({
@@ -353,3 +366,13 @@ def wallet_history(
 def get_analytics(current_user=Depends(get_current_user)):
     ensure_admin(current_user)
     return get_analytics_data()
+
+
+# ================= REPORTS =================
+
+@router.get("/reports/{report_type}")
+def get_report(report_type: str, current_user=Depends(get_current_user)):
+    ensure_admin(current_user)
+    if report_type not in ["daily", "weekly", "monthly"]:
+        raise HTTPException(400, "Invalid report type. Use daily, weekly, or monthly.")
+    return generate_report(report_type)

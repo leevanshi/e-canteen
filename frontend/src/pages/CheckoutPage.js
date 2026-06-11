@@ -181,43 +181,14 @@ const CheckoutPage = () => {
 
   /* SUCCESS UI */
   if (orderPlaced) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center p-6">
-        <Card className="max-w-md w-full text-center shadow-lg rounded-2xl">
-          <CardContent className="p-6 space-y-4">
-
-            <h1 className="text-3xl font-bold text-green-600">
-              ✅ Order Placed!
-            </h1>
-
-            <p className="text-gray-600">
-              Your order has been sent to the canteen.
-            </p>
-
-            <p className="text-sm">
-              <b>Order ID:</b> {orderId}
-            </p>
-
-            <p className="text-sm">
-              <b>Payment:</b> Wallet (Paid)
-            </p>
-
-            <Button
-              className="w-full bg-orange-500 hover:bg-orange-600"
-              onClick={() => navigate("/orders")}
-            >
-              View My Orders
-            </Button>
-
-          </CardContent>
-        </Card>
-      </div>
-    );
+    // Use window.location.href to force a full page reload and ensure auth state is fresh
+    window.location.href = `/order/confirmation?orderId=${orderId}`;
+    return null;
   }
 
   /* CHECKOUT UI */
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
 
       <Button
         variant="outline"
@@ -227,23 +198,23 @@ const CheckoutPage = () => {
         ← Back
       </Button>
 
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6">Checkout</h1>
 
       {cart.map((item, index) => (
 
         <Card key={item?._id || index} className="mb-3">
 
-          <CardContent className="flex items-center gap-4 p-4">
+          <CardContent className="flex items-center gap-3 sm:gap-4 p-4">
 
             <img
               src={item?.image || "/placeholder.png"}
               alt={item?.name || "item"}
-              className="w-20 h-20 object-cover rounded"
+              className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
             />
 
             <div className="flex-1">
 
-              <h3 className="font-semibold">
+              <h3 className="font-semibold text-sm sm:text-base">
                 {item?.name || "Item"}
               </h3>
 
@@ -253,7 +224,7 @@ const CheckoutPage = () => {
 
             </div>
 
-            <div className="font-medium">
+            <div className="font-medium text-sm sm:text-base">
               ₹{(item?.price || 0) * (item?.quantity || 1)}
             </div>
 
@@ -264,7 +235,7 @@ const CheckoutPage = () => {
       ))}
 
       <select
-        className="border p-2 w-full mt-4 rounded"
+        className="border p-2 sm:p-3 w-full mt-4 rounded text-sm sm:text-base"
         value={pickupTimeSlot}
         onChange={(e) => setPickupTimeSlot(e.target.value)}
       >
@@ -281,24 +252,24 @@ const CheckoutPage = () => {
 
       <div className="mt-6 p-4 border rounded bg-gray-50 space-y-2">
 
-        <h3 className="font-semibold">
+        <h3 className="font-semibold text-sm sm:text-base">
           Payment Method
         </h3>
 
-        <p className="text-green-700 font-medium">
+        <p className="text-green-700 font-medium text-sm sm:text-base">
           ✅ Wallet (Balance: ₹{walletBalance})
         </p>
 
       </div>
 
-      <div className="mt-4 font-semibold text-lg">
+      <div className="mt-4 font-semibold text-lg sm:text-xl">
         Total: ₹{totalAmount}
       </div>
 
       <Button
         onClick={handlePlaceOrder}
         disabled={loading}
-        className="mt-6 w-full bg-orange-500"
+        className="mt-6 w-full bg-orange-500 py-3 sm:py-4 text-sm sm:text-base"
       >
         {loading ? "Placing Order..." : "Place Order"}
       </Button>
