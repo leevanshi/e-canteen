@@ -1,21 +1,52 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "./ui/button";
-import { ShoppingCart, LogOut, Moon, Sun, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { ShoppingCart, LogOut, Moon, Sun, Menu, X, Wallet } from "lucide-react";
+import { useState, useEffect } from "react";
 
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
+import API from "../api";
 
 const Navbar = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [loadingWallet, setLoadingWallet] = useState(true);
 
   const { user, logout, loading, isAuthenticated } = useAuth();
   const { cart } = useCart();
   const { darkMode, toggleDarkMode } = useTheme();
+
+  // Fetch wallet balance
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      if (!isAuthenticated) {
+        setWalletBalance(0);
+        setLoadingWallet(false);
+        return;
+      }
+
+      try {
+        setLoadingWallet(true);
+        console.log("Fetching wallet balance...");
+        const res = await API.get("/wallet/me");
+        console.log("Wallet response:", res.data);
+        const balance = res?.data?.balance || res?.data?.wallet_balance || 0;
+        console.log("Wallet balance:", balance);
+        setWalletBalance(balance);
+      } catch (error) {
+        console.error("Failed to fetch wallet balance:", error);
+        setWalletBalance(0);
+      } finally {
+        setLoadingWallet(false);
+      }
+    };
+
+    fetchWalletBalance();
+  }, [isAuthenticated]);
 
   if (loading) return null;
 
@@ -110,6 +141,16 @@ const Navbar = () => {
           )}
 
           <div className="flex items-center gap-3">
+            {/* Wallet Balance */}
+            {isAuthenticated && (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full border-2" style={{ backgroundColor: darkMode ? '#1e293b' : '#f8fafc', borderColor: darkMode ? '#FF8A3D' : '#e2e8f0' }}>
+                <Wallet className="w-4 h-4" style={{ color: '#FF8A3D' }} />
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {loadingWallet ? 'Loading...' : `₹${walletBalance}`}
+                </span>
+              </div>
+            )}
+
             <button
               onClick={toggleDarkMode}
               className="relative w-11 h-11 flex items-center justify-center rounded-xl border-2 transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:scale-105"
@@ -237,6 +278,16 @@ const Navbar = () => {
             )}
 
             <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+              {/* Wallet Balance */}
+              {isAuthenticated && (
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full border-2 mb-3" style={{ backgroundColor: darkMode ? '#1e293b' : '#f8fafc', borderColor: darkMode ? '#FF8A3D' : '#e2e8f0' }}>
+                  <Wallet className="w-4 h-4" style={{ color: '#FF8A3D' }} />
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {loadingWallet ? 'Loading...' : `₹${walletBalance}`}
+                  </span>
+                </div>
+              )}
+
               <button
                 onClick={toggleDarkMode}
                 className="w-full flex items-center justify-center gap-3 p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:scale-105"
