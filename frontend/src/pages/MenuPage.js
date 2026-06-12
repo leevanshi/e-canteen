@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Flame, Droplet, Wheat, Dumbbell, Activity, ChevronRight, X, Info, Plus, Minus, Heart, Star, Leaf } from "lucide-react";
+import { Search, Flame, Droplet, Wheat, Dumbbell, Activity, ChevronRight, X, Info, Plus, Minus, Heart, Star, Leaf, Wallet } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 
 import API from "../api";
@@ -80,6 +80,8 @@ const MenuPage = () => {
   const [category, setCategory] = useState("all");
   const [sortBy, setSortBy] = useState("recommended");
   const [selectedItem, setSelectedItem] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [loadingWallet, setLoadingWallet] = useState(true);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -1165,6 +1167,23 @@ const MenuPage = () => {
     fetchMenu();
   }, []);
 
+  // Fetch wallet balance
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      try {
+        setLoadingWallet(true);
+        const res = await API.get("/wallet/me");
+        setWalletBalance(res?.data?.balance || 0);
+      } catch (error) {
+        console.error("Failed to fetch wallet balance:", error);
+        setWalletBalance(0);
+      } finally {
+        setLoadingWallet(false);
+      }
+    };
+    fetchWalletBalance();
+  }, []);
+
   const cartMap = useMemo(() => cart.reduce((map, item) => ({ ...map, [item._id]: item }), {}), [cart]);
   const categories = useMemo(() => ["all", ...new Set(menu.map((m) => m.category).filter(Boolean))], [menu]);
 
@@ -1247,6 +1266,14 @@ const MenuPage = () => {
                 <option value="protein">High Protein</option>
                 <option value="calories">Low Calories</option>
               </select>
+
+              {/* Wallet Balance */}
+              <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-2" style={{ backgroundColor: 'rgba(255, 138, 61, 0.1)', borderColor: '#FF8A3D' }}>
+                <Wallet className="w-5 h-5" style={{ color: '#FF8A3D' }} />
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {loadingWallet ? '...' : `₹${walletBalance}`}
+                </span>
+              </div>
             </div>
           </div>
 

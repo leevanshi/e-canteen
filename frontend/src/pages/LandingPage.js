@@ -17,10 +17,13 @@ import {
   Users,
   TrendingUp,
   Shield,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 
 /* ================= ANIMATIONS ================= */
 
@@ -73,6 +76,7 @@ const glowEffect = {
 const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout, loading: authLoading } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
   const [stats, setStats] = useState({ orders: 0, students: 0, success: 0, availability: 24 });
 
   const handleOrderClick = () => {
@@ -118,6 +122,21 @@ const LandingPage = () => {
             ☕ E-Canteen
           </Link>
           <div className="flex gap-3">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className="relative w-11 h-11 flex items-center justify-center rounded-xl border-2 transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:scale-105"
+              style={{
+                backgroundColor: darkMode ? '#1f2937' : '#f3f4f6',
+                borderColor: darkMode ? '#FF8A3D' : '#d1d5db',
+                boxShadow: darkMode ? '0 0 15px rgba(255, 138, 61, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}
+              title="Switch Theme"
+              aria-label="Switch Theme"
+            >
+              {darkMode ? <Sun className="w-5 h-5 text-white" /> : <Moon className="w-5 h-5 text-gray-700" />}
+            </button>
+
             {!user ? (
               <>
                 <Button variant="ghost" onClick={() => navigate("/login")} className="text-orange-600 dark:text-orange-400">

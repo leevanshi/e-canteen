@@ -27,6 +27,34 @@ IST = timezone(timedelta(hours=5, minutes=30))
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
 
 
+# ================= HELPERS =================
+
+def serialize_order(o):
+    """Serialize order document for JSON response"""
+    try:
+        created = o.get("created_at")
+        
+        return {
+            "_id": str(o["_id"]),
+            "order_id": o.get("order_id"),
+            "order_code": format_order_code(o),
+            "user_name": o.get("user_name"),
+            "user_email": o.get("user_email"),
+            "order_type": o.get("order_type"),
+            "payment_method": o.get("payment_method"),
+            "payment_status": o.get("payment_status"),
+            "items": o.get("items", []),
+            "total_amount": o.get("total_amount"),
+            "status": o.get("status"),
+            "pickup_time": o.get("pickup_time"),
+            "created_at": created.isoformat() if created else None,
+            "updated_at": o.get("updated_at").isoformat() if o.get("updated_at") else None,
+        }
+    except Exception as e:
+        print(f"Error serializing order: {str(e)}")
+        raise
+
+
 # ================= ORDER STATUS ENUM =================
 
 class OrderStatus(str, Enum):
@@ -323,34 +351,58 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
 def get_single_order(order_id: str, current_user=Depends(get_current_user)):
     """Get a single order by order_id or order_code"""
     try:
+        print("=" * 50)
+        print(f"LOOKING UP ORDER ID: {order_id}")
+        print(f"User ID: {current_user.get('_id')}")
+        print(f"User Role: {current_user.get('role')}")
+        print("=" * 50)
+        
         # Try to find by order_id (numeric) or order_code (string like "E-6")
-        order = orders_collection.find_one({
+        query = {
             "$or": [
                 {"order_id": int(order_id) if order_id.isdigit() else None},
                 {"order_code": order_id},
                 {"_id": ObjectId(order_id) if ObjectId.is_valid(order_id) else None}
             ]
-        })
-
+        }
+        
+        print(f"Query: {query}")
+        
+        order = orders_collection.find_one(query)
+        
         if not order:
+            print(f"ORDER NOT FOUND: {order_id}")
             raise HTTPException(404, "Order not found")
-
+        
+        print(f"ORDER FOUND: {order.get('order_id')} - {order.get('order_code')}")
+        print(f"Order User ID: {order.get('user_id')}")
+        
         # Check if user owns this order or is admin
         if (current_user.get("role") != "admin" and
             str(order.get("user_id")) != str(current_user.get("_id"))):
+            print("ACCESS DENIED: User does not own this order")
             raise HTTPException(403, "Access denied")
-
+        
+        # Convert ObjectId to string
         order["_id"] = str(order["_id"])
-        if "admin_id" in order:
+        if "user_id" in order and isinstance(order["user_id"], ObjectId):
+            order["user_id"] = str(order["user_id"])
+        if "admin_id" in order and isinstance(order["admin_id"], ObjectId):
             order["admin_id"] = str(order["admin_id"])
-
-        return serialize_order(order)
+        
+        print("SERIALIZING ORDER FOR RESPONSE")
+        serialized = serialize_order(order)
+        print(f"SERIALIZED ORDER: {serialized.get('order_id')} - {serialized.get('order_code')}")
+        
+        return serialized
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error fetching order: {str(e)}")
-        raise HTTPException(500, "Failed to fetch order")
+        print(f"ERROR FETCHING ORDER: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Failed to fetch order: {str(e)}")
 
 
 # ================= ADMIN DASHBOARD =================
@@ -366,27 +418,40 @@ def admin_dashboard(current_user=Depends(get_current_user)):
 
 @router.get("")
 def get_my_orders(current_user=Depends(get_current_user)):
+    try:
+        print("=" * 50)
+        print(f"FETCHING USER ORDERS")
+        print(f"User ID: {current_user.get('_id')}")
+        print("=" * 50)
+        
+        orders = orders_collection.find(
+            {"user_id": ObjectId(current_user["_id"])},
+            {"items": 0}
+        ).sort("created_at", -1).limit(50)
 
-    orders = orders_collection.find(
-        {"user_id": ObjectId(current_user["_id"])},
-        {"items": 0}
-    ).sort("created_at", -1).limit(50)
+        result = []
 
-    result = []
+        for o in orders:
+            created = o.get("created_at")
 
-    for o in orders:
-        created = o.get("created_at")
+            result.append({
+                "_id": str(o["_id"]),
+                "order_id": o.get("order_id"),
+                "order_code": format_order_code(o),
+                "total_amount": o.get("total_amount"),
+                "status": o.get("status"),
+                "created_at": created.isoformat() if created else None,
+            })
+        
+        print(f"FOUND {len(result)} ORDERS FOR USER")
+        
+        return result
 
-        result.append({
-            "_id": str(o["_id"]),
-            "order_id": o.get("order_id"),
-            "order_code": format_order_code(o),
-            "total_amount": o.get("total_amount"),
-            "status": o.get("status"),
-            "created_at": created.isoformat() if created else None,
-        })
-
-    return result
+    except Exception as e:
+        print(f"ERROR FETCHING USER ORDERS: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, f"Failed to fetch orders: {str(e)}")
 
 
 # ================= ADMIN GET ALL ORDERS =================
