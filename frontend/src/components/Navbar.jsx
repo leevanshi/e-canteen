@@ -110,14 +110,23 @@ const Navbar = () => {
           )}
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={toggleDarkMode}
-              className="flex items-center gap-2"
+              className="relative w-11 h-11 flex items-center justify-center rounded-xl border-2 transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:scale-105"
+              style={{
+                backgroundColor: darkMode ? '#1f2937' : '#f3f4f6',
+                borderColor: darkMode ? '#FF8A3D' : '#d1d5db',
+                boxShadow: darkMode ? '0 0 15px rgba(255, 138, 61, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+              }}
+              title="Switch Theme"
+              aria-label="Switch Theme"
             >
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
+              {darkMode ? (
+                <Sun className="w-5 h-5 text-white" />
+              ) : (
+                <Moon className="w-5 h-5 text-gray-700" />
+              )}
+            </button>
 
             {isStudent && (
               <Link to="/cart" className="relative">
@@ -228,14 +237,26 @@ const Navbar = () => {
             )}
 
             <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
-              <Button
-                variant="outline"
+              <button
                 onClick={toggleDarkMode}
-                className="w-full flex items-center justify-center gap-2 mb-3"
+                className="w-full flex items-center justify-center gap-3 p-3 rounded-xl border-2 transition-all duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:scale-105"
+                style={{
+                  backgroundColor: darkMode ? '#1f2937' : '#f3f4f6',
+                  borderColor: darkMode ? '#FF8A3D' : '#d1d5db',
+                  boxShadow: darkMode ? '0 0 15px rgba(255, 138, 61, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
+                }}
+                title="Switch Theme"
+                aria-label="Switch Theme"
               >
-                {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                {darkMode ? "Light Mode" : "Dark Mode"}
-              </Button>
+                {darkMode ? (
+                  <Sun className="w-5 h-5 text-white" />
+                ) : (
+                  <Moon className="w-5 h-5 text-gray-700" />
+                )}
+                <span className="font-medium" style={{ color: darkMode ? '#ffffff' : '#374151' }}>
+                  {darkMode ? "Light Mode" : "Dark Mode"}
+                </span>
+              </button>
 
               {!isAuthenticated && !hideAuthButtons && (
                 <>
