@@ -191,6 +191,10 @@ async def admin_path_guard(request: Request, call_next):
     if request.method == "OPTIONS":
         return await call_next(request)
 
+    # Also allow health check without auth
+    if path == "/health" or path == "/":
+        return await call_next(request)
+
     if path.startswith("/admin"):
         auth_header = request.headers.get("authorization")
         secret_header = request.headers.get("x-admin-register-secret")

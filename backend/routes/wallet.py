@@ -87,30 +87,46 @@ def admin_add_money(
 
 @router.get("/admin/wallet-history")
 def get_wallet_history(current_user=Depends(get_current_user)):
+    print("=" * 50)
+    print("FETCHING WALLET HISTORY")
+    print(f"User ID: {current_user.get('_id')}")
+    print(f"User Role: {current_user.get('role')}")
+    print("=" * 50)
+    
     # ROLE CHECK
     if current_user.get("role") != "admin":
+        print("ACCESS DENIED: User is not admin")
         raise HTTPException(403, "Admin only")
 
     # FETCH ALL TRANSACTIONS, SORTED NEWEST FIRST
+    print("Fetching transactions from database...")
     transactions = list(
         wallet_txn_collection.find()
         .sort("created_at", -1)
         .limit(100)
     )
+    
+    print(f"FOUND {len(transactions)} TRANSACTIONS")
 
     # FORMAT RESPONSE
     result = []
     for txn in transactions:
-        user = users_collection.find_one({"_id": ObjectId(txn["user_id"])})
-        result.append({
-            "_id": str(txn["_id"]),
-            "user_id": txn["user_id"],
-            "user_name": user.get("name", "Unknown") if user else "Unknown",
-            "amount": txn["amount"],
-            "type": txn["type"],
-            "description": txn.get("description", ""),
-            "order_id": txn.get("order_id"),
-            "created_at": txn.get("created_at"),
-        })
+        try:
+            user = users_collection.find_one({"_id": ObjectId(txn["user_id"])})
+            result.append({
+                "_id": str(txn["_id"]),
+                "user_id": txn["user_id"],
+                "user_name": user.get("name", "Unknown") if user else "Unknown",
+                "amount": txn["amount"],
+                "type": txn["type"],
+                "description": txn.get("description", ""),
+                "order_id": txn.get("order_id"),
+                "created_at": txn.get("created_at"),
+            })
+        except Exception as e:
+            print(f"ERROR PROCESSING TRANSACTION {txn.get('_id')}: {e}")
 
+    print(f"RETURNING {len(result)} FORMATTED TRANSACTIONS")
+    print("=" * 50)
+    
     return result

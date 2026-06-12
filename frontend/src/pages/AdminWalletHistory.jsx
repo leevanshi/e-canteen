@@ -81,6 +81,13 @@ const AdminWalletHistory = () => {
             <div className="flex gap-3">
               <Button
                 variant="outline"
+                onClick={() => navigate("/admin/wallet")}
+                className="flex items-center gap-2"
+              >
+                ← Back to Wallet
+              </Button>
+              <Button
+                variant="outline"
                 onClick={fetchWalletHistory}
                 className="flex items-center gap-2"
               >
@@ -92,7 +99,7 @@ const AdminWalletHistory = () => {
                 onClick={() => navigate("/admin")}
                 className="flex items-center gap-2"
               >
-                Back to Dashboard
+                Dashboard
               </Button>
             </div>
           </div>
