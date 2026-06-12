@@ -48,6 +48,11 @@ const Navbar = () => {
     fetchWalletBalance();
   }, [isAuthenticated]);
 
+  // Debug: Log wallet state
+  useEffect(() => {
+    console.log("Navbar wallet state:", { walletBalance, loadingWallet, isAuthenticated });
+  }, [walletBalance, loadingWallet, isAuthenticated]);
+
   if (loading) return null;
 
   const role = (user?.role || "").toLowerCase();

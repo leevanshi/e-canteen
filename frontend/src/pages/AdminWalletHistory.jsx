@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowUp, ArrowDown, Calendar, User, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowUp, ArrowDown, Calendar, User, Wallet, RefreshCw } from "lucide-react";
 import { getWalletHistory } from "../api";
 import { formatApiError } from "../utils/formatApiError";
 import { useAuth } from "../context/AuthContext";
+import { Button } from "../components/ui/button";
 
 const formatIST = (date) => {
   if (!date) return "—";
@@ -70,41 +71,62 @@ const AdminWalletHistory = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
+      {/* HEADER */}
       <div className="bg-white border-b sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate("/admin/wallet")}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft size={20} className="text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Wallet History</h1>
-              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                <Wallet size={14} className="text-orange-500" /> All wallet transactions
-              </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Wallet History</h1>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={fetchWalletHistory}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw size={16} />
+                Refresh
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/admin")}
+                className="flex items-center gap-2"
+              >
+                Back to Dashboard
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm mb-6">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 sm:p-6 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="font-semibold mb-1">Failed to load wallet history</p>
+                <p className="text-sm">Please check server connection.</p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={fetchWalletHistory}
+                className="w-full sm:w-auto"
+              >
+                Retry
+              </Button>
+            </div>
           </div>
         )}
 
         {transactions.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 shadow-sm border border-gray-100 text-center">
+          <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-gray-100 text-center">
             <Wallet size={64} className="mx-auto mb-4 text-gray-300" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No Transactions Found</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No wallet transactions yet</h3>
             <p className="text-gray-500">Wallet transactions will appear here once users top up or place orders.</p>
           </div>
         ) : (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 bg-gray-50/50">
               <h2 className="text-lg font-bold text-gray-900">Transaction History</h2>
               <p className="text-sm text-gray-500 mt-1">{transactions.length} transactions found</p>
             </div>
@@ -115,12 +137,12 @@ const AdminWalletHistory = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="px-6 py-4 hover:bg-gray-50 transition-colors"
+                  className="px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-start gap-4">
                       <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                           transaction.type === "credit"
                             ? "bg-emerald-100 text-emerald-600"
                             : "bg-red-100 text-red-600"
@@ -132,9 +154,9 @@ const AdminWalletHistory = () => {
                           <ArrowUp size={24} />
                         )}
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900">{transaction.description}</p>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
                             <User size={14} />
                             {transaction.user_name || "Unknown"}
@@ -143,17 +165,17 @@ const AdminWalletHistory = () => {
                             <Calendar size={14} />
                             {formatIST(transaction.created_at)}
                           </span>
-                          {transaction.order_id && (
+                          {transaction._id && (
                             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                              Order: {transaction.order_id}
+                              ID: {transaction._id.toString().slice(-8)}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex sm:flex-row sm:items-center sm:justify-between gap-2">
                       <p
-                        className={`text-2xl font-bold ${
+                        className={`text-xl sm:text-2xl font-bold ${
                           transaction.type === "credit" ? "text-emerald-600" : "text-red-600"
                         }`}
                       >

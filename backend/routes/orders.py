@@ -102,6 +102,10 @@ class AddMoneyRequest(BaseModel):
     amount: int
 
 
+class UpdateOrderStatus(BaseModel):
+    status: str
+
+
 # ================= PLACE ORDER =================
 
 @router.post("")
@@ -487,51 +491,74 @@ def get_all_orders(current_user=Depends(get_current_user)):
 
 # ================= ADMIN UPDATE ORDER STATUS =================
 
-@router.put("/admin/{id}/status")
-async def update_status(id: str, data: dict, current_user=Depends(get_current_user)):
-
+@router.put("/{order_id}/status")
+async def update_order_status(order_id: str, data: UpdateOrderStatus, current_user=Depends(get_current_user)):
+    """Update order status - accessible by admin"""
+    
+    print("=" * 50)
+    print(f"UPDATE ORDER STATUS: {order_id}")
+    print(f"New status: {data.status}")
+    print(f"User role: {current_user.get('role')}")
+    print("=" * 50)
+    
     if current_user.get("role") != "admin":
         raise HTTPException(403, "Admin only")
 
-    if not ObjectId.is_valid(id):
-        raise HTTPException(400, "Invalid order id")
+    # Validate status
+    valid_statuses = OrderStatus.valid_statuses()
+    if data.status not in valid_statuses:
+        raise HTTPException(400, f"Invalid status. Must be one of: {valid_statuses}")
 
-    status = data.get("status")
-
-    allowed_transitions = {
-        "pending": ["preparing"],
-        "preparing": ["completed"],
-        "completed": []
+    # Try to find by order_id (int), order_code (string), or _id (ObjectId)
+    query = {
+        "$or": [
+            {"order_id": int(order_id) if order_id.isdigit() else None},
+            {"order_code": order_id},
+            {"_id": ObjectId(order_id) if ObjectId.is_valid(order_id) else None}
+        ]
     }
-
-    order = orders_collection.find_one({"_id": ObjectId(id)})
-
+    
+    order = orders_collection.find_one(query)
+    
     if not order:
+        print(f"ORDER NOT FOUND: {order_id}")
         raise HTTPException(404, "Order not found")
-
-    current_status = order["status"]
-
-    if status not in allowed_transitions.get(current_status, []):
-        raise HTTPException(400, "Invalid status transition")
-
+    
+    print(f"ORDER FOUND: {order.get('order_id')} - {order.get('order_code')}")
+    print(f"Current status: {order.get('status')}")
+    
     now = datetime.now(IST)
-
-    order = orders_collection.find_one_and_update(
-        {"_id": ObjectId(id)},
+    
+    # Update order status
+    updated_order = orders_collection.find_one_and_update(
+        query,
         {
-            "$set": {"status": status, "updated_at": now},
-            "$push": {"status_history": {"status": status, "time": now}}
+            "$set": {"status": data.status, "updated_at": now},
+            "$push": {"status_history": {"status": data.status, "time": now}}
         },
         return_document=ReturnDocument.AFTER
     )
-
-    await manager.broadcast({
-        "type": "order_status_update",
-        "order_id": order["order_id"],
-        "status": status
-    })
-
-    return {"message": "Status updated", "status": status}
+    
+    print(f"STATUS UPDATED: {order.get('order_id')} -> {data.status}")
+    
+    # Broadcast via websocket for real-time updates
+    try:
+        await manager.broadcast({
+            "type": "order_status_update",
+            "order_id": updated_order.get("order_id"),
+            "order_code": updated_order.get("order_code"),
+            "status": data.status
+        })
+        print("WebSocket broadcast sent")
+    except Exception as e:
+        print(f"WebSocket broadcast failed: {e}")
+    
+    return {
+        "message": "Status updated successfully",
+        "order_id": updated_order.get("order_id"),
+        "order_code": updated_order.get("order_code"),
+        "status": data.status
+    }
 
 
 # ================= ADMIN ADD MONEY =================

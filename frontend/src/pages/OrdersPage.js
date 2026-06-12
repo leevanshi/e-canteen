@@ -8,12 +8,26 @@ import { Button } from "../components/ui/button";
 
 const ACTIVE_STATUSES = new Set([
   "pending",
-  "preparing"
+  "confirmed",
+  "preparing",
+  "ready_for_pickup"
 ]);
 
 const COMPLETED_STATUSES = new Set([
-  "completed"
+  "completed",
+  "picked_up",
+  "cancelled"
 ]);
+
+const STATUS_CONFIG = {
+  confirmed: { label: "Confirmed", color: "text-blue-600 bg-blue-100", icon: "🟢" },
+  preparing: { label: "Preparing", color: "text-purple-600 bg-purple-100", icon: "🟡" },
+  ready_for_pickup: { label: "Ready For Pickup", color: "text-emerald-600 bg-emerald-100", icon: "🔵" },
+  picked_up: { label: "Picked Up", color: "text-green-600 bg-green-100", icon: "✅" },
+  pending: { label: "Pending", color: "text-gray-600 bg-gray-100", icon: "⏳" },
+  cancelled: { label: "Cancelled", color: "text-red-600 bg-red-100", icon: "❌" },
+  completed: { label: "Completed", color: "text-green-600 bg-green-100", icon: "✅" },
+};
 
 /* ================= TIME FORMAT (IST) ================= */
 
@@ -58,9 +72,14 @@ const OrdersPage = () => {
 
       fetchingRef.current = true;
 
+      console.log("Fetching user orders...");
       const res = await getUserOrders();
+      console.log("Orders response:", res);
+      console.log("Orders response.data:", res?.data);
 
       const data = Array.isArray(res?.data) ? res.data : [];
+      console.log("Normalized orders data:", data);
+      console.log("Orders count:", data.length);
 
       if (!mountedRef.current) return;
 
@@ -143,17 +162,23 @@ const OrdersPage = () => {
 
   const filteredOrders = useMemo(() => {
 
-    return tab === "active"
-      ? orders.filter((o) =>
-          ACTIVE_STATUSES.has(
-            String(o?.status || "").toLowerCase()
-          )
-        )
-      : orders.filter((o) =>
-          COMPLETED_STATUSES.has(
-            String(o?.status || "").toLowerCase()
-          )
-        );
+    const active = orders.filter((o) =>
+      ACTIVE_STATUSES.has(
+        String(o?.status || "").toLowerCase()
+      )
+    );
+
+    const completed = orders.filter((o) =>
+      COMPLETED_STATUSES.has(
+        String(o?.status || "").toLowerCase()
+      )
+    );
+
+    console.log("Active orders:", active);
+    console.log("Completed orders:", completed);
+    console.log("Current tab:", tab);
+
+    return tab === "active" ? active : completed;
 
   }, [orders, tab]);
 
@@ -299,21 +324,13 @@ const OrdersPage = () => {
 
                   </div>
 
-                  {isCompleted ? (
-
-                    <span className="flex items-center gap-1 text-green-700 font-semibold">
-                      <CheckCircle size={18} />
-                      Completed
-                    </span>
-
-                  ) : (
-
-                    <span className="flex items-center gap-1 text-orange-600 capitalize">
-                      <Clock size={16} />
-                      {status || "pending"}
-                    </span>
-
-                  )}
+                  <div className="flex items-center gap-2">
+                    {STATUS_CONFIG[status] && (
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_CONFIG[status].color}`}>
+                        {STATUS_CONFIG[status].icon} {STATUS_CONFIG[status].label}
+                      </span>
+                    )}
+                  </div>
 
                 </div>
 

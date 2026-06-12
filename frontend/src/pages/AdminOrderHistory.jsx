@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
-import { getAdminOrders } from "../api";
+import { getAdminOrders, updateOrderStatus } from "../api";
 import { formatApiError } from "../utils/formatApiError";
 
 import { Card } from "../components/ui/card";
@@ -56,10 +56,35 @@ const AdminOrderHistory = () => {
   const role = (user?.role || "").toLowerCase();
 
   const [orders, setOrders] = useState([]);
-  const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [updatingStatus, setUpdatingStatus] = useState(null);
+
+  const ORDER_STATUSES = [
+    { key: "confirmed", label: "Confirmed", color: "bg-blue-100 text-blue-700 border-blue-300" },
+    { key: "preparing", label: "Preparing", color: "bg-purple-100 text-purple-700 border-purple-300" },
+    { key: "ready_for_pickup", label: "Ready For Pickup", color: "bg-emerald-100 text-emerald-700 border-emerald-300" },
+    { key: "picked_up", label: "Picked Up", color: "bg-green-100 text-green-700 border-green-300" },
+  ];
+
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      setUpdatingStatus(orderId);
+      console.log(`Updating order ${orderId} to status: ${newStatus}`);
+      
+      await updateOrderStatus(orderId, { status: newStatus });
+      
+      toast.success(`Order status updated to ${newStatus.replace('_', ' ')}`);
+      
+      // Refresh orders to get updated data
+      await fetchOrders();
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      toast.error("Failed to update order status");
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
 
   /* ================= AUTH GUARD ================= */
 
@@ -99,7 +124,8 @@ const AdminOrderHistory = () => {
         return dateB - dateA;
       });
 
-      setAllOrders(sorted);
+      setOrders(sorted);
+      console.log("Fetched orders:", sorted.length);
 
     } catch (err) {
 
@@ -116,21 +142,6 @@ const AdminOrderHistory = () => {
     }
 
   };
-
-  /* ================= FILTER ORDERS ================= */
-
-  const filteredOrders = useMemo(() => {
-    if (statusFilter === "all") {
-      return allOrders;
-    }
-    return allOrders.filter(
-      (o) => String(o.status).toLowerCase() === statusFilter.toLowerCase()
-    );
-  }, [allOrders, statusFilter]);
-
-  useEffect(() => {
-    setOrders(filteredOrders);
-  }, [filteredOrders]);
 
   useEffect(() => {
 
@@ -170,7 +181,7 @@ const AdminOrderHistory = () => {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
 
         <h1 className="text-2xl font-bold">
-          📜 Order History
+          📜 Order Management
         </h1>
 
         <div className="flex gap-3">
@@ -202,26 +213,6 @@ const AdminOrderHistory = () => {
 
       </div>
 
-      {/* FILTER TABS */}
-
-      <div className="flex flex-wrap gap-2 border-b pb-4">
-
-        {["all", "confirmed", "preparing", "ready_for_pickup", "picked_up"].map((filter) => (
-          <button
-            key={filter}
-            onClick={() => setStatusFilter(filter)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-              statusFilter === filter
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {filter === "all" ? "All" : filter.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-          </button>
-        ))}
-
-      </div>
-
       {fetchError && (
         <Card className="p-4 text-red-700 bg-red-50 border-red-200 flex justify-between items-center">
           <span className="text-sm">{fetchError}</span>
@@ -232,7 +223,7 @@ const AdminOrderHistory = () => {
       {orders.length === 0 ? (
 
         <Card className="p-8 text-center text-gray-500">
-          No orders found for this filter
+          No orders found
         </Card>
 
       ) : (
@@ -246,50 +237,89 @@ const AdminOrderHistory = () => {
               className="p-5 rounded-xl"
             >
 
-              <div className="flex flex-col md:flex-row md:justify-between gap-6">
+              <div className="flex flex-col gap-4">
 
-                <div className="space-y-2">
+                {/* Order Info */}
+                <div className="flex flex-col md:flex-row md:justify-between gap-4">
 
-                  <p className="font-semibold">
-                    Order Code:
-                    <span className="font-normal">
-                      {" "}
-                      {order.order_code || `E-${order.order_id}`}
+                  <div className="space-y-2">
+
+                    <p className="font-semibold">
+                      Order Code:
+                      <span className="font-normal">
+                        {" "}
+                        {order.order_code || `E-${order.order_id}`}
+                      </span>
+                    </p>
+
+                    <p>
+                      Customer:
+                      <span className="font-medium">
+                        {" "}
+                        {order.user_name || "Walk-in Customer"}
+                      </span>
+                    </p>
+
+                    <p className="font-semibold">
+                      Total: ₹{order.total_amount}
+                    </p>
+
+                    <p className="text-sm text-gray-500">
+                      Created at:{" "}
+                      {formatIST(order.created_at)}
+                    </p>
+
+                  </div>
+
+                  <div className="flex items-center">
+
+                    <span className={`px-3 py-1 text-sm font-semibold rounded-full capitalize ${
+                      order.status === "confirmed" ? "bg-blue-100 text-blue-700" :
+                      order.status === "preparing" ? "bg-purple-100 text-purple-700" :
+                      order.status === "ready_for_pickup" ? "bg-emerald-100 text-emerald-700" :
+                      order.status === "picked_up" ? "bg-green-100 text-green-700" :
+                      "bg-gray-100 text-gray-700"
+                    }`}>
+                      {order.status?.replace("_", " ")}
                     </span>
-                  </p>
 
-                  <p>
-                    Customer:
-                    <span className="font-medium">
-                      {" "}
-                      {order.user_name ||
-                        "Walk-in Customer"}
-                    </span>
-                  </p>
-
-                  <p className="font-semibold">
-                    Total: ₹{order.total_amount}
-                  </p>
-
-                  <p className="text-sm text-gray-500">
-                    Created at:{" "}
-                    {formatIST(order.created_at)}
-                  </p>
+                  </div>
 
                 </div>
 
-                <div className="flex items-center">
+                {/* Items */}
+                {order.items && order.items.length > 0 && (
+                  <div className="border-t pt-3">
+                    <p className="text-sm font-semibold mb-2">Items:</p>
+                    <div className="space-y-1">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="text-sm text-gray-600">
+                          {item.name || item.item_name} x {item.quantity}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                  <span className={`px-3 py-1 text-sm font-semibold rounded-full capitalize ${
-                    order.status === "confirmed" ? "bg-blue-100 text-blue-700" :
-                    order.status === "preparing" ? "bg-purple-100 text-purple-700" :
-                    order.status === "ready_for_pickup" ? "bg-emerald-100 text-emerald-700" :
-                    order.status === "picked_up" ? "bg-green-100 text-green-700" :
-                    "bg-gray-100 text-gray-700"
-                  }`}>
-                    {order.status?.replace("_", " ")}
-                  </span>
-
+                {/* Status Controls */}
+                <div className="border-t pt-4">
+                  <p className="text-sm font-semibold mb-3">Update Status:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ORDER_STATUSES.map((status) => (
+                      <button
+                        key={status.key}
+                        onClick={() => handleStatusUpdate(order.order_id || order._id, status.key)}
+                        disabled={updatingStatus === (order.order_id || order._id)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
+                          order.status === status.key
+                            ? status.color + " ring-2 ring-offset-2 ring-orange-500"
+                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                        } ${updatingStatus === (order.order_id || order._id) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        {status.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
               </div>

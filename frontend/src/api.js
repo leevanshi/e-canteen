@@ -145,8 +145,8 @@ export const getAdminDashboard = () =>
 export const getAdminOrders = () =>
   API.get("/admin/orders");
 
-export const updateOrderStatus = (orderId, status) =>
-  API.put(`/admin/orders/${orderId}/status`, { status });
+export const updateOrderStatus = (orderId, data) =>
+  API.put(`/orders/${orderId}/status`, data);
 
 export const placeCounterOrder = (data) =>
   API.post("/admin/place-order", data);

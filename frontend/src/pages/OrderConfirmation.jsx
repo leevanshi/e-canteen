@@ -8,10 +8,10 @@ import { useAuth } from "../context/AuthContext";
 import { getOrderById } from "../api";
 
 const ORDER_STATUSES = [
-  { key: "confirmed", label: "Confirmed", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-100" },
-  { key: "preparing", label: "Preparing", icon: Clock, color: "text-purple-500", bg: "bg-purple-100" },
-  { key: "ready_for_pickup", label: "Ready For Pickup", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-100" },
-  { key: "picked_up", label: "Picked Up", icon: CheckCircle, color: "text-green-500", bg: "bg-green-100" },
+  { key: "confirmed", label: "Confirmed", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-100", emoji: "🟢" },
+  { key: "preparing", label: "Preparing", icon: Clock, color: "text-purple-500", bg: "bg-purple-100", emoji: "🟡" },
+  { key: "ready_for_pickup", label: "Ready For Pickup", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-100", emoji: "🔵" },
+  { key: "picked_up", label: "Picked Up", icon: CheckCircle, color: "text-green-500", bg: "bg-green-100", emoji: "✅" },
 ];
 
 const OrderConfirmation = () => {
@@ -34,10 +34,16 @@ const OrderConfirmation = () => {
         console.log("Fetching order with ID:", orderId);
         const res = await getOrderById(orderId);
         console.log("Order response:", res);
-        const orderData = res?.data || res;
-        if (orderData) {
+        console.log("Order response.data:", res?.data);
+        
+        // Normalize response - handle both response.data and direct response
+        const orderData = res?.data?.order || res?.data || res;
+        console.log("Normalized order data:", orderData);
+        
+        if (orderData && (orderData.order_id || orderData._id || orderData.order_code)) {
           setOrder(orderData);
         } else {
+          console.error("Invalid order data structure:", orderData);
           setError("Order not found");
           toast.error("Order not found");
         }
@@ -51,6 +57,11 @@ const OrderConfirmation = () => {
     };
 
     fetchOrder();
+
+    // Poll for status updates every 10 seconds
+    const interval = setInterval(fetchOrder, 10000);
+
+    return () => clearInterval(interval);
   }, [orderId, navigate, user]);
 
   if (loading) {
@@ -210,7 +221,7 @@ const OrderConfirmation = () => {
                 transition={{ delay: 0.8 }}
               >
                 <h3 className="font-semibold text-gray-900 mb-3">Order Progress</h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {ORDER_STATUSES.map((status, idx) => {
                     const isActive = idx === currentStatusIndex;
                     const isCompleted = idx < currentStatusIndex;
@@ -226,14 +237,21 @@ const OrderConfirmation = () => {
                           isActive ? "bg-green-50 border-2 border-green-500" : isCompleted ? "bg-green-50" : "bg-gray-50"
                         }`}
                       >
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
                           isCompleted ? "bg-green-500 text-white" : isActive ? "bg-green-500 text-white" : "bg-gray-200 text-gray-400"
                         }`}>
-                          {isCompleted ? <CheckCircle size={16} /> : <Icon size={16} />}
+                          {isCompleted ? <CheckCircle size={20} /> : status.emoji}
                         </div>
-                        <p className={`font-medium text-sm ${isActive ? "text-green-700" : isCompleted ? "text-green-700" : "text-gray-600"}`}>
-                          {status.label}
-                        </p>
+                        <div className="flex-1">
+                          <p className={`font-medium ${isActive ? "text-green-700" : isCompleted ? "text-green-700" : "text-gray-600"}`}>
+                            {status.emoji} {status.label}
+                          </p>
+                        </div>
+                        {isActive && (
+                          <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                            Current
+                          </span>
+                        )}
                       </motion.div>
                     );
                   })}
