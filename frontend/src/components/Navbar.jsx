@@ -124,7 +124,7 @@ const Navbar = () => {
               </Link>
 
               <Link to="/monthly-menu" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors">
-                Monthly Menu
+                Monthly Menu 📄
               </Link>
 
               <Link to="/orders" className="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium transition-colors">
@@ -244,7 +244,7 @@ const Navbar = () => {
                   onClick={() => handleMobileNav("/monthly-menu")}
                   className="text-left text-lg font-medium text-gray-700 dark:text-gray-300 py-3 border-b border-gray-200 dark:border-gray-800"
                 >
-                  Monthly Menu
+                  Monthly Menu 📄
                 </button>
 
                 <button

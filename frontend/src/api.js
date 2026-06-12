@@ -193,6 +193,26 @@ export const createInventoryItem = (data) =>
 export const updateInventoryItem = (itemId, data) =>
   API.put(`/inventory/${itemId}`, data);
 
+/* =========================
+   MONTHLY MENU
+========================= */
+
+export const getMonthlyMenu = () =>
+  API.get("/api/monthly-menu");
+
+export const uploadMonthlyMenu = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return API.post("/api/monthly-menu/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+export const deleteMonthlyMenu = () =>
+  API.delete("/api/monthly-menu");
+
 export const deleteInventoryItem = (itemId) =>
   API.delete(`/inventory/${itemId}`);
 

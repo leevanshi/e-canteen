@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   Activity, Wallet, Utensils, History, ShoppingBag, ArrowUpRight,
-  TrendingUp, CheckCircle2, Store, Globe, FileText, Package, AlertTriangle,
+  TrendingUp, CheckCircle2, Store, Globe, FileText, Package, AlertTriangle, FileText as FilePdf,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 
@@ -242,6 +242,14 @@ const AdminDashboard = () => {
                   <h3 className="font-bold text-gray-900">Reports</h3>
                   <p className="text-sm text-gray-500 mt-1">Generate and export business reports.</p>
                   <ArrowUpRight className="absolute top-5 right-5 text-gray-300 group-hover:text-rose-500" size={20}/>
+                </button>
+
+                <button onClick={() => navigate("/admin/monthly-menu")}
+                  className="group relative overflow-hidden bg-gray-50 hover:bg-white border border-gray-100 hover:border-cyan-200 rounded-2xl p-5 text-left transition-all hover:shadow-lg">
+                  <div className="w-10 h-10 bg-cyan-100 text-cyan-600 rounded-xl flex items-center justify-center mb-4"><FilePdf size={20}/></div>
+                  <h3 className="font-bold text-gray-900">Monthly Menu</h3>
+                  <p className="text-sm text-gray-500 mt-1">Upload and manage monthly menu PDFs.</p>
+                  <ArrowUpRight className="absolute top-5 right-5 text-gray-300 group-hover:text-cyan-500" size={20}/>
                 </button>
 
                 <button onClick={() => navigate("/admin/menu")}

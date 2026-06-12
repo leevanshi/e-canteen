@@ -174,6 +174,7 @@ from routes.orders import router as orders_router
 from routes.admin import router as admin_router, ADMIN_REGISTER_SECRET
 from routes.feedback import router as feedback_router
 from routes.inventory import router as inventory_router
+from routes.monthly_menu import router as monthly_menu_router
 
 
 def get_client_ip(request: Request) -> str | None:
@@ -243,6 +244,7 @@ app.include_router(admin_router)
 app.include_router(wallet_router)
 app.include_router(feedback_router)
 app.include_router(inventory_router)
+app.include_router(monthly_menu_router)
 
 
 @app.on_event("startup")
