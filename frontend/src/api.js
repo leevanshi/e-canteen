@@ -128,6 +128,9 @@ export const createOrder = (data) =>
 export const getUserOrders = () =>
   API.get("/api/orders");
 
+export const getOrderById = (orderId) =>
+  API.get(`/api/orders/${orderId}`);
+
 /* =========================
    ADMIN DASHBOARD
 ========================= */

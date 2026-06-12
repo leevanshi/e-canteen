@@ -146,11 +146,16 @@ const CheckoutPage = () => {
         payment_method: "wallet",
       });
 
+      console.log("Order response:", res);
+
       const id =
-        res?.data?.order_number ||
+        res?.order_id ||
+        res?.order_code ||
         res?.data?.order_id ||
-        res?.data?._id ||
+        res?.data?.order_code ||
         "—";
+
+      console.log("Extracted order ID:", id);
 
       setOrderId(id);
       setOrderPlaced(true);

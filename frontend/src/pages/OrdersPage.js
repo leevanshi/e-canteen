@@ -339,7 +339,7 @@ const OrdersPage = () => {
 
                   <button
                     onClick={() =>
-                      navigate(`/orders/${mongoId}`)
+                      navigate(`/order-confirmation/${order?.order_code || mongoId}`)
                     }
                     className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
                   >

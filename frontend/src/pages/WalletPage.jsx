@@ -121,7 +121,7 @@ const WalletPage = () => {
   if (loading) {
 
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-400">
         Loading wallet...
       </div>
     );
@@ -134,7 +134,7 @@ const WalletPage = () => {
 
     <div className="max-w-4xl mx-auto p-6">
 
-      <h1 className="text-2xl font-bold mb-4">
+      <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Wallet
       </h1>
 
@@ -150,19 +150,19 @@ const WalletPage = () => {
 
       {/* BALANCE */}
 
-      <div className="bg-white shadow rounded-xl p-6 flex items-center justify-between mb-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 flex items-center justify-between mb-6 border border-gray-200 dark:border-gray-700">
 
         <div className="flex items-center gap-3">
 
-          <Wallet size={28} />
+          <Wallet size={28} className="text-orange-500 dark:text-orange-400" />
 
           <div>
 
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
               Current Balance
             </p>
 
-            <p className="text-2xl font-bold">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               ₹{balance}
             </p>
 
@@ -181,9 +181,9 @@ const WalletPage = () => {
 
       {/* ADMIN ADD MONEY */}
 
-      <div className="bg-white shadow rounded-xl p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
 
-        <h2 className="font-semibold mb-4">
+        <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
           Admin Add Money
         </h2>
 
@@ -196,7 +196,7 @@ const WalletPage = () => {
             onChange={(e) =>
               setUserId(e.target.value)
             }
-            className="border p-2 rounded flex-1"
+            className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded flex-1"
           />
 
           <input
@@ -206,7 +206,7 @@ const WalletPage = () => {
             onChange={(e) =>
               setAmount(e.target.value)
             }
-            className="border p-2 rounded w-32"
+            className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white p-2 rounded w-32"
           />
 
           <Button
@@ -223,15 +223,15 @@ const WalletPage = () => {
 
       {/* TRANSACTIONS */}
 
-      <div className="bg-white shadow rounded-xl p-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 border border-gray-200 dark:border-gray-700">
 
-        <h2 className="font-semibold mb-4">
+        <h2 className="font-semibold mb-4 text-gray-900 dark:text-white">
           Transaction History
         </h2>
 
         {transactions.length === 0 ? (
 
-          <p className="text-gray-500">
+          <p className="text-gray-500 dark:text-gray-400">
             No transactions yet.
           </p>
 
@@ -243,18 +243,18 @@ const WalletPage = () => {
 
               <div
                 key={t._id}
-                className="flex justify-between border-b pb-2 text-sm"
+                className="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2 text-sm"
               >
 
-                <span className="capitalize">
+                <span className="capitalize text-gray-900 dark:text-white">
                   {t.type}
                 </span>
 
                 <span
                   className={
                     t.type === "credit"
-                      ? "text-green-600"
-                      : "text-red-600"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
                   }
                 >
                   {t.type === "credit"

@@ -5,7 +5,7 @@ import { CheckCircle, Clock, MapPin, CreditCard, ArrowRight, ArrowLeft, List } f
 import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
-import { getUserOrders } from "../api";
+import { getOrderById } from "../api";
 
 const ORDER_STATUSES = [
   { key: "confirmed", label: "Confirmed", icon: CheckCircle, color: "text-blue-500", bg: "bg-blue-100" },
@@ -21,6 +21,7 @@ const OrderConfirmation = () => {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!orderId) {
@@ -30,17 +31,19 @@ const OrderConfirmation = () => {
 
     const fetchOrder = async () => {
       try {
-        const res = await getUserOrders();
-        const userOrders = res?.data || [];
-        const foundOrder = userOrders.find(o => o.order_id === orderId || o.order_code === orderId || o._id === orderId);
-        if (foundOrder) {
-          setOrder(foundOrder);
+        console.log("Fetching order with ID:", orderId);
+        const res = await getOrderById(orderId);
+        console.log("Order response:", res);
+        const orderData = res?.data || res;
+        if (orderData) {
+          setOrder(orderData);
         } else {
+          setError("Order not found");
           toast.error("Order not found");
-          navigate("/menu", { replace: true });
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching order:", err);
+        setError("Failed to load order details");
         toast.error("Failed to load order details");
       } finally {
         setLoading(false);
@@ -53,13 +56,30 @@ const OrderConfirmation = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-          className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full" />
+        <div className="text-center">
+          <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-gray-600">Loading order details...</p>
+        </div>
       </div>
     );
   }
 
-  if (!order) return null;
+  if (error || !order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8">
+          <p className="text-red-600 mb-4">{error || "Order not found"}</p>
+          <button
+            onClick={() => navigate("/orders")}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            View My Orders
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const getCurrentStatusIndex = () => {
     if (!order) return -1;

@@ -299,9 +299,13 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
         })
 
         return {
+            "success": True,
             "message": "Order placed successfully",
             "order_id": order_doc["order_id"],
             "order_code": order_doc["order_code"],
+            "customer_name": order_doc["user_name"],
+            "status": order_doc["status"],
+            "total_amount": order_doc["total_amount"],
         }
 
     except HTTPException:
@@ -311,6 +315,42 @@ async def place_order(data: CreateOrder, current_user=Depends(get_current_user))
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ================= GET SINGLE ORDER =================
+
+@router.get("/{order_id}")
+def get_single_order(order_id: str, current_user=Depends(get_current_user)):
+    """Get a single order by order_id or order_code"""
+    try:
+        # Try to find by order_id (numeric) or order_code (string like "E-6")
+        order = orders_collection.find_one({
+            "$or": [
+                {"order_id": int(order_id) if order_id.isdigit() else None},
+                {"order_code": order_id},
+                {"_id": ObjectId(order_id) if ObjectId.is_valid(order_id) else None}
+            ]
+        })
+
+        if not order:
+            raise HTTPException(404, "Order not found")
+
+        # Check if user owns this order or is admin
+        if (current_user.get("role") != "admin" and
+            str(order.get("user_id")) != str(current_user.get("_id"))):
+            raise HTTPException(403, "Access denied")
+
+        order["_id"] = str(order["_id"])
+        if "admin_id" in order:
+            order["admin_id"] = str(order["admin_id"])
+
+        return serialize_order(order)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching order: {str(e)}")
+        raise HTTPException(500, "Failed to fetch order")
 
 
 # ================= ADMIN DASHBOARD =================

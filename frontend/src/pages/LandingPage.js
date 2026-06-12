@@ -60,6 +60,14 @@ const scaleIn = {
   },
 };
 
+const glowEffect = {
+  hidden: { boxShadow: "0 0 0 rgba(255, 138, 61, 0)" },
+  visible: {
+    boxShadow: "0 0 20px rgba(255, 138, 61, 0.5)",
+    transition: { duration: 0.3, ease: "easeOut" },
+  },
+};
+
 /* ================= PAGE ================= */
 
 const LandingPage = () => {
@@ -104,9 +112,9 @@ const LandingPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       
       {/* ================= NAVBAR ================= */}
-      <header className="fixed top-0 left-0 w-full z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-orange-100 dark:border-gray-800">
+      <header className="fixed top-0 left-0 w-full z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-orange-100 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+          <Link to="/" className="text-2xl font-bold" style={{ color: '#FF8A3D' }}>
             ☕ E-Canteen
           </Link>
           <div className="flex gap-3">
@@ -115,7 +123,7 @@ const LandingPage = () => {
                 <Button variant="ghost" onClick={() => navigate("/login")} className="text-orange-600 dark:text-orange-400">
                   Login
                 </Button>
-                <Button onClick={() => navigate("/join")} className="bg-orange-500 hover:bg-orange-600">
+                <Button onClick={() => navigate("/join")} style={{ backgroundColor: '#FF8A3D' }} className="hover:opacity-90">
                   Register
                 </Button>
               </>
@@ -144,12 +152,13 @@ const LandingPage = () => {
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: 0.2 }}
-                className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-4 py-2 rounded-full text-sm font-medium"
+                className="inline-flex items-center gap-2 bg-orange-500/10 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 px-4 py-2 rounded-full text-sm font-medium border border-orange-200 dark:border-orange-500/30"
+                style={{ color: '#FF8A3D', backgroundColor: 'rgba(255, 138, 61, 0.1)', borderColor: 'rgba(255, 138, 61, 0.3)' }}
               >
                 <Zap className="w-4 h-4" />
-                Smart Campus Ordering
+                Smart Campus Food Ordering
               </motion.div>
-              
+
               <motion.h1
                 variants={fadeInUp}
                 initial="hidden"
@@ -159,19 +168,19 @@ const LandingPage = () => {
               >
                 Skip The Queue.
                 <br />
-                <span className="text-orange-600 dark:text-orange-400">Order Ahead.</span>
+                <span style={{ color: '#FF8A3D' }}>Order Ahead.</span>
               </motion.h1>
-              
+
               <motion.p
                 variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: 0.4 }}
-                className="text-lg text-gray-600 dark:text-gray-300"
+                className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed"
               >
                 Pre-order meals, pay with wallet, and collect food instantly from your campus canteen.
               </motion.p>
-              
+
               <motion.div
                 variants={fadeInUp}
                 initial="hidden"
@@ -182,7 +191,10 @@ const LandingPage = () => {
                 <Button
                   size="lg"
                   onClick={handleOrderClick}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl shadow-lg shadow-orange-500/30"
+                  style={{ backgroundColor: '#FF8A3D' }}
+                  className="text-white px-8 py-4 rounded-xl shadow-lg hover:opacity-90 transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   Order Now
                   <ArrowRight className="ml-2 w-5 h-5" />
@@ -191,9 +203,12 @@ const LandingPage = () => {
                   size="lg"
                   variant="outline"
                   onClick={() => navigate("/menu")}
-                  className="border-orange-500 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 px-8 py-4 rounded-xl"
+                  style={{ borderColor: '#FF8A3D', color: '#FF8A3D' }}
+                  className="hover:bg-orange-50 dark:hover:bg-orange-900/20 px-8 py-4 rounded-xl transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  View Menu
+                  Explore Menu
                 </Button>
               </motion.div>
             </motion.div>
@@ -205,40 +220,7 @@ const LandingPage = () => {
               animate="visible"
               className="relative"
             >
-              <div className="relative bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-3xl p-8 lg:p-12">
-                {/* Floating Cards */}
-                <motion.div
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                  className="absolute -top-4 -right-4 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-xl"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900 dark:text-white">Order Confirmed</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Just now</div>
-                    </div>
-                  </div>
-                </motion.div>
-                
-                <motion.div
-                  animate={{ y: [0, 10, 0] }}
-                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut", delay: 0.5 }}
-                  className="absolute -bottom-4 -left-4 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-xl"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900 dark:text-white">Wallet Balance</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">₹1,250</div>
-                    </div>
-                  </div>
-                </motion.div>
-
+              <div className="relative bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-3xl p-8 lg:p-12 backdrop-blur-sm">
                 {/* Main Mockup */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl">
                   <div className="space-y-4">
@@ -251,14 +233,71 @@ const LandingPage = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Feature Badges */}
+                <div className="absolute -top-2 -right-2 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" style={{ color: '#FF8A3D' }} />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">Live Menu</span>
+                  </div>
+                </div>
+
+                <div className="absolute -bottom-2 -left-2 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5" style={{ color: '#FF8A3D' }} />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">Fast Pickup</span>
+                  </div>
+                </div>
+
+                <div className="absolute top-1/2 -right-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-5 h-5" style={{ color: '#FF8A3D' }} />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">Digital Wallet</span>
+                  </div>
+                </div>
+
+                <div className="absolute top-1/2 -left-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-5 h-5" style={{ color: '#FF8A3D' }} />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">Order Tracking</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
         </div>
       </section>
 
+      {/* ================= TRUST SECTION ================= */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <TrustCard
+              icon={Zap}
+              title="Instant Ordering"
+              description="Order in seconds"
+            />
+            <TrustCard
+              icon={CreditCard}
+              title="Wallet Payments"
+              description="Fast cashless payments"
+            />
+            <TrustCard
+              icon={Smartphone}
+              title="Real-Time Tracking"
+              description="Track every order"
+            />
+            <TrustCard
+              icon={ChefHat}
+              title="Fresh Campus Meals"
+              description="Prepared on demand"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* ================= STATS SECTION ================= */}
-      <section ref={statsRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
+      <section ref={statsRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-900 dark:to-gray-800">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             <StatCard icon={TrendingUp} value={stats.orders.toLocaleString()} label="Orders Processed" />
@@ -428,16 +467,33 @@ const LandingPage = () => {
 
 /* ================= COMPONENTS ================= */
 
+const TrustCard = ({ icon: Icon, title, description }) => (
+  <motion.div
+    variants={fadeInUp}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true }}
+    whileHover={{ y: -4 }}
+    className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
+  >
+    <div className="w-12 h-12 mb-4 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 138, 61, 0.1)' }}>
+      <Icon className="w-6 h-6" style={{ color: '#FF8A3D' }} />
+    </div>
+    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{title}</h3>
+    <p className="text-sm text-gray-600 dark:text-gray-300">{description}</p>
+  </motion.div>
+);
+
 const StatCard = ({ icon: Icon, value, label }) => (
   <motion.div
     variants={scaleIn}
     initial="hidden"
     whileInView="visible"
     viewport={{ once: true }}
-    className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-700 dark:to-gray-800 rounded-2xl p-6 text-center"
+    className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-700 dark:to-gray-800 rounded-2xl p-6 text-center border border-orange-100 dark:border-gray-600"
   >
-    <div className="w-12 h-12 mx-auto mb-4 bg-orange-500/20 dark:bg-orange-500/30 rounded-full flex items-center justify-center">
-      <Icon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+    <div className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 138, 61, 0.2)' }}>
+      <Icon className="w-6 h-6" style={{ color: '#FF8A3D' }} />
     </div>
     <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{value}</div>
     <div className="text-sm text-gray-600 dark:text-gray-300">{label}</div>
@@ -453,7 +509,7 @@ const FeatureCard = ({ icon: Icon, title, description }) => (
     whileHover={{ y: -8 }}
     className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300"
   >
-    <div className="w-14 h-14 mb-6 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center">
+    <div className="w-14 h-14 mb-6 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#FF8A3D' }}>
       <Icon className="w-7 h-7 text-white" />
     </div>
     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{title}</h3>
@@ -470,17 +526,17 @@ const StepCard = ({ step, icon: Icon, title, description }) => (
     className="relative"
   >
     <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-100 dark:border-gray-700">
-      <div className="w-16 h-16 mb-6 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+      <div className="w-16 h-16 mb-6 rounded-2xl flex items-center justify-center text-white text-2xl font-bold" style={{ backgroundColor: '#FF8A3D' }}>
         {step}
       </div>
-      <div className="w-12 h-12 mb-4 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-        <Icon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+      <div className="w-12 h-12 mb-4 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255, 138, 61, 0.1)' }}>
+        <Icon className="w-6 h-6" style={{ color: '#FF8A3D' }} />
       </div>
       <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{title}</h3>
       <p className="text-gray-600 dark:text-gray-300">{description}</p>
     </div>
     {step < 3 && (
-      <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-orange-300 dark:bg-orange-700"></div>
+      <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5" style={{ backgroundColor: 'rgba(255, 138, 61, 0.3)' }}></div>
     )}
   </motion.div>
 );
@@ -495,7 +551,7 @@ const TestimonialCard = ({ name, text, rating }) => (
   >
     <div className="flex gap-1 mb-4">
       {[...Array(rating)].map((_, i) => (
-        <Star key={i} className="w-5 h-5 fill-orange-500 text-orange-500" />
+        <Star key={i} className="w-5 h-5" style={{ fill: '#FF8A3D', color: '#FF8A3D' }} />
       ))}
     </div>
     <p className="text-gray-600 dark:text-gray-300 mb-6 italic">"{text}"</p>

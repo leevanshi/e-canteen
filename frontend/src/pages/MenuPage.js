@@ -1233,14 +1233,14 @@ const MenuPage = () => {
                   placeholder="Search smart food..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-100/50 border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-100/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 rounded-xl focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
               
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="py-2.5 px-4 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-orange-500/20 outline-none cursor-pointer"
+                className="py-2.5 px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 outline-none cursor-pointer"
               >
                 <option value="recommended">Recommended</option>
                 <option value="health">Highest Health Score</option>
@@ -1258,8 +1258,8 @@ const MenuPage = () => {
                 onClick={() => setCategory(c)}
                 className={`snap-start px-5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-300 ${
                   category === c
-                    ? "bg-gray-900 text-white shadow-md scale-105"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                    ? "bg-gray-900 dark:bg-orange-500 text-white shadow-md scale-105"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 {c.charAt(0).toUpperCase() + c.slice(1)}
@@ -1423,7 +1423,7 @@ const MenuPage = () => {
               initial="hidden"
               animate="show"
               exit="exit"
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
               {/* Close btn */}
               <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/40 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/60 transition-colors">
@@ -1454,55 +1454,55 @@ const MenuPage = () => {
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Nutrition Breakdown</h3>
 
                   <div className="grid grid-cols-4 gap-4 mb-8">
-                    <div className="bg-orange-50 rounded-2xl p-4 text-center border border-orange-100">
-                      <Flame className="mx-auto text-orange-500 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900">{selectedItem.nutrition?.calories}</div>
-                      <div className="text-[10px] text-gray-500 font-bold uppercase">Calories</div>
+                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4 text-center border border-orange-100 dark:border-orange-500/30">
+                      <Flame className="mx-auto text-orange-500 dark:text-orange-400 mb-2" size={24}/>
+                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.calories}</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Calories</div>
                     </div>
-                    <div className="bg-blue-50 rounded-2xl p-4 text-center border border-blue-100">
-                      <Dumbbell className="mx-auto text-blue-500 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900">{selectedItem.nutrition?.protein}g</div>
-                      <div className="text-[10px] text-gray-500 font-bold uppercase">Protein</div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 text-center border border-blue-100 dark:border-blue-500/30">
+                      <Dumbbell className="mx-auto text-blue-500 dark:text-blue-400 mb-2" size={24}/>
+                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.protein}g</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Protein</div>
                     </div>
-                    <div className="bg-emerald-50 rounded-2xl p-4 text-center border border-emerald-100">
-                      <Wheat className="mx-auto text-emerald-500 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900">{selectedItem.nutrition?.carbs}g</div>
-                      <div className="text-[10px] text-gray-500 font-bold uppercase">Carbs</div>
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-4 text-center border border-emerald-100 dark:border-emerald-500/30">
+                      <Wheat className="mx-auto text-emerald-500 dark:text-emerald-400 mb-2" size={24}/>
+                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.carbs}g</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Carbs</div>
                     </div>
-                    <div className="bg-purple-50 rounded-2xl p-4 text-center border border-purple-100">
-                      <Droplet className="mx-auto text-purple-500 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900">{selectedItem.nutrition?.fats}g</div>
-                      <div className="text-[10px] text-gray-500 font-bold uppercase">Fats</div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 text-center border border-purple-100 dark:border-purple-500/30">
+                      <Droplet className="mx-auto text-purple-500 dark:text-purple-400 mb-2" size={24}/>
+                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.fats}g</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Fats</div>
                     </div>
                   </div>
 
                   {/* Micro Nutrients */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
                     <div>
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Detailed Metrics</h3>
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4">Detailed Metrics</h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500 font-medium">Dietary Fiber</span>
-                          <span className="font-bold text-gray-900">{selectedItem.nutrition?.fiber}g <span className="text-xs text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md ml-2">{Math.round((selectedItem.nutrition?.fiber/28)*100)}% DV</span></span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Dietary Fiber</span>
+                          <span className="font-bold text-gray-900 dark:text-white">{selectedItem.nutrition?.fiber}g <span className="text-xs text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md ml-2">{Math.round((selectedItem.nutrition?.fiber/28)*100)}% DV</span></span>
                         </div>
-                        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden"><div className="bg-emerald-400 h-full rounded-full" style={{width: `${Math.min((selectedItem.nutrition?.fiber/28)*100, 100)}%`}}></div></div>
-                        
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden"><div className="bg-emerald-400 h-full rounded-full" style={{width: `${Math.min((selectedItem.nutrition?.fiber/28)*100, 100)}%`}}></div></div>
+
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500 font-medium">Sugar</span>
-                          <span className="font-bold text-gray-900">{selectedItem.nutrition?.sugar}g</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Sugar</span>
+                          <span className="font-bold text-gray-900 dark:text-white">{selectedItem.nutrition?.sugar}g</span>
                         </div>
-                        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden"><div className="bg-red-400 h-full rounded-full" style={{width: `${Math.min((selectedItem.nutrition?.sugar/50)*100, 100)}%`}}></div></div>
-                        
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden"><div className="bg-red-400 h-full rounded-full" style={{width: `${Math.min((selectedItem.nutrition?.sugar/50)*100, 100)}%`}}></div></div>
+
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500 font-medium">Sodium</span>
-                          <span className="font-bold text-gray-900">{selectedItem.nutrition?.sodium}mg</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Sodium</span>
+                          <span className="font-bold text-gray-900 dark:text-white">{selectedItem.nutrition?.sodium}mg</span>
                         </div>
                         <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden"><div className="bg-blue-400 h-full rounded-full" style={{width: `${Math.min((selectedItem.nutrition?.sodium/2300)*100, 100)}%`}}></div></div>
                       </div>
                     </div>
 
                     {/* Chart */}
-                    <div className="bg-gray-50 rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-100">
+                    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-100 dark:border-gray-700">
                        <div className="h-40 w-full relative">
                           <ResponsiveContainer width="100%" height="100%" minHeight={150}>
                             <PieChart>

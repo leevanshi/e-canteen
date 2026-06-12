@@ -26,7 +26,7 @@ const CartPage = () => {
           ← Back
         </Button>
 
-        <h2 className="text-2xl font-semibold mb-4">
+        <h2 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">
           Your cart is empty
         </h2>
 
@@ -47,7 +47,7 @@ const CartPage = () => {
         ← Back
       </Button>
 
-      <h1 className="text-2xl sm:text-3xl font-bold mb-6">Your Cart</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 dark:text-white">Your Cart</h1>
 
       <div className="space-y-4">
         {safeCart.map((item, index) => {
@@ -67,10 +67,10 @@ const CartPage = () => {
                   />
 
                   <div className="flex-1">
-                    <h3 className="font-semibold text-base sm:text-lg">
+                    <h3 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-white">
                       {item?.name || "Item"}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       ₹{price}
                     </p>
                   </div>
@@ -86,7 +86,7 @@ const CartPage = () => {
                     −
                   </Button>
 
-                  <span className="font-semibold w-8 text-center">
+                  <span className="font-semibold w-8 text-center text-gray-900 dark:text-white">
                     {quantity}
                   </span>
 
@@ -99,7 +99,7 @@ const CartPage = () => {
                   </Button>
                 </div>
 
-                <div className="font-semibold">
+                <div className="font-semibold text-gray-900 dark:text-white">
                   ₹{price * quantity}
                 </div>
               </CardContent>
@@ -109,7 +109,7 @@ const CartPage = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-8">
-        <h2 className="text-2xl font-bold">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Total: ₹{totalAmount}
         </h2>
 
