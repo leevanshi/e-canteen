@@ -47,6 +47,8 @@ const CheckoutPage = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [loadingWallet, setLoadingWallet] = useState(true);
+  const [highlightWallet, setHighlightWallet] = useState(false);
 
   const timeSlots = useMemo(generateTimeSlots, []);
 
@@ -68,14 +70,20 @@ const CheckoutPage = () => {
 
   /* FETCH WALLET */
   const fetchWallet = async () => {
-    if (!token) return;
+    if (!token) {
+      setLoadingWallet(false);
+      return;
+    }
 
     try {
+      setLoadingWallet(true);
       const res = await getMyWallet();
       setWalletBalance(res?.data?.balance ?? 0);
     } catch (err) {
       console.error("Wallet fetch failed", err);
       setWalletBalance(0);
+    } finally {
+      setLoadingWallet(false);
     }
   };
 
@@ -108,6 +116,11 @@ const CheckoutPage = () => {
       return;
     }
 
+    if (loadingWallet) {
+      toast.error("Loading wallet balance. Please wait...");
+      return;
+    }
+
     if (!pickupTimeSlot || !isValidSlot(pickupTimeSlot)) {
       toast.error("Please select a valid future time slot");
       return;
@@ -118,8 +131,16 @@ const CheckoutPage = () => {
       return;
     }
 
+    // Insufficient balance validation with destructive toast
     if (walletBalance < totalAmount) {
-      toast.error("Insufficient wallet balance");
+      toast.error("Insufficient Wallet Balance", {
+        description: "Your wallet balance is lower than the order amount. Please add funds to continue.",
+      });
+
+      // Highlight wallet balance chip briefly
+      setHighlightWallet(true);
+      setTimeout(() => setHighlightWallet(false), 2000);
+
       return;
     }
 
@@ -255,28 +276,34 @@ const CheckoutPage = () => {
 
       </select>
 
-      <div className="mt-6 p-4 border rounded bg-gray-50 space-y-2">
+      <div className="mt-6 p-4 border rounded bg-gray-50 dark:bg-gray-800 space-y-2">
 
-        <h3 className="font-semibold text-sm sm:text-base">
+        <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
           Payment Method
         </h3>
 
-        <p className="text-green-700 font-medium text-sm sm:text-base">
+        <p
+          className={`font-medium text-sm sm:text-base transition-all duration-200 ${
+            highlightWallet
+              ? "text-orange-600 dark:text-orange-400 animate-pulse"
+              : "text-green-700 dark:text-green-400"
+          }`}
+        >
           ✅ Wallet (Balance: ₹{walletBalance})
         </p>
 
       </div>
 
-      <div className="mt-4 font-semibold text-lg sm:text-xl">
+      <div className="mt-4 font-semibold text-lg sm:text-xl text-gray-900 dark:text-white">
         Total: ₹{totalAmount}
       </div>
 
       <Button
         onClick={handlePlaceOrder}
-        disabled={loading}
-        className="mt-6 w-full bg-orange-500 py-3 sm:py-4 text-sm sm:text-base"
+        disabled={loading || loadingWallet}
+        className="mt-6 w-full bg-orange-500 hover:bg-orange-600 py-3 sm:py-4 text-sm sm:text-base"
       >
-        {loading ? "Placing Order..." : "Place Order"}
+        {loading ? "Placing Order..." : loadingWallet ? "Loading Wallet..." : "Place Order"}
       </Button>
 
     </div>

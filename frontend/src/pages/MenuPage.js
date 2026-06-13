@@ -1235,31 +1235,41 @@ const MenuPage = () => {
       
       {/* HERO HEADER */}
       <div className="bg-white border-b sticky top-0 z-30 shadow-sm backdrop-blur-xl bg-white/80">
-        <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 md:py-6">
+          <div className="flex flex-col gap-4">
             
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Smart Menu</h1>
-              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1"><Activity size={14} className="text-emerald-500"/> AI-Powered Nutrition Insights</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Smart Menu</h1>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1 flex items-center gap-1"><Activity size={12} className="text-emerald-500"/> AI-Powered Nutrition Insights</p>
+              </div>
+
+              {/* Wallet Balance - Mobile */}
+              <div className="flex sm:hidden items-center gap-2 px-3 py-1.5 rounded-xl border-2" style={{ backgroundColor: 'rgba(255, 138, 61, 0.1)', borderColor: '#FF8A3D' }}>
+                <Wallet className="w-4 h-4" style={{ color: '#FF8A3D' }} />
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">
+                  {loadingWallet ? '...' : `₹${walletBalance}`}
+                </span>
+              </div>
             </div>
 
             {/* SEARCH & SORT */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                 <input
                   type="text"
                   placeholder="Search smart food..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-100/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 rounded-xl focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-gray-100/50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 rounded-xl focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
               
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="py-2.5 px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 outline-none cursor-pointer"
+                className="py-2 sm:py-2.5 px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500/20 outline-none cursor-pointer"
               >
                 <option value="recommended">Recommended</option>
                 <option value="health">Highest Health Score</option>
@@ -1267,42 +1277,42 @@ const MenuPage = () => {
                 <option value="calories">Low Calories</option>
               </select>
 
-              {/* Wallet Balance */}
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border-2" style={{ backgroundColor: 'rgba(255, 138, 61, 0.1)', borderColor: '#FF8A3D' }}>
-                <Wallet className="w-5 h-5" style={{ color: '#FF8A3D' }} />
-                <span className="font-semibold text-gray-900 dark:text-white">
+              {/* Wallet Balance - Desktop */}
+              <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border-2" style={{ backgroundColor: 'rgba(255, 138, 61, 0.1)', borderColor: '#FF8A3D' }}>
+                <Wallet className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#FF8A3D' }} />
+                <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
                   {loadingWallet ? '...' : `₹${walletBalance}`}
                 </span>
               </div>
             </div>
-          </div>
 
-          {/* CATEGORIES */}
-          <div className="flex gap-2 mt-6 overflow-x-auto pb-2 scrollbar-hide snap-x">
-            {categories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={`snap-start px-5 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-300 ${
-                  category === c
-                    ? "bg-gray-900 dark:bg-orange-500 text-white shadow-md scale-105"
-                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                }`}
-              >
-                {c.charAt(0).toUpperCase() + c.slice(1)}
-              </button>
-            ))}
+            {/* CATEGORIES */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`snap-start px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-300 ${
+                    category === c
+                      ? "bg-gray-900 dark:bg-orange-500 text-white shadow-md scale-105"
+                      : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                >
+                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-4 sm:py-6 md:py-8">
         <motion.div 
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
         >
           {filteredAndSortedMenu.map((item) => {
             const id = item._id;
@@ -1314,11 +1324,11 @@ const MenuPage = () => {
               <motion.div
                 variants={cardVariant}
                 key={id}
-                className="group relative bg-white rounded-3xl p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col"
+                className="group relative bg-white rounded-2xl sm:rounded-3xl p-2 sm:p-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col"
               >
                 {/* 3D Image Wrapper */}
                 <div 
-                  className="relative h-48 w-full rounded-2xl overflow-hidden cursor-pointer"
+                  className="relative h-40 sm:h-48 w-full rounded-xl sm:rounded-2xl overflow-hidden cursor-pointer"
                   onClick={() => setSelectedItem(item)}
                 >
                   <motion.img
@@ -1329,63 +1339,63 @@ const MenuPage = () => {
                   />
                   {/* Glass Overlay on Hover */}
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
-                    <div className="bg-white/90 text-gray-900 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
-                      <Info size={14}/> View Nutrition
+                    <div className="bg-white/90 text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                      <Info size={12} sm:size={14}/> View Nutrition
                     </div>
                   </div>
                   
                   {/* Top Badges */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    <div className={`px-2.5 py-1 rounded-lg border backdrop-blur-md text-xs font-bold flex items-center gap-1 shadow-sm ${scoreClass}`}>
-                      <Activity size={12} /> {nut.health_score ?? 0}
+                  <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-2">
+                    <div className={`px-2 sm:px-2.5 py-1 rounded-lg border backdrop-blur-md text-[10px] sm:text-xs font-bold flex items-center gap-1 shadow-sm ${scoreClass}`}>
+                      <Activity size={10} sm:size={12} /> {nut.health_score ?? 0}
                     </div>
                   </div>
-                  <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-md text-gray-400 flex items-center justify-center hover:text-red-500 hover:bg-white shadow-sm transition-colors">
-                    <Heart size={16} />
+                  <button className="absolute top-2 sm:top-3 right-2 sm:right-3 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/80 backdrop-blur-md text-gray-400 flex items-center justify-center hover:text-red-500 hover:bg-white shadow-sm transition-colors">
+                    <Heart size={14} sm:size={16} />
                   </button>
                 </div>
 
-                <div className="mt-4 px-2 flex-1 flex flex-col">
+                <div className="mt-3 sm:mt-4 px-2 flex-1 flex flex-col">
                   <div className="flex justify-between items-start gap-2">
-                    <h2 className="font-extrabold text-lg text-gray-900 leading-tight">{item.name}</h2>
+                    <h2 className="font-extrabold text-base sm:text-lg text-gray-900 leading-tight">{item.name}</h2>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
                   
-                  <div className="mt-4 flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="mt-3 sm:mt-4 flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50 rounded-lg sm:rounded-xl border border-gray-100">
                     <div className="text-center">
-                      <div className="text-xs font-bold text-orange-500 flex items-center gap-0.5 justify-center"><Flame size={12}/>{nut.calories ?? 0}</div>
-                      <div className="text-[9px] text-gray-400 uppercase tracking-wide">Kcal</div>
+                      <div className="text-[10px] sm:text-xs font-bold text-orange-500 flex items-center gap-0.5 justify-center"><Flame size={10} sm:size={12}/>{nut.calories ?? 0}</div>
+                      <div className="text-[8px] sm:text-[9px] text-gray-400 uppercase tracking-wide">Kcal</div>
                     </div>
-                    <div className="w-px h-6 bg-gray-200"></div>
+                    <div className="w-px h-4 sm:h-6 bg-gray-200"></div>
                     <div className="text-center">
-                      <div className="text-xs font-bold text-blue-500">{nut.protein ?? 0}g</div>
-                      <div className="text-[9px] text-gray-400 uppercase tracking-wide">Protein</div>
+                      <div className="text-[10px] sm:text-xs font-bold text-blue-500">{nut.protein ?? 0}g</div>
+                      <div className="text-[8px] sm:text-[9px] text-gray-400 uppercase tracking-wide">Protein</div>
                     </div>
-                    <div className="w-px h-6 bg-gray-200"></div>
+                    <div className="w-px h-4 sm:h-6 bg-gray-200"></div>
                     <div className="text-center">
-                      <div className="text-xs font-bold text-emerald-500">{nut.carbs ?? 0}g</div>
-                      <div className="text-[9px] text-gray-400 uppercase tracking-wide">Carbs</div>
+                      <div className="text-[10px] sm:text-xs font-bold text-emerald-500">{nut.carbs ?? 0}g</div>
+                      <div className="text-[8px] sm:text-[9px] text-gray-400 uppercase tracking-wide">Carbs</div>
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-4 flex items-center justify-between">
-                    <div className="font-black text-xl text-gray-900">₹{Number(item.price).toFixed(0)}</div>
+                  <div className="mt-auto pt-3 sm:pt-4 flex items-center justify-between">
+                    <div className="font-black text-lg sm:text-xl text-gray-900">₹{Number(item.price).toFixed(0)}</div>
                     
                     {quantity === 0 ? (
                       <button
                         onClick={(e) => { e.stopPropagation(); addToCart(item); toast.success(`${item.name} added`); }}
-                        className="bg-gray-900 text-white p-2.5 rounded-xl hover:bg-orange-500 hover:shadow-lg hover:shadow-orange-500/20 transition-all group/btn"
+                        className="bg-gray-900 text-white p-2 sm:p-2.5 rounded-lg sm:rounded-xl hover:bg-orange-500 hover:shadow-lg hover:shadow-orange-500/20 transition-all group/btn min-h-[36px] sm:min-h-[40px]"
                       >
-                        <Plus size={20} className="group-hover/btn:rotate-90 transition-transform duration-300" />
+                        <Plus size={16} sm:size={20} className="group-hover/btn:rotate-90 transition-transform duration-300" />
                       </button>
                     ) : (
-                      <div className="flex items-center gap-3 bg-gray-100 rounded-xl p-1 border border-gray-200">
-                        <button onClick={(e) => { e.stopPropagation(); decreaseQty(id); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-red-500 transition-colors">
-                          <Minus size={16} />
+                      <div className="flex items-center gap-2 sm:gap-3 bg-gray-100 rounded-lg sm:rounded-xl p-1 border border-gray-200">
+                        <button onClick={(e) => { e.stopPropagation(); decreaseQty(id); }} className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-red-500 transition-colors">
+                          <Minus size={14} sm:size={16} />
                         </button>
-                        <span className="font-bold text-sm w-4 text-center">{quantity}</span>
-                        <button onClick={(e) => { e.stopPropagation(); addToCart(item); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-green-500 transition-colors">
-                          <Plus size={16} />
+                        <span className="font-bold text-xs sm:text-sm w-3 sm:w-4 text-center">{quantity}</span>
+                        <button onClick={(e) => { e.stopPropagation(); addToCart(item); }} className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-green-500 transition-colors">
+                          <Plus size={14} sm:size={16} />
                         </button>
                       </div>
                     )}
@@ -1397,12 +1407,12 @@ const MenuPage = () => {
         </motion.div>
 
         {filteredAndSortedMenu.length === 0 && (
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
-              <Search size={24} />
+          <div className="text-center py-16 sm:py-20">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
+              <Search size={20} sm:size={24} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">No smart meals found</h3>
-            <p className="text-gray-500 mt-1">Try adjusting your search or filters.</p>
+            <h3 className="text-base sm:text-lg font-bold text-gray-900">No smart meals found</h3>
+            <p className="text-gray-500 mt-1 text-sm">Try adjusting your search or filters.</p>
           </div>
         )}
       </div>
@@ -1435,10 +1445,38 @@ const MenuPage = () => {
         )}
       </AnimatePresence>
 
+      {/* ================= FLOATING CART - MOBILE ================= */}
+      <AnimatePresence>
+        {totalItems > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="md:hidden fixed bottom-4 left-4 right-4 bg-gray-900/95 backdrop-blur-xl border border-white/10 p-3 rounded-2xl shadow-2xl flex items-center justify-between z-40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center font-bold">
+                {totalItems}
+              </div>
+              <div>
+                <div className="text-xs text-gray-400 font-medium">Total</div>
+                <div className="text-white font-bold">₹{totalPrice.toFixed(2)}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/cart")}
+              className="bg-white text-black px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-100 transition-colors"
+            >
+              Checkout <ChevronRight size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ================= NUTRITION MODAL ================= */}
       <AnimatePresence>
         {selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6">
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setSelectedItem(null)}
@@ -1450,61 +1488,61 @@ const MenuPage = () => {
               initial="hidden"
               animate="show"
               exit="exit"
-              className="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh]"
             >
               {/* Close btn */}
-              <button onClick={() => setSelectedItem(null)} className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/40 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/60 transition-colors">
-                <X size={20} />
+              <button onClick={() => setSelectedItem(null)} className="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 w-9 h-9 sm:w-10 sm:h-10 bg-black/40 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/60 transition-colors">
+                <X size={18} sm:size={20} />
               </button>
 
               <div className="overflow-y-auto overflow-x-hidden scrollbar-hide">
                 {/* Header Image */}
-                <div className="h-64 sm:h-72 w-full relative">
+                <div className="h-48 sm:h-64 md:h-72 w-full relative">
                   <img src={selectedItem.image || fallbackImage} alt={selectedItem.name} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent"></div>
-                  <div className="absolute bottom-6 left-6 pr-6">
-                    <div className="flex gap-2 mb-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md ${getScoreColor(selectedItem.nutrition?.health_score)}`}>
+                  <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 pr-4 sm:pr-6">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className={`px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold border backdrop-blur-md ${getScoreColor(selectedItem.nutrition?.health_score)}`}>
                         {getScoreLabel(selectedItem.nutrition?.health_score)} ({selectedItem.nutrition?.health_score}/100)
                       </span>
                       {selectedItem.nutrition?.protein > 20 && (
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1"><Dumbbell size={12}/> High Protein</span>
+                        <span className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1"><Dumbbell size={10} sm:size={12}/> High Protein</span>
                       )}
                     </div>
-                    <h2 className="text-3xl font-black text-white">{selectedItem.name}</h2>
-                    <p className="text-gray-300 text-sm mt-1">{selectedItem.description}</p>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white">{selectedItem.name}</h2>
+                    <p className="text-gray-300 text-xs sm:text-sm mt-1">{selectedItem.description}</p>
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Quick Macros */}
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">Nutrition Breakdown</h3>
+                  <h3 className="text-xs sm:text-sm font-bold text-gray-900 uppercase tracking-widest mb-3 sm:mb-4">Nutrition Breakdown</h3>
 
-                  <div className="grid grid-cols-4 gap-4 mb-8">
-                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4 text-center border border-orange-100 dark:border-orange-500/30">
-                      <Flame className="mx-auto text-orange-500 dark:text-orange-400 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.calories}</div>
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Calories</div>
+                  <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
+                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-orange-100 dark:border-orange-500/30">
+                      <Flame className="mx-auto text-orange-500 dark:text-orange-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.calories}</div>
+                      <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Calories</div>
                     </div>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 text-center border border-blue-100 dark:border-blue-500/30">
-                      <Dumbbell className="mx-auto text-blue-500 dark:text-blue-400 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.protein}g</div>
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Protein</div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-blue-100 dark:border-blue-500/30">
+                      <Dumbbell className="mx-auto text-blue-500 dark:text-blue-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.protein}g</div>
+                      <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Protein</div>
                     </div>
-                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-4 text-center border border-emerald-100 dark:border-emerald-500/30">
-                      <Wheat className="mx-auto text-emerald-500 dark:text-emerald-400 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.carbs}g</div>
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Carbs</div>
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-emerald-100 dark:border-emerald-500/30">
+                      <Wheat className="mx-auto text-emerald-500 dark:text-emerald-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.carbs}g</div>
+                      <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Carbs</div>
                     </div>
-                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 text-center border border-purple-100 dark:border-purple-500/30">
-                      <Droplet className="mx-auto text-purple-500 dark:text-purple-400 mb-2" size={24}/>
-                      <div className="font-black text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.fats}g</div>
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Fats</div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-purple-100 dark:border-purple-500/30">
+                      <Droplet className="mx-auto text-purple-500 dark:text-purple-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.fats}g</div>
+                      <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Fats</div>
                     </div>
                   </div>
 
                   {/* Micro Nutrients */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-6">
                     <div>
                       <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest mb-4">Detailed Metrics</h3>
                       <div className="space-y-4">

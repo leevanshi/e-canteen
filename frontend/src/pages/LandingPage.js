@@ -156,26 +156,27 @@ const LandingPage = () => {
       </header>
 
       {/* ================= HERO SECTION ================= */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left Side */}
             <motion.div
               variants={fadeInLeft}
               initial="hidden"
               animate="visible"
-              className="space-y-8"
+              className="space-y-6 lg:space-y-8"
             >
               <motion.div
                 variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: 0.2 }}
-                className="inline-flex items-center gap-2 bg-orange-500/10 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 px-4 py-2 rounded-full text-sm font-medium border border-orange-200 dark:border-orange-500/30"
+                className="inline-flex items-center gap-2 bg-orange-500/10 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium border border-orange-200 dark:border-orange-500/30"
                 style={{ color: '#FF8A3D', backgroundColor: 'rgba(255, 138, 61, 0.1)', borderColor: 'rgba(255, 138, 61, 0.3)' }}
               >
-                <Zap className="w-4 h-4" />
-                Smart Campus Food Ordering
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Smart Campus Food Ordering</span>
+                <span className="sm:hidden">Smart Food Ordering</span>
               </motion.div>
 
               <motion.h1
@@ -183,7 +184,7 @@ const LandingPage = () => {
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: 0.3 }}
-                className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-gray-900 dark:text-white"
+                className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight text-gray-900 dark:text-white"
               >
                 Skip The Queue.
                 <br />
@@ -195,7 +196,7 @@ const LandingPage = () => {
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: 0.4 }}
-                className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed"
+                className="text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed"
               >
                 Pre-order meals, pay with wallet, and collect food instantly from your campus canteen.
               </motion.p>
@@ -205,13 +206,13 @@ const LandingPage = () => {
                 initial="hidden"
                 animate="visible"
                 transition={{ delay: 0.5 }}
-                className="flex flex-col sm:flex-row gap-4"
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4"
               >
                 <Button
                   size="lg"
                   onClick={handleOrderClick}
                   style={{ backgroundColor: '#FF8A3D' }}
-                  className="text-white px-8 py-4 rounded-xl shadow-lg hover:opacity-90 transition-all duration-300"
+                  className="text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl shadow-lg hover:opacity-90 transition-all duration-300 w-full sm:w-auto min-h-[44px]"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -223,7 +224,7 @@ const LandingPage = () => {
                   variant="outline"
                   onClick={() => navigate("/menu")}
                   style={{ borderColor: '#FF8A3D', color: '#FF8A3D' }}
-                  className="hover:bg-orange-50 dark:hover:bg-orange-900/20 px-8 py-4 rounded-xl transition-all duration-300"
+                  className="hover:bg-orange-50 dark:hover:bg-orange-900/20 px-6 sm:px-8 py-3 sm:py-4 rounded-xl transition-all duration-300 w-full sm:w-auto min-h-[44px]"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -237,45 +238,45 @@ const LandingPage = () => {
               variants={fadeInRight}
               initial="hidden"
               animate="visible"
-              className="relative"
+              className="relative order-first lg:order-last"
             >
-              <div className="relative bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-3xl p-8 lg:p-12 backdrop-blur-sm">
+              <div className="relative bg-gradient-to-br from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30 rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 xl:p-12 backdrop-blur-sm">
                 {/* Main Mockup */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl">
-                  <div className="space-y-4">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                    <div className="h-32 bg-gradient-to-br from-orange-200 to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40 rounded-xl"></div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl lg:rounded-2xl p-4 sm:p-6 shadow-2xl">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                    <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    <div className="h-24 sm:h-32 bg-gradient-to-br from-orange-200 to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40 rounded-xl"></div>
                     <div className="flex gap-2">
-                      <div className="h-8 bg-orange-500 rounded-lg flex-1"></div>
-                      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg flex-1"></div>
+                      <div className="h-7 sm:h-8 bg-orange-500 rounded-lg flex-1"></div>
+                      <div className="h-7 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded-lg flex-1"></div>
                     </div>
                   </div>
                 </div>
 
-                {/* Feature Badges */}
-                <div className="absolute -top-2 -right-2 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5" style={{ color: '#FF8A3D' }} />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Live Menu</span>
+                {/* Feature Badges - Hidden on very small screens */}
+                <div className="hidden sm:block absolute -top-2 -right-2 bg-white dark:bg-gray-800 rounded-xl p-2 sm:p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#FF8A3D' }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Live Menu</span>
                   </div>
                 </div>
 
-                <div className="absolute -bottom-2 -left-2 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5" style={{ color: '#FF8A3D' }} />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Fast Pickup</span>
+                <div className="hidden sm:block absolute -bottom-2 -left-2 bg-white dark:bg-gray-800 rounded-xl p-2 sm:p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#FF8A3D' }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">Fast Pickup</span>
                   </div>
                 </div>
 
-                <div className="absolute top-1/2 -right-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                <div className="hidden lg:block absolute top-1/2 -right-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
                   <div className="flex items-center gap-2">
                     <Wallet className="w-5 h-5" style={{ color: '#FF8A3D' }} />
                     <span className="text-sm font-medium text-gray-900 dark:text-white">Digital Wallet</span>
                   </div>
                 </div>
 
-                <div className="absolute top-1/2 -left-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
+                <div className="hidden lg:block absolute top-1/2 -left-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg border border-orange-200 dark:border-orange-500/30">
                   <div className="flex items-center gap-2">
                     <Smartphone className="w-5 h-5" style={{ color: '#FF8A3D' }} />
                     <span className="text-sm font-medium text-gray-900 dark:text-white">Order Tracking</span>
@@ -288,9 +289,9 @@ const LandingPage = () => {
       </section>
 
       {/* ================= TRUST SECTION ================= */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <TrustCard
               icon={Zap}
               title="Instant Ordering"
@@ -316,9 +317,9 @@ const LandingPage = () => {
       </section>
 
       {/* ================= STATS SECTION ================= */}
-      <section ref={statsRef} className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-900 dark:to-gray-800">
+      <section ref={statsRef} className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-900 dark:to-gray-800">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <StatCard icon={TrendingUp} value={stats.orders.toLocaleString()} label="Orders Processed" />
             <StatCard icon={Users} value={stats.students.toLocaleString()} label="Students" />
             <StatCard icon={CheckCircle2} value={`${stats.success}%`} label="Pickup Success" />
@@ -328,24 +329,24 @@ const LandingPage = () => {
       </section>
 
       {/* ================= FEATURES SECTION ================= */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               Why Choose E-Canteen?
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-lg">
+            <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg">
               Modern features for a seamless dining experience
             </p>
           </motion.div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
+
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             <FeatureCard
               icon={Zap}
               title="Fast Ordering"
@@ -366,24 +367,24 @@ const LandingPage = () => {
       </section>
 
       {/* ================= HOW IT WORKS ================= */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white dark:bg-gray-800">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               How It Works
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-lg">
+            <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg">
               Three simple steps to get your food
             </p>
           </motion.div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
+
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             <StepCard
               step="1"
               icon={Menu}
@@ -407,21 +408,21 @@ const LandingPage = () => {
       </section>
 
       {/* ================= TESTIMONIALS ================= */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={fadeInUp}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
               What Students Say
             </h2>
           </motion.div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
+
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             <TestimonialCard
               name="Rahul Sharma"
               text="Saved me 20 minutes every day. No more waiting in queues!"
@@ -442,40 +443,40 @@ const LandingPage = () => {
       </section>
 
       {/* ================= FOOTER ================= */}
-      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-16 px-4 sm:px-6 lg:px-8">
+      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div>
-              <h3 className="text-xl font-bold mb-4">☕ E-Canteen</h3>
-              <p className="text-gray-400 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8 sm:mb-12">
+            <div className="col-span-2 md:col-span-1">
+              <h3 className="text-lg sm:text-xl font-bold mb-4">☕ E-Canteen</h3>
+              <p className="text-gray-400 text-xs sm:text-sm">
                 Smart campus food ordering system
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
+              <h4 className="font-semibold mb-4 text-sm sm:text-base">Quick Links</h4>
+              <ul className="space-y-2 text-gray-400 text-xs sm:text-sm">
                 <li><Link to="/menu" className="hover:text-white">Menu</Link></li>
                 <li><Link to="/orders" className="hover:text-white">My Orders</Link></li>
                 <li><Link to="/wallet" className="hover:text-white">Wallet</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
+              <h4 className="font-semibold mb-4 text-sm sm:text-base">Support</h4>
+              <ul className="space-y-2 text-gray-400 text-xs sm:text-sm">
                 <li><Link to="/login" className="hover:text-white">Login</Link></li>
                 <li><Link to="/join" className="hover:text-white">Register</Link></li>
                 <li><Link to="/forgot-password" className="hover:text-white">Forgot Password</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2 text-gray-400 text-sm">
+              <h4 className="font-semibold mb-4 text-sm sm:text-base">Contact</h4>
+              <ul className="space-y-2 text-gray-400 text-xs sm:text-sm">
                 <li>support@ecanteen.com</li>
                 <li>+91 1234567890</li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
+          <div className="border-t border-gray-800 pt-6 sm:pt-8 text-center text-gray-400 text-xs sm:text-sm">
             © 2026 E-Canteen. All rights reserved.
           </div>
         </div>
