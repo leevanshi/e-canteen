@@ -1,13 +1,17 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
 
 const MobileCartBar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { cartCount, totalPrice } = useCart();
 
-  // Only show on mobile when cart has items
+  // Only show on mobile when cart has items AND user is on cart page
   if (cartCount === 0) return null;
+
+  // Hide on all pages except /cart
+  if (location.pathname !== "/cart") return null;
 
   return (
     <div 
