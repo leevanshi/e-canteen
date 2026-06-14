@@ -196,24 +196,14 @@ const AdminOrdersPage = () => {
 
   }, []);
 
-  /* ================= SORT (FIFO) ================= */
+  /* ================= SORT (STRICT FIFO) ================= */
 
   const sortedOrders = useMemo(() => {
 
+    // STRICT FIFO: Sort by createdAt ascending only
+    // Oldest order always appears first, regardless of status
     return [...orders].sort((a, b) => {
-
-      const statusA = a?.status?.toLowerCase();
-      const statusB = b?.status?.toLowerCase();
-
-      const diff =
-        (STATUS_PRIORITY[statusA] || 99) -
-        (STATUS_PRIORITY[statusB] || 99);
-
-      if (diff !== 0) return diff;
-
-      // FIFO: Oldest created_at comes FIRST
       return new Date(a.created_at) - new Date(b.created_at);
-
     });
 
   }, [orders]);

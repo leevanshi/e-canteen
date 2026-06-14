@@ -512,6 +512,12 @@ async def reset_password(data: ResetPasswordSchema):
     if not user:
         raise HTTPException(404, "User not found")
 
+    # SECURITY: Prevent admin password reset
+    user_role = normalize_role(user.get("role"))
+    if user_role == "admin":
+        logger.warning(f"Attempted password reset for admin account: {email}")
+        raise HTTPException(403, "Admin password cannot be reset through this method. Contact system administrator.")
+
     users_collection.update_one(
         {"email": email},
         {"$set": {"password": hash_password(data.password)}}

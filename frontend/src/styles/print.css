@@ -1,0 +1,104 @@
+/* Thermal Printer Print Styles - 80mm Width */
+
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    width: 80mm;
+  }
+
+  .receipt {
+    width: 80mm;
+    margin: 0;
+    padding: 3mm;
+    box-sizing: border-box;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* Hide all elements except receipt during print */
+  body > *:not(.receipt) {
+    display: none !important;
+  }
+
+  /* Ensure receipt is visible */
+  .receipt {
+    display: block !important;
+  }
+
+  /* Remove any shadows or borders that might affect printing */
+  .receipt * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ensure text is black for thermal printing */
+  .receipt,
+  .receipt * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Remove background colors */
+  .receipt {
+    background: white !important;
+  }
+
+  /* Compact spacing for thermal printing */
+  .receipt p,
+  .receipt div {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Ensure proper line breaks */
+  .receipt {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Kitchen Token Print Styles */
+@page kitchen {
+  size: 80mm auto;
+  margin: 0;
+}
+
+@media print {
+  .kitchen-token {
+    width: 80mm;
+    margin: 0;
+    padding: 5mm;
+    box-sizing: border-box;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .kitchen-token-id {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .kitchen-items {
+    font-size: 14px;
+    margin: 10px 0;
+    text-align: left;
+  }
+
+  .kitchen-footer {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 15px;
+  }
+}

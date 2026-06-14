@@ -1340,18 +1340,18 @@ const MenuPage = () => {
                   {/* Glass Overlay on Hover */}
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
                     <div className="bg-white/90 text-gray-900 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
-                      <Info size={12} sm:size={14}/> View Nutrition
+                      <Info className="w-3 h-3 sm:w-4 sm:h-4" /> View Nutrition
                     </div>
                   </div>
                   
                   {/* Top Badges */}
                   <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-2">
                     <div className={`px-2 sm:px-2.5 py-1 rounded-lg border backdrop-blur-md text-[10px] sm:text-xs font-bold flex items-center gap-1 shadow-sm ${scoreClass}`}>
-                      <Activity size={10} sm:size={12} /> {nut.health_score ?? 0}
+                      <Activity className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {nut.health_score ?? 0}
                     </div>
                   </div>
                   <button className="absolute top-2 sm:top-3 right-2 sm:right-3 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/80 backdrop-blur-md text-gray-400 flex items-center justify-center hover:text-red-500 hover:bg-white shadow-sm transition-colors">
-                    <Heart size={14} sm:size={16} />
+                    <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 </div>
 
@@ -1363,7 +1363,7 @@ const MenuPage = () => {
                   
                   <div className="mt-3 sm:mt-4 flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50 rounded-lg sm:rounded-xl border border-gray-100">
                     <div className="text-center">
-                      <div className="text-[10px] sm:text-xs font-bold text-orange-500 flex items-center gap-0.5 justify-center"><Flame size={10} sm:size={12}/>{nut.calories ?? 0}</div>
+                      <div className="text-[10px] sm:text-xs font-bold text-orange-500 flex items-center gap-0.5 justify-center"><Flame className="w-2.5 h-2.5 sm:w-3 sm:h-3"/>{nut.calories ?? 0}</div>
                       <div className="text-[8px] sm:text-[9px] text-gray-400 uppercase tracking-wide">Kcal</div>
                     </div>
                     <div className="w-px h-4 sm:h-6 bg-gray-200"></div>
@@ -1386,16 +1386,16 @@ const MenuPage = () => {
                         onClick={(e) => { e.stopPropagation(); addToCart(item); toast.success(`${item.name} added`); }}
                         className="bg-gray-900 text-white p-2 sm:p-2.5 rounded-lg sm:rounded-xl hover:bg-orange-500 hover:shadow-lg hover:shadow-orange-500/20 transition-all group/btn min-h-[36px] sm:min-h-[40px]"
                       >
-                        <Plus size={16} sm:size={20} className="group-hover/btn:rotate-90 transition-transform duration-300" />
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5 group-hover/btn:rotate-90 transition-transform duration-300" />
                       </button>
                     ) : (
                       <div className="flex items-center gap-2 sm:gap-3 bg-gray-100 rounded-lg sm:rounded-xl p-1 border border-gray-200">
                         <button onClick={(e) => { e.stopPropagation(); decreaseQty(id); }} className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-red-500 transition-colors">
-                          <Minus size={14} sm:size={16} />
+                          <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                         <span className="font-bold text-xs sm:text-sm w-3 sm:w-4 text-center">{quantity}</span>
                         <button onClick={(e) => { e.stopPropagation(); addToCart(item); }} className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-green-500 transition-colors">
-                          <Plus size={14} sm:size={16} />
+                          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
                     )}
@@ -1409,7 +1409,7 @@ const MenuPage = () => {
         {filteredAndSortedMenu.length === 0 && (
           <div className="text-center py-16 sm:py-20">
             <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gray-100 text-gray-400 mb-4">
-              <Search size={20} sm:size={24} />
+              <Search className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <h3 className="text-base sm:text-lg font-bold text-gray-900">No smart meals found</h3>
             <p className="text-gray-500 mt-1 text-sm">Try adjusting your search or filters.</p>
@@ -1492,7 +1492,7 @@ const MenuPage = () => {
             >
               {/* Close btn */}
               <button onClick={() => setSelectedItem(null)} className="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 w-9 h-9 sm:w-10 sm:h-10 bg-black/40 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/60 transition-colors">
-                <X size={18} sm:size={20} />
+                <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
               </button>
 
               <div className="overflow-y-auto overflow-x-hidden scrollbar-hide">
@@ -1506,7 +1506,7 @@ const MenuPage = () => {
                         {getScoreLabel(selectedItem.nutrition?.health_score)} ({selectedItem.nutrition?.health_score}/100)
                       </span>
                       {selectedItem.nutrition?.protein > 20 && (
-                        <span className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1"><Dumbbell size={10} sm:size={12}/> High Protein</span>
+                        <span className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1"><Dumbbell className="w-2.5 h-2.5 sm:w-3 sm:h-3"/> High Protein</span>
                       )}
                     </div>
                     <h2 className="text-2xl sm:text-3xl font-black text-white">{selectedItem.name}</h2>
@@ -1520,22 +1520,22 @@ const MenuPage = () => {
 
                   <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
                     <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-orange-100 dark:border-orange-500/30">
-                      <Flame className="mx-auto text-orange-500 dark:text-orange-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <Flame className="mx-auto text-orange-500 dark:text-orange-400 mb-1 sm:mb-2 w-4 h-4 sm:w-6 sm:h-6" />
                       <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.calories}</div>
                       <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Calories</div>
                     </div>
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-blue-100 dark:border-blue-500/30">
-                      <Dumbbell className="mx-auto text-blue-500 dark:text-blue-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <Dumbbell className="mx-auto text-blue-500 dark:text-blue-400 mb-1 sm:mb-2 w-4 h-4 sm:w-6 sm:h-6" />
                       <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.protein}g</div>
                       <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Protein</div>
                     </div>
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-emerald-100 dark:border-emerald-500/30">
-                      <Wheat className="mx-auto text-emerald-500 dark:text-emerald-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <Wheat className="mx-auto text-emerald-500 dark:text-emerald-400 mb-1 sm:mb-2 w-4 h-4 sm:w-6 sm:h-6" />
                       <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.carbs}g</div>
                       <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Carbs</div>
                     </div>
                     <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl sm:rounded-2xl p-2 sm:p-4 text-center border border-purple-100 dark:border-purple-500/30">
-                      <Droplet className="mx-auto text-purple-500 dark:text-purple-400 mb-1 sm:mb-2" size={16} sm:size={24}/>
+                      <Droplet className="mx-auto text-purple-500 dark:text-purple-400 mb-1 sm:mb-2 w-4 h-4 sm:w-6 sm:h-6" />
                       <div className="font-black text-base sm:text-xl text-gray-900 dark:text-white">{selectedItem.nutrition?.fats}g</div>
                       <div className="text-[8px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Fats</div>
                     </div>

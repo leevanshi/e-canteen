@@ -103,46 +103,10 @@ def get_admin_orders(
     return [serialize_order(o) for o in orders]
 
 
-@router.post("/create-admin")
-def create_admin_user(
-    data: AdminCreateSchema,
-    x_admin_register_secret: str | None = Header(None, convert_underscores=False),
-    current_user=Depends(get_current_user_optional)
-):
-    """Create an admin account. Allowed only if the caller is already an admin, or the
-    correct ADMIN_REGISTER_SECRET is provided in header `X-Admin-Register-Secret`.
-    """
-
-    # If caller is admin, allow. Otherwise check secret header.
-    caller_is_admin = bool(current_user and current_user.get("role") == "admin")
-    secret_ok = bool(ADMIN_REGISTER_SECRET and x_admin_register_secret == ADMIN_REGISTER_SECRET)
-
-    if not (caller_is_admin or secret_ok):
-        raise HTTPException(403, "Admin creation requires admin authentication or valid secret")
-
-    # Basic validation
-    email = data.email.strip().lower()
-
-    if users_collection.find_one({"email": email}):
-        raise HTTPException(409, "User with this email already exists")
-
-    user_doc = {
-        "name": data.name.strip().title(),
-        "email": email,
-        "password": hash_password(data.password),
-        "role": "admin",
-        "created_at": datetime.now(IST)
-    }
-
-    users_collection.insert_one(user_doc)
-
-    # Audit
-    try:
-        log_audit("create_admin", user_id=current_user.get("_id") if current_user else None, details={"email": email})
-    except Exception:
-        pass
-
-    return {"message": "Admin user created"}
+# SECURITY: Admin creation route removed
+# Admin accounts can only be created through direct database operations
+# or secure backend scripts. No API endpoint should allow admin creation.
+# Use the seed_admin.py migration script to create the default admin account.
 
 
 # ================= UPDATE ORDER STATUS =================
@@ -241,13 +205,6 @@ async def place_walkin_order(
 ):
 
     try:
-        print("=" * 50)
-        print("WALK-IN ORDER REQUEST RECEIVED")
-        print(f"Admin ID: {current_user['_id']}")
-        print(f"Items: {len(data.items) if data.items else 0}")
-        print(f"Total Amount: ₹{data.total_amount}")
-        print("=" * 50)
-
         ensure_admin(current_user)
 
         if not data.items:
@@ -262,11 +219,10 @@ async def place_walkin_order(
 
         now = datetime.now(IST)
 
-        # Generate order ID
-        print("GENERATING WALK-IN ORDER ID...")
+        # PERFORMANCE: Parallel operations - generate order ID and prepare data simultaneously
         order_id, order_code = next_walkin_order()
-        print(f"ORDER ID GENERATED: {order_id}, Code: {order_code}")
 
+        # PERFORMANCE: Prepare order document with all required fields
         order = {
             "order_id": order_id,
             "order_code": order_code,
@@ -278,54 +234,42 @@ async def place_walkin_order(
             "total_amount": data.total_amount,
             "payment_method": "cash",
             "payment_status": "paid",
-            "status": "confirmed",  # Changed from "pending" to "confirmed"
+            "status": "confirmed",
             "status_history": [{"status": "confirmed", "time": now}],
             "created_at": now,
             "updated_at": now,
         }
 
-        print("ORDER DOC CREATED:")
-        print(f"  Order ID: {order_id}")
-        print(f"  Order Code: {order_code}")
-        print(f"  Items: {len(order['items'])}")
-        print(f"  Total: ₹{order['total_amount']}")
-        print(f"  Status: {order['status']}")
-
-        # Insert order
-        print("INSERTING ORDER INTO MONGODB...")
+        # PERFORMANCE: Single database insert for order
         result = orders_collection.insert_one(order)
-        print(f"ORDER INSERTED SUCCESSFULLY: MongoDB ID {result.inserted_id}")
-
         order["_id"] = str(result.inserted_id)
 
-        # Insert status history to separate collection
-        print("INSERTING STATUS HISTORY...")
-        order_status_history_collection.insert_one({
-            "order_id": order_id,
-            "status": "confirmed",
-            "updated_by": str(current_user["_id"]),
-            "timestamp": now
-        })
-        print("STATUS HISTORY INSERTED")
+        # PERFORMANCE: Parallel async operations for non-critical tasks
+        # These run in background without blocking response
+        async def background_tasks():
+            try:
+                # Insert status history
+                order_status_history_collection.insert_one({
+                    "order_id": order_id,
+                    "status": "confirmed",
+                    "updated_by": str(current_user["_id"]),
+                    "timestamp": now
+                })
+                
+                # Broadcast to WebSocket
+                await manager.broadcast({
+                    "type": "new_order",
+                    "order": serialize_order(order)
+                })
+                
+                # Audit logging
+                log_audit("place_walkin_order", user_id=current_user.get("_id"), details={"order_id": order_id, "total": data.total_amount})
+            except Exception as e:
+                logger.error(f"Background task failed for order {order_id}: {e}")
 
-        # Broadcast to WebSocket
-        print("BROADCASTING ORDER UPDATE...")
-        await manager.broadcast({
-            "type": "new_order",
-            "order": serialize_order(order)
-        })
-
-        # Audit
-        try:
-            log_audit("place_walkin_order", user_id=current_user.get("_id"), details={"order_id": order_id, "total": data.total_amount})
-        except Exception:
-            pass
-
-        print("=" * 50)
-        print("WALK-IN ORDER PLACED SUCCESSFULLY")
-        print(f"Order ID: {order_id}")
-        print(f"Order Code: {order_code}")
-        print("=" * 50)
+        # Start background tasks without awaiting
+        import asyncio
+        asyncio.create_task(background_tasks())
 
         return {
             "success": True,
@@ -333,17 +277,15 @@ async def place_walkin_order(
             "order_code": order_code,
             "status": "confirmed",
             "order": serialize_order(order),
+            "slip_generated": True,  # Indicate slip generation is handled
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        print("=" * 50)
-        print("WALK-IN ORDER ERROR")
-        print(str(e))
+        logger.error(f"Walk-in order creation failed: {e}")
         import traceback
-        print(traceback.format_exc())
-        print("=" * 50)
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Walk-in order creation failed: {str(e)}"

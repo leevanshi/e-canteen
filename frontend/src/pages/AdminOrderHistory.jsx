@@ -121,10 +121,12 @@ const AdminOrderHistory = () => {
         ? res.data
         : [];
 
+      // STRICT FIFO: Sort by createdAt ascending only
+      // Oldest order always appears first, regardless of status
       const sorted = fetchedOrders.sort((a, b) => {
         const dateA = new Date(a.created_at || 0).getTime();
         const dateB = new Date(b.created_at || 0).getTime();
-        return dateB - dateA;
+        return dateA - dateB; // Ascending (oldest first)
       });
 
       setOrders(sorted);

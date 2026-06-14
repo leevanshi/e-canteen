@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Loader2, KeyRound, ShieldCheck, Lock, ArrowRight, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Loader2, KeyRound, ShieldCheck, Lock, ArrowRight, ArrowLeft, AlertCircle } from "lucide-react";
 import API from "../api";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { formatApiError, sanitizeOtp } from "../utils/formatApiError";
+import { useAuth } from "../context/AuthContext";
 
 /* ================= ANIMATION VARIANTS ================= */
 const slideIn = {
@@ -54,6 +55,7 @@ const StepIndicator = ({ step }) => (
 /* ================= COMPONENT ================= */
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
 
   const [step, setStep]               = useState(1);
   const [email, setEmail]             = useState("");
@@ -63,6 +65,43 @@ const ForgotPasswordPage = () => {
   const [loading, setLoading]         = useState(false);
   const [showPwd, setShowPwd]         = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // SECURITY: Prevent admin users from accessing password reset
+  useEffect(() => {
+    if (!authLoading && user?.role === "admin") {
+      toast.error("Admin password cannot be reset through this page. Contact system administrator.");
+      navigate("/admin/dashboard");
+    }
+  }, [authLoading, user, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user?.role === "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-4">
+          <AlertCircle size={64} className="mx-auto mb-4 text-red-500" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600 mb-6">Admin password cannot be reset through this page. Contact system administrator.</p>
+          <button
+            onClick={() => navigate("/admin/dashboard")}
+            className="px-6 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   /* --- Send OTP (checks email is registered) --- */
   const sendOtp = async () => {

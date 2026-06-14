@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { formatApiError } from "../utils/formatApiError";
 import { Search, Plus, Minus, Printer, Store } from "lucide-react";
-import OrderReceipt from "../components/OrderReceipt";
+import ThermalReceipt from "../components/ThermalReceipt";
 
 const formatCurrency = (num) => `₹${Number(num || 0).toFixed(0)}`;
 
@@ -51,11 +51,32 @@ const AdminCounterMenu = () => {
     try {
       const res = await API.get("/menu");
       const data = Array.isArray(res?.data) ? res.data : [];
-      setMenu(data.map((item, idx) => ({
+      
+      // Add meal options for walk-in orders
+      const mealOptions = [
+        {
+          _id: "meal-full",
+          name: "Full Meal",
+          price: 100,
+          category: "Meals",
+          description: "Complete meal with rice, dal, vegetable, and roti",
+          available: true,
+        },
+        {
+          _id: "meal-half",
+          name: "Half Meal",
+          price: 50,
+          category: "Meals",
+          description: "Half portion meal with rice and dal",
+          available: true,
+        },
+      ];
+      
+      setMenu([...mealOptions, ...data.map((item, idx) => ({
         ...item,
         _id: item._id || item.id || `item-${idx}`,
         price: Number(item.price || 0),
-      })));
+      }))]);
     } catch (err) {
       toast.error(formatApiError(err?.response?.data?.detail, "Failed to load menu"));
     }
@@ -237,7 +258,7 @@ const AdminCounterMenu = () => {
       </div>
 
       {showReceipt && lastOrder && (
-        <OrderReceipt
+        <ThermalReceipt
           order={lastOrder}
           onClose={() => setShowReceipt(false)}
           onPrint={() => setShowReceipt(false)}

@@ -14,117 +14,127 @@ def _start_of_month(now: datetime) -> datetime:
 
 
 def get_analytics_data() -> dict:
-    """Get comprehensive analytics data."""
+    """Get comprehensive analytics data - Optimized with single queries."""
     now = datetime.now(IST)
     today_start = _start_of_day(now)
     month_start = _start_of_month(now)
+    thirty_days_ago = today_start - timedelta(days=30)
+    seven_days_ago = today_start - timedelta(days=7)
     
-    # Revenue trend (last 30 days)
+    # OPTIMIZED: Single query for revenue and orders trend (last 30 days)
+    daily_stats_cursor = orders_collection.aggregate([
+        {
+            "$match": {
+                "created_at": {"$gte": thirty_days_ago, "$lt": today_start + timedelta(days=1)},
+            }
+        },
+        {
+            "$group": {
+                "_id": {
+                    "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
+                },
+                "revenue": {
+                    "$sum": {
+                        "$cond": [
+                            {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                            "$total_amount",
+                            0,
+                        ]
+                    }
+                },
+                "orders": {"$sum": 1},
+            }
+        },
+        {"$sort": {"_id.date": 1}},
+    ])
+    
+    daily_stats = {doc["_id"]["date"]: doc for doc in daily_stats_cursor}
+    
+    # Build revenue and orders trend from single query result
     revenue_trend = []
-    for offset in range(29, -1, -1):
-        day = today_start - timedelta(days=offset)
-        next_day = day + timedelta(days=1)
-        
-        day_cursor = orders_collection.aggregate([
-            {
-                "$match": {
-                    "payment_status": "paid",
-                    "status": "completed",
-                    "created_at": {"$gte": day, "$lt": next_day},
-                }
-            },
-            {"$group": {"_id": None, "total": {"$sum": "$total_amount"}, "count": {"$sum": 1}}},
-        ])
-        day_result = next(day_cursor, {})
-        revenue_trend.append({
-            "date": day.strftime("%Y-%m-%d"),
-            "revenue": int(day_result.get("total", 0) or 0),
-            "orders": day_result.get("count", 0) or 0,
-        })
-    
-    # Orders trend (last 30 days)
     orders_trend = []
     for offset in range(29, -1, -1):
-        day = today_start - timedelta(days=offset)
-        next_day = day + timedelta(days=1)
-        
-        day_cursor = orders_collection.aggregate([
-            {
-                "$match": {
-                    "created_at": {"$gte": day, "$lt": next_day},
-                }
-            },
-            {"$group": {"_id": None, "count": {"$sum": 1}}},
-        ])
-        day_result = next(day_cursor, {})
+        day = (today_start - timedelta(days=offset)).strftime("%Y-%m-%d")
+        stats = daily_stats.get(day, {"revenue": 0, "orders": 0})
+        revenue_trend.append({
+            "date": day,
+            "revenue": int(stats.get("revenue", 0)),
+            "orders": stats.get("orders", 0),
+        })
         orders_trend.append({
-            "date": day.strftime("%Y-%m-%d"),
-            "orders": day_result.get("count", 0) or 0,
+            "date": day,
+            "orders": stats.get("orders", 0),
         })
     
-    # Peak order hours (last 7 days)
-    peak_hours = []
-    for hour in range(24):
-        hour_cursor = orders_collection.aggregate([
-            {
-                "$match": {
-                    "created_at": {"$gte": today_start - timedelta(days=7)},
-                    "$expr": {"$eq": [{"$hour": "$created_at"}, hour]},
-                }
-            },
-            {"$group": {"_id": None, "count": {"$sum": 1}}},
-        ])
-        hour_result = next(hour_cursor, {})
-        peak_hours.append({
-            "hour": f"{hour:02d}:00",
-            "orders": hour_result.get("count", 0) or 0,
-        })
+    # OPTIMIZED: Single query for peak hours (last 7 days)
+    peak_hours_cursor = orders_collection.aggregate([
+        {
+            "$match": {
+                "created_at": {"$gte": seven_days_ago},
+            }
+        },
+        {
+            "$group": {
+                "_id": {"$hour": "$created_at"},
+                "count": {"$sum": 1},
+            }
+        },
+        {"$sort": {"_id": 1}},
+    ])
     
-    # Daily revenue (last 7 days)
-    daily_revenue = []
-    for offset in range(6, -1, -1):
-        day = today_start - timedelta(days=offset)
-        next_day = day + timedelta(days=1)
-        
-        day_cursor = orders_collection.aggregate([
-            {
-                "$match": {
-                    "payment_status": "paid",
-                    "status": "completed",
-                    "created_at": {"$gte": day, "$lt": next_day},
-                }
-            },
-            {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}},
-        ])
-        day_result = next(day_cursor, {})
-        daily_revenue.append({
-            "date": day.strftime("%a"),
-            "revenue": int(day_result.get("total", 0) or 0),
-        })
+    peak_hours_map = {doc["_id"]: doc["count"] for doc in peak_hours_cursor}
+    peak_hours = [
+        {"hour": f"{hour:02d}:00", "orders": peak_hours_map.get(hour, 0)}
+        for hour in range(24)
+    ]
     
-    # Monthly revenue (last 6 months)
-    monthly_revenue = []
-    for offset in range(5, -1, -1):
-        month = now.replace(day=1) - timedelta(days=offset * 30)
-        month_end = (month + timedelta(days=32)).replace(day=1)
-        
-        month_cursor = orders_collection.aggregate([
-            {
-                "$match": {
-                    "payment_status": "paid",
-                    "status": "completed",
-                    "created_at": {"$gte": month, "$lt": month_end},
-                }
-            },
-            {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}},
-        ])
-        month_result = next(month_cursor, {})
-        monthly_revenue.append({
-            "month": month.strftime("%b %Y"),
-            "revenue": int(month_result.get("total", 0) or 0),
-        })
+    # OPTIMIZED: Single query for daily revenue (last 7 days)
+    daily_revenue_cursor = orders_collection.aggregate([
+        {
+            "$match": {
+                "payment_status": "paid",
+                "status": "completed",
+                "created_at": {"$gte": seven_days_ago},
+            }
+        },
+        {
+            "$group": {
+                "_id": {"$dateToString": {"format": "%a", "date": "$created_at"}},
+                "revenue": {"$sum": "$total_amount"},
+            }
+        },
+    ])
     
-    # Top selling products
+    daily_revenue_map = {doc["_id"]: int(doc["revenue"]) for doc in daily_revenue_cursor}
+    daily_revenue = [
+        {"date": (today_start - timedelta(days=offset)).strftime("%a"), "revenue": daily_revenue_map.get((today_start - timedelta(days=offset)).strftime("%a"), 0)}
+        for offset in range(6, -1, -1)
+    ]
+    
+    # OPTIMIZED: Single query for monthly revenue (last 6 months)
+    monthly_revenue_cursor = orders_collection.aggregate([
+        {
+            "$match": {
+                "payment_status": "paid",
+                "status": "completed",
+                "created_at": {"$gte": month_start - timedelta(days=180)},
+            }
+        },
+        {
+            "$group": {
+                "_id": {"$dateToString": {"format": "%b %Y", "date": "$created_at"}},
+                "revenue": {"$sum": "$total_amount"},
+            }
+        },
+        {"$sort": {"_id": 1}},
+    ])
+    
+    monthly_revenue = [
+        {"month": doc["_id"], "revenue": int(doc["revenue"])}
+        for doc in monthly_revenue_cursor
+    ]
+    
+    # Top selling products (already optimized)
     top_products_cursor = orders_collection.aggregate([
         {"$unwind": "$items"},
         {
@@ -138,15 +148,16 @@ def get_analytics_data() -> dict:
         {"$limit": 10},
     ])
     
-    top_products = []
-    for doc in top_products_cursor:
-        top_products.append({
+    top_products = [
+        {
             "name": doc["_id"],
             "total_sold": doc["total_sold"],
             "revenue": int(doc["revenue"]),
-        })
+        }
+        for doc in top_products_cursor
+    ]
     
-    # Walk-in vs Online comparison
+    # Walk-in vs Online comparison (already optimized)
     comparison_cursor = orders_collection.aggregate([
         {
             "$match": {
@@ -170,13 +181,13 @@ def get_analytics_data() -> dict:
         },
     ])
     
-    comparison = {}
-    for doc in comparison_cursor:
-        order_type = doc.get("_id", "unknown")
-        comparison[order_type] = {
+    comparison = {
+        doc.get("_id", "unknown"): {
             "count": doc["count"],
             "revenue": int(doc["revenue"]),
         }
+        for doc in comparison_cursor
+    }
     
     return {
         "revenue_trend": revenue_trend,

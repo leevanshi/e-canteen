@@ -258,6 +258,41 @@ def init_indexes():
         background=True
     )
 
+    # PERFORMANCE: Additional indexes for analytics queries
+    safe_create_index(
+        orders_collection,
+        [("payment_status", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)],
+        background=True
+    )
+
+    safe_create_index(
+        orders_collection,
+        [("created_at", DESCENDING), ("payment_status", ASCENDING)],
+        background=True
+    )
+
+    # PERFORMANCE: Index for wallet transaction queries
+    safe_create_index(
+        wallet_txn_collection,
+        [("created_at", DESCENDING)],
+        background=True
+    )
+
+    # PERFORMANCE: Index for user queries by email
+    safe_create_index(
+        users_collection,
+        [("email", ASCENDING)],
+        unique=True,
+        background=True
+    )
+
+    # PERFORMANCE: Index for user queries by role
+    safe_create_index(
+        users_collection,
+        [("role", ASCENDING)],
+        background=True
+    )
+
     logger.info("✅ MongoDB indexes initialized")
 
 # =========================

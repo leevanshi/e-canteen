@@ -178,7 +178,13 @@ const OrdersPage = () => {
     console.log("Completed orders:", completed);
     console.log("Current tab:", tab);
 
-    return tab === "active" ? active : completed;
+    // STRICT FIFO: Sort by createdAt ascending only
+    // Oldest order always appears first, regardless of status
+    const sorted = (tab === "active" ? active : completed).sort((a, b) => {
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
+
+    return sorted;
 
   }, [orders, tab]);
 

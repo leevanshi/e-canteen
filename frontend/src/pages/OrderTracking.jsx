@@ -148,7 +148,7 @@ const OrderTracking = () => {
                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${
                     isCompleted ? "bg-green-500 text-white" : isActive ? "bg-indigo-500 text-white" : "bg-gray-200 text-gray-400"
                   }`}>
-                    <Icon size={20} className="sm:size-24" />
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
                   <div className="flex-1">
                     <p className={`font-semibold text-sm sm:text-base ${isActive ? "text-indigo-700" : isCompleted ? "text-green-700" : "text-gray-600"}`}>
@@ -165,7 +165,7 @@ const OrderTracking = () => {
                     )}
                   </div>
                   {isCompleted && (
-                    <CheckCircle size={20} className="sm:size-24 text-green-500" />
+                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
                   )}
                 </motion.div>
               );
@@ -213,7 +213,7 @@ const OrderTracking = () => {
         {order.status !== "completed" && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 sm:p-6 text-white">
             <div className="flex items-center gap-3">
-              <Clock size={20} className="sm:size-24" />
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
               <div>
                 <p className="font-semibold text-sm sm:text-base">Estimated Preparation Time</p>
                 <p className="text-xs sm:text-sm opacity-90">15-20 minutes</p>
@@ -230,7 +230,7 @@ const OrderTracking = () => {
               transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
               className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4"
             >
-              <Flame size={80} className="sm:size-96" />
+              <Flame className="w-20 h-20 sm:w-24 sm:h-24" />
             </motion.div>
             <h3 className="text-xl sm:text-2xl font-bold mb-2">Cooking in Progress</h3>
             <p className="opacity-90 text-sm sm:text-base">Your food is being prepared with care</p>
@@ -252,7 +252,7 @@ const OrderTracking = () => {
               transition={{ repeat: Infinity, duration: 1.5 }}
               className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4"
             >
-              <Box size={80} className="sm:size-96" />
+              <Box className="w-20 h-20 sm:w-24 sm:h-24" />
             </motion.div>
             <h3 className="text-xl sm:text-2xl font-bold mb-2">Packaging Your Order</h3>
             <p className="opacity-90 text-sm sm:text-base">Almost ready for pickup</p>
@@ -267,7 +267,7 @@ const OrderTracking = () => {
               transition={{ repeat: Infinity, duration: 1 }}
               className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4"
             >
-              <CheckCircle size={80} className="sm:size-96" />
+              <CheckCircle className="w-20 h-20 sm:w-24 sm:h-24" />
             </motion.div>
             <h3 className="text-xl sm:text-2xl font-bold mb-2">Ready for Pickup!</h3>
             <p className="opacity-90 text-sm sm:text-base">Please collect your order from the counter</p>
