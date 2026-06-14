@@ -64,14 +64,11 @@ def admin_add_money(
     if not user:
         raise HTTPException(404, "User not found")
 
-    now = datetime.now(IST)
-
-    # USE WALLET SERVICE
+    # USE WALLET SERVICE (now handles IST timezone internally)
     new_balance = credit_wallet(
         data.user_id,
         data.amount,
         current_user["_id"],
-        now,
         description=f"Wallet top-up by {current_user.get('name', 'Admin')}"
     )
 

@@ -171,6 +171,9 @@ const AdminWalletPage = () => {
         [userId]: ""
       }));
 
+      // Refresh analytics after adding funds
+      fetchAnalytics();
+
     } catch (err) {
 
       console.error("Add money error:", err);

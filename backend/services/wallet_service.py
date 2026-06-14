@@ -1,10 +1,15 @@
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pymongo import ReturnDocument
 
 from database import wallet_collection, wallet_txn_collection, users_collection
 
-def credit_wallet(user_id, amount, admin_id, now, description="Wallet top-up by admin"):
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def credit_wallet(user_id, amount, admin_id, description="Wallet top-up by admin"):
+    
+    # Use IST timezone for consistent date calculations
+    now = datetime.now(IST)
 
     # Get current balance before transaction
     wallet = wallet_collection.find_one({"user_id": ObjectId(user_id)})
@@ -33,11 +38,11 @@ def credit_wallet(user_id, amount, admin_id, now, description="Wallet top-up by 
 
     # Create transaction history entry
     wallet_txn_collection.insert_one({
-        "user_id": ObjectId(user_id),
+        "user_id": str(user_id),  # Store as string for consistency
         "amount": amount,
         "type": "credit",
         "source": "admin",
-        "admin_id": ObjectId(admin_id),
+        "admin_id": str(admin_id),  # Store as string for consistency
         "admin_name": admin_name,
         "description": description,
         "previous_balance": previous_balance,
@@ -49,7 +54,10 @@ def credit_wallet(user_id, amount, admin_id, now, description="Wallet top-up by 
     return new_balance
 
 
-def debit_wallet(user_id, amount, order_id, now, description="Order payment"):
+def debit_wallet(user_id, amount, order_id, description="Order payment"):
+    
+    # Use IST timezone for consistent date calculations
+    now = datetime.now(IST)
 
     # Get current balance before transaction
     wallet = wallet_collection.find_one({"user_id": ObjectId(user_id)})
@@ -78,7 +86,7 @@ def debit_wallet(user_id, amount, order_id, now, description="Order payment"):
 
     # Create transaction history entry
     wallet_txn_collection.insert_one({
-        "user_id": ObjectId(user_id),
+        "user_id": str(user_id),  # Store as string for consistency
         "amount": amount,
         "type": "debit",
         "source": "order",

@@ -46,6 +46,14 @@ allowed_origins = [
     "http://127.0.0.1:3000",
 ]
 
+# Also allow from environment variable if set
+if os.getenv("FRONTEND_URL"):
+    allowed_origins.append(os.getenv("FRONTEND_URL"))
+
+if os.getenv("CORS_ORIGINS"):
+    additional_origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS").split(",")]
+    allowed_origins.extend(additional_origins)
+
 logger.info("CORS allowed origins: %s", allowed_origins)
 
 app.add_middleware(
@@ -200,7 +208,8 @@ async def admin_path_guard(request: Request, call_next):
     if path == "/health" or path == "/":
         return await call_next(request)
 
-    if path.startswith("/admin"):
+    # Check for admin routes (including wallet/admin)
+    if path.startswith("/admin") or path.startswith("/wallet/admin"):
         auth_header = request.headers.get("authorization")
         secret_header = request.headers.get("x-admin-register-secret")
         client_ip = get_client_ip(request)

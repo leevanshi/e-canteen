@@ -41,8 +41,19 @@ const clearAuth = () => {
   } catch {}
 };
 
-const isAuthRoute = (url = "") =>
-  typeof url === "string" && url.includes("/auth/");
+const isAuthRoute = (url = "") => {
+  if (typeof url !== "string") return false;
+  const publicAuthRoutes = [
+    "/auth/send-otp",
+    "/auth/send-reset-otp",
+    "/auth/verify-otp",
+    "/auth/register",
+    "/auth/login",
+    "/auth/reset-password",
+    "/auth/forgot-password"
+  ];
+  return publicAuthRoutes.some(route => url.includes(route));
+};
 
 /* =========================
    REQUEST INTERCEPTOR
