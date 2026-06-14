@@ -10,6 +10,7 @@ from typing import List
 import os
 import asyncio
 from services.audit import log_audit
+from middleware.security_headers import SecurityHeadersMiddleware
 
 
 # ================= ENV =================
@@ -56,6 +57,9 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=600,
 )
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.middleware("http")
