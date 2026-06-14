@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Wallet, RefreshCw, ArrowUpRight, ArrowDown, User, Mail, DollarSign, AlertCircle } from "lucide-react";
+import { Search, Wallet, RefreshCw, ArrowUpRight, ArrowDown, User, Mail, DollarSign, AlertCircle, TrendingUp, Calendar, X, Trash2 } from "lucide-react";
 
-import { getUsers, adminAddMoney } from "../api";
+import { getUsers, adminAddMoney, getWalletAnalytics, deleteUser } from "../api";
 import { formatApiError } from "../utils/formatApiError";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -24,6 +24,11 @@ const AdminWalletPage = () => {
   const [loading, setLoading] = useState(true);
   const [updatingUser, setUpdatingUser] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [showUsersCreditedModal, setShowUsersCreditedModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
 
   /* ================= AUTH GUARD ================= */
 
@@ -84,9 +89,22 @@ const AdminWalletPage = () => {
 
     if (!authLoading && role === "admin") {
       fetchUsers();
+      fetchAnalytics();
     }
 
   }, [authLoading, role]);
+
+  /* ================= FETCH ANALYTICS ================= */
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await getWalletAnalytics();
+      setAnalytics(res?.data || {});
+    } catch (err) {
+      console.error("Analytics fetch error:", err);
+      // Don't show error toast, just log it
+    }
+  };
 
   /* ================= FILTER USERS ================= */
 
@@ -165,6 +183,41 @@ const AdminWalletPage = () => {
 
     }
 
+  };
+
+  /* ================= DELETE USER ================= */
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setDeletingUser(userToDelete._id);
+      
+      await deleteUser(userToDelete._id);
+      
+      toast.success(`User ${userToDelete.name} deleted successfully`);
+      
+      // Remove user from list
+      setUsers((prev) => prev.filter((u) => u._id !== userToDelete._id));
+      
+      // Close modal
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      
+      // Refresh analytics
+      fetchAnalytics();
+      
+    } catch (err) {
+      console.error("Delete user error:", err);
+      toast.error(formatApiError(err?.response?.data?.detail, "Failed to delete user"));
+    } finally {
+      setDeletingUser(null);
+    }
+  };
+
+  const openDeleteModal = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
   };
 
   /* ================= LOADING STATE ================= */
@@ -260,17 +313,16 @@ const AdminWalletPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-6 shadow-sm border border-emerald-100 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setShowUsersCreditedModal(true)}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">Total Balance</p>
-                <p className="text-3xl font-black text-gray-900 mt-1">
-                  ₹{users.reduce((sum, u) => sum + u.wallet_balance, 0).toLocaleString()}
-                </p>
+                <p className="text-sm text-gray-600 font-medium">Users Credited Today</p>
+                <p className="text-3xl font-black text-gray-900 mt-1">{analytics?.users_credited_today || 0}</p>
               </div>
-              <div className="w-12 h-12 bg-green-50 text-green-500 rounded-xl flex items-center justify-center">
-                <DollarSign size={24} />
+              <div className="w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center">
+                <TrendingUp size={24} />
               </div>
             </div>
           </motion.div>
@@ -279,17 +331,15 @@ const AdminWalletPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-100"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">First-Time Users</p>
-                <p className="text-3xl font-black text-gray-900 mt-1">
-                  {users.filter(u => u.wallet_first_time).length}
-                </p>
+                <p className="text-sm text-gray-600 font-medium">Today's Credits</p>
+                <p className="text-3xl font-black text-gray-900 mt-1">₹{(analytics?.today_credits || 0).toLocaleString()}</p>
               </div>
-              <div className="w-12 h-12 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center">
-                <AlertCircle size={24} />
+              <div className="w-12 h-12 bg-blue-500 text-white rounded-xl flex items-center justify-center">
+                <DollarSign size={24} />
               </div>
             </div>
           </motion.div>
@@ -298,19 +348,65 @@ const AdminWalletPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 shadow-sm border border-purple-100"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 font-medium">Filtered Results</p>
-                <p className="text-3xl font-black text-gray-900 mt-1">{filteredUsers.length}</p>
+                <p className="text-sm text-gray-600 font-medium">Total Credits This Month</p>
+                <p className="text-3xl font-black text-gray-900 mt-1">₹{(analytics?.month_credits || 0).toLocaleString()}</p>
               </div>
-              <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center">
-                <Search size={24} />
+              <div className="w-12 h-12 bg-purple-500 text-white rounded-xl flex items-center justify-center">
+                <Calendar size={24} />
               </div>
             </div>
           </motion.div>
         </div>
+
+        {/* USERS CREDITED TODAY MODAL */}
+        {showUsersCreditedModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-bold">Users Credited Today</h2>
+                <Button variant="ghost" size="sm" onClick={() => setShowUsersCreditedModal(false)}>
+                  <X size={20} />
+                </Button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                {analytics?.users_credited_today_details?.length > 0 ? (
+                  <div className="space-y-4">
+                    {analytics.users_credited_today_details.map((detail, index) => (
+                      <div key={index} className="bg-gray-50 rounded-xl p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-semibold text-gray-900">{detail.user_name}</p>
+                            <p className="text-sm text-gray-500">{detail.user_email}</p>
+                          </div>
+                          <p className="text-xl font-bold text-emerald-600">₹{detail.amount_credited.toLocaleString()}</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={14} />
+                            {detail.credited_at ? new Date(detail.credited_at).toLocaleString('en-IN') : '—'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <User size={14} />
+                            {detail.admin_name}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Wallet size={48} className="mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-500">No users credited today</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* SEARCH BAR */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6">
@@ -425,12 +521,90 @@ const AdminWalletPage = () => {
                               </span>
                             )}
                           </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => openDeleteModal(u)}
+                            disabled={deletingUser === u._id}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
                         </div>
                       </td>
                     </motion.tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* DELETE USER CONFIRMATION MODAL */}
+        {showDeleteModal && userToDelete && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                    <Trash2 size={24} />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">Delete User</h2>
+                </div>
+                
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                  <p className="text-sm text-red-800 mb-2">Are you sure you want to permanently delete this user?</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Username:</span>
+                      <span className="font-semibold">{userToDelete.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Email:</span>
+                      <span className="font-semibold">{userToDelete.email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Wallet Balance:</span>
+                      <span className="font-semibold">₹{userToDelete.wallet_balance?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Orders:</span>
+                      <span className="font-semibold">{userToDelete.order_count || 0}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-gray-600 mb-4">
+                  This will mark the user as deleted. Order history and wallet transactions will be preserved for audit purposes.
+                </p>
+                
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setUserToDelete(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteUser}
+                    disabled={deletingUser === userToDelete._id}
+                    className="flex-1"
+                  >
+                    {deletingUser === userToDelete._id ? (
+                      <span className="flex items-center gap-2">
+                        <RefreshCw size={16} className="animate-spin" />
+                        Deleting...
+                      </span>
+                    ) : (
+                      "Delete Permanently"
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

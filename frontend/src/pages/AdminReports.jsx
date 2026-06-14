@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { FileText, Download, Calendar, ArrowLeft, TrendingUp, ShoppingBag, DollarSign } from "lucide-react";
+import { FileText, Download, Calendar, ArrowLeft, TrendingUp, ShoppingBag, DollarSign, CreditCard, Wallet, Banknote, Smartphone } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
-import { getReport } from "../api";
+import { getReport, getAnalytics } from "../api";
 import { formatApiError } from "../utils/formatApiError";
 import { Button } from "../components/ui/button";
 
@@ -17,6 +17,7 @@ const AdminReports = () => {
   const [report, setReport] = useState(null);
   const [reportType, setReportType] = useState("daily");
   const [loading, setLoading] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -40,8 +41,18 @@ const AdminReports = () => {
   useEffect(() => {
     if (!authLoading && role === "admin") {
       fetchReport();
+      fetchAnalytics();
     }
   }, [authLoading, role, reportType]);
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await getAnalytics();
+      setAnalytics(res?.data || null);
+    } catch (err) {
+      console.error("Analytics fetch error:", err);
+    }
+  };
 
   const downloadCSV = () => {
     if (!report) return;
@@ -163,6 +174,53 @@ const AdminReports = () => {
                 </p>
               </div>
             </motion.div>
+
+            {/* Revenue Breakdown by Payment Method */}
+            {analytics?.payment_methods && analytics.payment_methods.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-6">
+                  <CreditCard size={20} className="text-indigo-600" />
+                  <h2 className="text-lg font-bold text-gray-900">Revenue by Payment Method</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {analytics.payment_methods.map((pm) => {
+                    const percentage = analytics.total_revenue > 0 
+                      ? ((pm.revenue / analytics.total_revenue) * 100).toFixed(1) 
+                      : 0;
+                    
+                    const getIcon = (method) => {
+                      const lower = method?.toLowerCase() || "";
+                      if (lower.includes("wallet")) return <Wallet size={20} />;
+                      if (lower.includes("cash")) return <Banknote size={20} />;
+                      if (lower.includes("upi")) return <Smartphone size={20} />;
+                      return <CreditCard size={20} />;
+                    };
+                    
+                    const getColor = (method) => {
+                      const lower = method?.toLowerCase() || "";
+                      if (lower.includes("wallet")) return "bg-emerald-50 text-emerald-600 border-emerald-200";
+                      if (lower.includes("cash")) return "bg-green-50 text-green-600 border-green-200";
+                      if (lower.includes("upi")) return "bg-purple-50 text-purple-600 border-purple-200";
+                      return "bg-blue-50 text-blue-600 border-blue-200";
+                    };
+                    
+                    return (
+                      <div key={pm.method} className={`p-4 rounded-xl border ${getColor(pm.method)}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          {getIcon(pm.method)}
+                          <span className="font-semibold text-gray-900 capitalize">{pm.method || "Unknown"}</span>
+                        </div>
+                        <p className="text-2xl font-bold text-gray-900">₹{pm.revenue.toLocaleString()}</p>
+                        <div className="flex items-center justify-between mt-2 text-sm">
+                          <span className="text-gray-600">{pm.count} transactions</span>
+                          <span className="font-semibold">{percentage}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
 
             {/* Top Products */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">

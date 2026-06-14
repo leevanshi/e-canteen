@@ -42,6 +42,10 @@ class AdminCreateSchema(BaseModel):
     password: str
 
 
+class DeleteUserSchema(BaseModel):
+    user_id: str
+
+
 def serialize_order(o):
 
     created = o.get("created_at")
@@ -295,6 +299,94 @@ async def place_walkin_order(
 # ================= USERS LIST =================
 
 @router.get("/users")
+def get_all_users(current_user=Depends(get_current_user)):
+    ensure_admin(current_user)
+    
+    users = list(users_collection.find({"deleted_at": {"$exists": False}}).sort("created_at", -1))
+    
+    result = []
+    for u in users:
+        # Get wallet balance
+        wallet = wallet_collection.find_one({"user_id": u["_id"]})
+        balance = wallet["balance"] if wallet else 0
+        
+        # Get order count
+        order_count = orders_collection.count_documents({"user_id": u["_id"]})
+        
+        result.append({
+            "_id": str(u["_id"]),
+            "name": u.get("name"),
+            "email": u.get("email"),
+            "role": u.get("role"),
+            "wallet_balance": balance,
+            "order_count": order_count,
+            "created_at": u.get("created_at"),
+        })
+    
+    return {"users": result}
+
+
+# ================= DELETE USER =================
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: str, current_user=Depends(get_current_user)):
+    ensure_admin(current_user)
+    
+    if not ObjectId.is_valid(user_id):
+        raise HTTPException(400, "Invalid user ID")
+    
+    user_obj_id = ObjectId(user_id)
+    
+    # Check if user exists
+    user = users_collection.find_one({"_id": user_obj_id})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    # Prevent deleting admins
+    if user.get("role") == "admin":
+        raise HTTPException(403, "Cannot delete admin users")
+    
+    # Check if user has orders or wallet transactions
+    order_count = orders_collection.count_documents({"user_id": user_obj_id})
+    wallet_txn_count = wallet_txn_collection.count_documents({"user_id": user_obj_id})
+    
+    # Soft delete: mark as deleted but preserve history
+    now = datetime.now(IST)
+    users_collection.update_one(
+        {"_id": user_obj_id},
+        {
+            "$set": {
+                "deleted_at": now,
+                "deleted_by": ObjectId(current_user["_id"]),
+                "deleted_reason": "admin_deletion"
+            }
+        }
+    )
+    
+    # Log audit
+    log_audit(
+        "delete_user",
+        user_id=current_user.get("_id"),
+        details={
+            "deleted_user_id": user_id,
+            "deleted_user_name": user.get("name"),
+            "deleted_user_email": user.get("email"),
+            "order_count": order_count,
+            "wallet_txn_count": wallet_txn_count
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": "User deleted successfully",
+        "preserved_orders": order_count,
+        "preserved_wallet_transactions": wallet_txn_count
+    }
+
+
+# ================= USERS LIST (LEGACY - FOR COMPATIBILITY) =================
+
+@router.get("/users/list")
 def get_users(
     limit: int = Query(200, le=500),
     current_user=Depends(get_current_user)
@@ -304,7 +396,7 @@ def get_users(
 
     users_cursor = list(
         users_collection.find(
-            {},
+            {"deleted_at": {"$exists": False}},
             {"password": 0, "refresh_token": 0}
         ).limit(limit)
     )

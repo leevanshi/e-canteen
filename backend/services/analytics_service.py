@@ -22,10 +22,15 @@ def get_analytics_data() -> dict:
     seven_days_ago = today_start - timedelta(days=7)
     
     # OPTIMIZED: Single query for revenue and orders trend (last 30 days)
+    # Include all completed orders regardless of payment_status for walk-in orders
     daily_stats_cursor = orders_collection.aggregate([
         {
             "$match": {
                 "created_at": {"$gte": thirty_days_ago, "$lt": today_start + timedelta(days=1)},
+                "$or": [
+                    {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                    {"$and": [{"$eq": ["$order_type", "walk-in"]}, {"$in": ["$status", ["completed", "picked_up"]]}]}
+                ]
             }
         },
         {
@@ -36,7 +41,10 @@ def get_analytics_data() -> dict:
                 "revenue": {
                     "$sum": {
                         "$cond": [
-                            {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                            {"$or": [
+                                {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                                {"$eq": ["$order_type", "walk-in"]}
+                            ]},
                             "$total_amount",
                             0,
                         ]
@@ -92,8 +100,10 @@ def get_analytics_data() -> dict:
     daily_revenue_cursor = orders_collection.aggregate([
         {
             "$match": {
-                "payment_status": "paid",
-                "status": "completed",
+                "$or": [
+                    {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                    {"$and": [{"$eq": ["$order_type", "walk-in"]}, {"$in": ["$status", ["completed", "picked_up"]]}]}
+                ],
                 "created_at": {"$gte": seven_days_ago},
             }
         },
@@ -115,8 +125,10 @@ def get_analytics_data() -> dict:
     monthly_revenue_cursor = orders_collection.aggregate([
         {
             "$match": {
-                "payment_status": "paid",
-                "status": "completed",
+                "$or": [
+                    {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                    {"$and": [{"$eq": ["$order_type", "walk-in"]}, {"$in": ["$status", ["completed", "picked_up"]]}]}
+                ],
                 "created_at": {"$gte": month_start - timedelta(days=180)},
             }
         },
@@ -171,7 +183,10 @@ def get_analytics_data() -> dict:
                 "revenue": {
                     "$sum": {
                         "$cond": [
-                            {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                            {"$or": [
+                                {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                                {"$eq": ["$order_type", "walk-in"]}
+                            ]},
                             "$total_amount",
                             0,
                         ]
@@ -189,6 +204,53 @@ def get_analytics_data() -> dict:
         for doc in comparison_cursor
     }
     
+    # Revenue breakdown by payment method
+    payment_method_cursor = orders_collection.aggregate([
+        {
+            "$match": {
+                "$or": [
+                    {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+                    {"$and": [{"$eq": ["$order_type", "walk-in"]}, {"$in": ["$status", ["completed", "picked_up"]]}]}
+                ],
+                "created_at": {"$gte": month_start},
+            }
+        },
+        {
+            "$group": {
+                "_id": "$payment_method",
+                "revenue": {"$sum": "$total_amount"},
+                "count": {"$sum": 1},
+            }
+        },
+        {"$sort": {"revenue": -1}},
+    ])
+    
+    payment_methods = [
+        {
+            "method": doc.get("_id", "unknown"),
+            "revenue": int(doc["revenue"]),
+            "count": doc["count"],
+        }
+        for doc in payment_method_cursor
+    ]
+    
+    # Calculate total revenue for validation
+    total_revenue = sum(doc["revenue"] for doc in payment_methods)
+    
+    # Validation: Log warning if revenue is 0 but orders exist
+    total_orders = orders_collection.count_documents({
+        "$or": [
+            {"$and": [{"$eq": ["$payment_status", "paid"]}, {"$eq": ["$status", "completed"]}]},
+            {"$and": [{"$eq": ["$order_type", "walk-in"]}, {"$in": ["$status", ["completed", "picked_up"]]}]}
+        ],
+        "created_at": {"$gte": month_start}
+    })
+    
+    if total_orders > 0 and total_revenue == 0:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Revenue validation failed: {total_orders} completed orders found but total revenue is ₹0")
+    
     return {
         "revenue_trend": revenue_trend,
         "orders_trend": orders_trend,
@@ -197,4 +259,7 @@ def get_analytics_data() -> dict:
         "monthly_revenue": monthly_revenue,
         "top_products": top_products,
         "comparison": comparison,
+        "payment_methods": payment_methods,
+        "total_revenue": total_revenue,
+        "total_orders": total_orders,
     }

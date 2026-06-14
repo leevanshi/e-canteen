@@ -158,6 +158,9 @@ export const placeCounterOrder = (data) =>
 export const getUsers = () =>
   API.get("/admin/users");
 
+export const deleteUser = (userId) =>
+  API.delete(`/admin/users/${userId}`);
+
 /* =========================
    WALLET
 ========================= */
@@ -170,6 +173,9 @@ export const adminAddMoney = (data) =>
 
 export const getWalletHistory = () =>
   API.get("/wallet/admin/wallet-history");
+
+export const getWalletAnalytics = () =>
+  API.get("/wallet/admin/analytics");
 
 /* =========================
    FEEDBACK
