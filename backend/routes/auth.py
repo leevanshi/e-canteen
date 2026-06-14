@@ -121,10 +121,6 @@ class ChangePasswordSchema(BaseModel):
             raise ValueError("Must include a number")
         return v
 
-    @field_validator("name")
-    def normalize_name(cls, v):
-        return v.strip().title()
-
 
 class EmailRequest(BaseModel):
     email: EmailStr
