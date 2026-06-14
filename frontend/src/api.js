@@ -146,7 +146,7 @@ export const getAdminOrders = () =>
   API.get("/admin/orders");
 
 export const updateOrderStatus = (orderId, data) =>
-  API.put(`/api/orders/${orderId}/status`, data);
+  API.put(`/admin/orders/${orderId}/status`, data);
 
 export const placeCounterOrder = (data) =>
   API.post("/admin/place-order", data);
