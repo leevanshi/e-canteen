@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel, EmailStr, field_validator
-from database import users_collection, otp_collection
+from database import users_collection, otp_collection, orders_collection, wallet_collection, wallet_txn_collection
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
@@ -88,6 +88,28 @@ class RegisterSchema(BaseModel):
     role: str
 
     @field_validator("password")
+    def strong_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Must include uppercase letter")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Must include lowercase letter")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Must include a number")
+        return v
+
+
+class UpdateProfileSchema(BaseModel):
+    name: str
+    phone: Optional[str] = None
+
+
+class ChangePasswordSchema(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
     def strong_password(cls, v):
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
@@ -546,3 +568,180 @@ async def test_email(data: EmailRequest):
         raise HTTPException(500, "Failed to send test email: delivery could not be completed")
 
     return {"message": "Test email sent"}
+
+
+# ================= PROFILE MANAGEMENT =================
+
+@router.get("/profile")
+def get_profile(current_user=Depends(get_current_user)):
+    """Get current user's profile information"""
+    user = users_collection.find_one(
+        {"_id": ObjectId(current_user["_id"])},
+        {"password": 0, "refresh_token": 0}
+    )
+    
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    # Get wallet balance
+    wallet = wallet_collection.find_one({"user_id": user["_id"]})
+    wallet_balance = wallet["balance"] if wallet else 0
+    
+    # Get order statistics
+    total_orders = orders_collection.count_documents({"user_id": user["_id"]})
+    pending_orders = orders_collection.count_documents({
+        "user_id": user["_id"],
+        "status": {"$in": ["confirmed", "preparing", "ready_for_pickup"]}
+    })
+    
+    # Calculate total spent
+    completed_orders = list(orders_collection.find({
+        "user_id": user["_id"],
+        "status": "completed"
+    }, {"total_amount": 1}))
+    total_spent = sum(order.get("total_amount", 0) for order in completed_orders)
+    
+    # Get last order date
+    last_order = orders_collection.find_one(
+        {"user_id": user["_id"]},
+        sort=[("created_at", -1)]
+    )
+    last_order_date = last_order.get("created_at") if last_order else None
+    
+    return {
+        "_id": str(user["_id"]),
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "phone": user.get("phone"),
+        "role": normalize_role(user.get("role")),
+        "profile_photo": user.get("profile_photo"),
+        "created_at": user.get("created_at"),
+        "wallet_balance": wallet_balance,
+        "total_orders": total_orders,
+        "pending_orders": pending_orders,
+        "total_spent": total_spent,
+        "last_order_date": last_order_date,
+        "account_status": "active" if not user.get("deleted_at") else "deleted"
+    }
+
+
+@router.put("/profile")
+def update_profile(data: UpdateProfileSchema, current_user=Depends(get_current_user)):
+    """Update current user's profile (name and phone only)"""
+    user_id = ObjectId(current_user["_id"])
+    
+    # Verify user exists
+    user = users_collection.find_one({"_id": user_id})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    # Update allowed fields only
+    update_data = {
+        "name": data.name.strip().title(),
+        "updated_at": datetime.now(IST)
+    }
+    
+    if data.phone:
+        update_data["phone"] = data.phone.strip()
+    
+    users_collection.update_one(
+        {"_id": user_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Profile updated successfully"}
+
+
+@router.post("/profile/change-password")
+def change_password(data: ChangePasswordSchema, current_user=Depends(get_current_user)):
+    """Change current user's password"""
+    user_id = ObjectId(current_user["_id"])
+    
+    # Verify user exists
+    user = users_collection.find_one({"_id": user_id})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    # Verify current password
+    if not pwd_context.verify(data.current_password, user["password"]):
+        raise HTTPException(400, "Current password is incorrect")
+    
+    # Update password
+    users_collection.update_one(
+        {"_id": user_id},
+        {
+            "$set": {
+                "password": hash_password(data.new_password),
+                "updated_at": datetime.now(IST)
+            }
+        }
+    )
+    
+    return {"message": "Password changed successfully"}
+
+
+@router.post("/profile/upload-photo")
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user)
+):
+    """Upload profile photo for current user"""
+    user_id = ObjectId(current_user["_id"])
+    
+    # Verify user exists
+    user = users_collection.find_one({"_id": user_id})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    # Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(400, "File must be an image")
+    
+    # Validate file size (max 5MB)
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(400, "File size must be less than 5MB")
+    
+    # In a real implementation, you would upload to a cloud storage service
+    # For now, we'll store a placeholder URL
+    photo_url = f"/uploads/profiles/{user_id}_{file.filename}"
+    
+    users_collection.update_one(
+        {"_id": user_id},
+        {
+            "$set": {
+                "profile_photo": photo_url,
+                "updated_at": datetime.now(IST)
+            }
+        }
+    )
+    
+    return {"message": "Profile photo uploaded successfully", "photo_url": photo_url}
+
+
+@router.get("/profile/transactions")
+def get_profile_transactions(current_user=Depends(get_current_user)):
+    """Get current user's wallet transaction history"""
+    user_id = ObjectId(current_user["_id"])
+    
+    transactions = list(
+        wallet_txn_collection.find({"user_id": str(user_id)})
+        .sort("created_at", -1)
+        .limit(50)
+    )
+    
+    result = []
+    for txn in transactions:
+        result.append({
+            "_id": str(txn["_id"]),
+            "amount": txn["amount"],
+            "type": txn["type"],
+            "description": txn.get("description", ""),
+            "previous_balance": txn.get("previous_balance"),
+            "new_balance": txn.get("new_balance"),
+            "created_at": txn.get("created_at"),
+            "admin_name": txn.get("admin_name")
+        })
+    
+    return {"transactions": result}

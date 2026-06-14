@@ -20,6 +20,7 @@ import OrderSuccessPage from "./pages/OrderSuccessPage";
 import OrderDetails from "./pages/OrderDetails";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import OrderTracking from "./pages/OrderTracking";
+import Profile from "./pages/Profile";
 
 /* ADMIN */
 import AdminMonthlyMenu from "./pages/AdminMonthlyMenu";
@@ -197,6 +198,15 @@ const App = () => {
             element={
               <ProtectedRoute allowedRoles={["student"]}>
                 <AnimatedPage><OrderTracking /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AnimatedPage><Profile /></AnimatedPage>
               </ProtectedRoute>
             }
           />

@@ -178,6 +178,30 @@ export const getWalletAnalytics = () =>
   API.get("/wallet/admin/analytics");
 
 /* =========================
+   PROFILE
+========================= */
+
+export const getProfile = () =>
+  API.get("/auth/profile");
+
+export const updateProfile = (data) =>
+  API.put("/auth/profile", data);
+
+export const changePassword = (data) =>
+  API.post("/auth/profile/change-password", data);
+
+export const uploadProfilePhoto = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return API.post("/auth/profile/upload-photo", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+};
+
+export const getProfileTransactions = () =>
+  API.get("/auth/profile/transactions");
+
+/* =========================
    FEEDBACK
 ========================= */
 
